@@ -155,11 +155,11 @@ void EditorApplication::enableMaterialEditorGUI(bool enable) {
 
 
 void EditorApplication::enableMaterialEditorListGUI() {
-	bool material_list_flag=true;
+	bool material_list_flag = true;
 	if ((material_editor_mode == SONICGLVL_MATERIAL_EDITOR_MODE_MODEL) && !material_editor_model) {
 		material_list_flag = false;
 	}
-	
+
 	EnableWindow(GetDlgItem(hMaterialEditorDlg, IDG_MATERIAL_MATERIAL_LIST), material_list_flag);
 	EnableWindow(GetDlgItem(hMaterialEditorDlg, IDL_MATERIAL_MATERIAL_LIST), material_list_flag);
 	EnableWindow(GetDlgItem(hMaterialEditorDlg, IDB_MATERIAL_NEW_MATERIAL), material_list_flag);
@@ -225,21 +225,21 @@ void EditorApplication::updateMaterialTextureInfo() {
 }
 
 void EditorApplication::updateMaterialEditorInfo() {
-	LibGens::Material *mat = material_editor_material;
+	LibGens::Material* mat = material_editor_material;
 	if (!material_editor_material) return;
 
 	// Update Info
 	SetDlgItemText(hMaterialEditorDlg, IDE_MATERIAL_NAME, mat->getName().c_str());
 	SetDlgItemText(hMaterialEditorDlg, IDC_MATERIAL_SHADER, mat->getShader().c_str());
-	SendDlgItemMessage(hMaterialEditorDlg, IDC_MATERIAL_BACKFACE_CULLING, BM_SETCHECK, (WPARAM) mat->hasNoCulling(), 0);
-	SendDlgItemMessage(hMaterialEditorDlg, IDC_MATERIAL_ADDITIVE, BM_SETCHECK, (WPARAM) mat->hasColorBlend(), 0);
-	
-	updateMaterialEditorTextureList();
-	
-	// Update Parameters
-	vector<LibGens::Parameter *> parameters = mat->getParameters();
+	SendDlgItemMessage(hMaterialEditorDlg, IDC_MATERIAL_BACKFACE_CULLING, BM_SETCHECK, (WPARAM)mat->hasNoCulling(), 0);
+	SendDlgItemMessage(hMaterialEditorDlg, IDC_MATERIAL_ADDITIVE, BM_SETCHECK, (WPARAM)mat->hasColorBlend(), 0);
 
-	for (size_t i=0; i<10; i++) {
+	updateMaterialEditorTextureList();
+
+	// Update Parameters
+	vector<LibGens::Parameter*> parameters = mat->getParameters();
+
+	for (size_t i = 0; i < 10; i++) {
 		string parameter_name = "";
 		string parameter_r = "";
 		string parameter_g = "";
@@ -495,15 +495,15 @@ void EditorApplication::createPreviewMaterialEditorGUI() {
 	// Certain models have invalid AABB values so rebuild it.
 	material_editor_model->buildAABB();
 
-	LibGens::AABB model_aabb=material_editor_model->getAABB();
+	LibGens::AABB model_aabb = material_editor_model->getAABB();
 	LibGens::Vector3 aabb_center = model_aabb.center();
 	Ogre::Vector3 camera_center = Ogre::Vector3(aabb_center.x, aabb_center.y, aabb_center.z);
 	float size_max = model_aabb.sizeMax();
-	Ogre::Camera *camera = material_editor_viewport->getCamera();
+	Ogre::Camera* camera = material_editor_viewport->getCamera();
 
 	camera->setPosition(camera_center);
 	camera->setDirection(Ogre::Vector3(0, 0, -1).normalisedCopy());
-	camera->moveRelative(Ogre::Vector3::UNIT_Z * size_max*1.5);
+	camera->moveRelative(Ogre::Vector3::UNIT_Z * size_max * 1.5);
 	hasScene = true;
 }
 
@@ -539,9 +539,9 @@ void EditorApplication::rebuildMaterialPreviewNodes() {
 
 	material_editor_animation_state = NULL;
 	if (material_editor_animation_name.size()) {
-		unsigned short attached_objects=material_editor_scene_node->numAttachedObjects();
-		for (unsigned short i=0; i<attached_objects; i++) {
-			Ogre::Entity *entity=static_cast<Ogre::Entity *>(material_editor_scene_node->getAttachedObject(i));
+		unsigned short attached_objects = material_editor_scene_node->numAttachedObjects();
+		for (unsigned short i = 0; i < attached_objects; i++) {
+			Ogre::Entity* entity = static_cast<Ogre::Entity*>(material_editor_scene_node->getAttachedObject(i));
 
 			if (entity->hasAnimationState(material_editor_animation_name)) {
 				material_editor_animation_state = entity->getAnimationState(material_editor_animation_name);
@@ -557,27 +557,27 @@ void EditorApplication::rebuildMaterialPreviewNodes() {
 
 
 void EditorApplication::rebuildListMaterialEditorGUI() {
-	HWND hMaterialList=GetDlgItem(hMaterialEditorDlg, IDL_MATERIAL_MATERIAL_LIST);
+	HWND hMaterialList = GetDlgItem(hMaterialEditorDlg, IDL_MATERIAL_MATERIAL_LIST);
 
 	// Cleanup old material list
-	if(ListView_GetItemCount(hMaterialList) != 0) {
+	if (ListView_GetItemCount(hMaterialList) != 0) {
 		ListView_DeleteAllItems(hMaterialList);
 		while (ListView_DeleteColumn(hMaterialList, 0) > 0);
 		ListView_SetItemCount(hMaterialList, 0);
 	}
 
 	// Create new material list
-	for (size_t i=0; i<material_editor_materials.size(); i++) {
+	for (size_t i = 0; i < material_editor_materials.size(); i++) {
 		char temp[256];
 		LV_ITEM Item;
 		Item.mask = LVIF_TEXT;
 		strcpy(temp, material_editor_materials[i]->getName().c_str());
 
 		Item.pszText = temp;
-		Item.cchTextMax = strlen(temp);            
-		Item.iSubItem = 0;                           
-		Item.lParam = (LPARAM) NULL;                   
-		Item.iItem = ListView_GetItemCount(hMaterialList); 
+		Item.cchTextMax = strlen(temp);
+		Item.iSubItem = 0;
+		Item.lParam = (LPARAM)NULL;
+		Item.iItem = ListView_GetItemCount(hMaterialList);
 		ListView_InsertItem(hMaterialList, &Item);
 	}
 
@@ -616,22 +616,22 @@ void EditorApplication::rebuildListMaterialEditorGUI() {
 }
 
 
-void EditorApplication::saveMaterialEditorModelGUI(){
+void EditorApplication::saveMaterialEditorModelGUI() {
 	char* filename = (char*)malloc(1024);
 	strcpy(filename, "");
 
 	OPENFILENAME    ofn;
 	memset(&ofn, 0, sizeof(ofn));
-	ofn.lStructSize		= sizeof(ofn);
-	ofn.lpstrFilter		= "Generations Model File(.model)\0*.model\0Unleashed Model File(.model)\0*.model\0";
-	ofn.nFilterIndex	= material_editor_unleashed ? 2 : 1;
-	ofn.lpstrFile		= filename;
-	ofn.nMaxFile		= 1024;
-	ofn.lpstrTitle		= "Choose where you would like save the model";
-	ofn.lpstrFile		= (LPSTR)material_editor_model_filename.c_str();
-	ofn.Flags			= OFN_EXPLORER | OFN_PATHMUSTEXIST | 
-						  OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT |
-						  OFN_ENABLESIZING;
+	ofn.lStructSize = sizeof(ofn);
+	ofn.lpstrFilter = "Generations Model File(.model)\0*.model\0Unleashed Model File(.model)\0*.model\0";
+	ofn.nFilterIndex = material_editor_unleashed ? 2 : 1;
+	ofn.lpstrFile = filename;
+	ofn.nMaxFile = 1024;
+	ofn.lpstrTitle = "Choose where you would like save the model";
+	ofn.lpstrFile = (LPSTR)material_editor_model_filename.c_str();
+	ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST |
+		OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT |
+		OFN_ENABLESIZING;
 
 	if (GetSaveFileName(&ofn)) {
 		string folder = LibGens::File::folderFromFilename(ofn.lpstrFile);
@@ -662,22 +662,22 @@ void EditorApplication::saveMaterialEditorMaterial() {
 }
 
 void EditorApplication::loadMaterialEditorModelGUI() {
-	char *filename = (char *) malloc(1024);
+	char* filename = (char*)malloc(1024);
 	strcpy(filename, "");
 
 	OPENFILENAME    ofn;
-    memset(&ofn, 0, sizeof(ofn));
-	ofn.lStructSize     = sizeof(ofn);
-	ofn.lpstrFilter     = "Model File(.model)\0*.model\0Terrain Model File(.terrain-model)\0*.terrain-model\0";
-	ofn.nFilterIndex    = 1;
-	ofn.lpstrFile       = filename;
-    ofn.nMaxFile        = 1024;
-    ofn.lpstrTitle      = "Choose the Model File you want to edit";
-    ofn.Flags           = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST |
-                          OFN_LONGNAMES     | OFN_EXPLORER |
-                          OFN_HIDEREADONLY  | OFN_ENABLESIZING;
+	memset(&ofn, 0, sizeof(ofn));
+	ofn.lStructSize = sizeof(ofn);
+	ofn.lpstrFilter = "Model File(.model)\0*.model\0Terrain Model File(.terrain-model)\0*.terrain-model\0";
+	ofn.nFilterIndex = 1;
+	ofn.lpstrFile = filename;
+	ofn.nMaxFile = 1024;
+	ofn.lpstrTitle = "Choose the Model File you want to edit";
+	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST |
+		OFN_LONGNAMES | OFN_EXPLORER |
+		OFN_HIDEREADONLY | OFN_ENABLESIZING;
 
-    if(GetOpenFileName(&ofn)) {
+	if (GetOpenFileName(&ofn)) {
 		chdir(exe_path.c_str());
 
 		if (material_editor_model) {
@@ -702,8 +702,8 @@ void EditorApplication::loadMaterialEditorModelGUI() {
 		clearSelectionMaterialEditorGUI();
 		material_editor_materials.clear();
 		material_editor_unleashed = true;
-		for (list<string>::iterator it=material_names.begin(); it!=material_names.end(); it++) {
-			LibGens::Material *mat = material_editor_material_library->getMaterial(*it);
+		for (list<string>::iterator it = material_names.begin(); it != material_names.end(); it++) {
+			LibGens::Material* mat = material_editor_material_library->getMaterial(*it);
 
 			if (mat) {
 				if (mat->getRootNodeType() != LIBGENS_MATERIAL_ROOT_UNLEASHED) {
@@ -715,7 +715,7 @@ void EditorApplication::loadMaterialEditorModelGUI() {
 
 		std::sort(material_editor_materials.begin(), material_editor_materials.end(),
 			[](LibGens::Material* lhs, LibGens::Material* rhs) {
-				return lhs->getName().compare(rhs->getName()) < 0; 
+				return lhs->getName().compare(rhs->getName()) < 0;
 			});
 
 		rebuildListMaterialEditorGUI();
@@ -723,7 +723,7 @@ void EditorApplication::loadMaterialEditorModelGUI() {
 	}
 
 	chdir(exe_path.c_str());
-    free(filename);
+	free(filename);
 }
 
 void EditorApplication::copyMaterialEditorTexture(const string& file) const
@@ -756,8 +756,8 @@ void EditorApplication::pickMaterialEditorTextureGUI() {
 	ofn.nMaxFile = 1024;
 	ofn.lpstrTitle = "Choose the Texture File you want to use";
 	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST |
-				OFN_LONGNAMES | OFN_EXPLORER |
-				OFN_ENABLESIZING;
+		OFN_LONGNAMES | OFN_EXPLORER |
+		OFN_ENABLESIZING;
 
 	if (GetOpenFileName(&ofn)) {
 		chdir(exe_path.c_str());
@@ -809,7 +809,7 @@ void EditorApplication::addMaterialEditorTextureGUI() {
 			else if (fileUnit == "env" || fileUnit == "ref")
 				unit = "reflection";
 		}
-		LibGens::Texture* tex = new LibGens::Texture(unitName, unit,internal_name);
+		LibGens::Texture* tex = new LibGens::Texture(unitName, unit, internal_name);
 		material_editor_material->addTextureUnit(tex);
 
 		copyMaterialEditorTexture(file);
@@ -827,22 +827,22 @@ void EditorApplication::addMaterialEditorTextureGUI() {
 }
 
 void EditorApplication::loadMaterialEditorSkeletonGUI() {
-	char *filename = (char *) malloc(1024);
+	char* filename = (char*)malloc(1024);
 	strcpy(filename, "");
 
 	OPENFILENAME    ofn;
-    memset(&ofn, 0, sizeof(ofn));
-	ofn.lStructSize     = sizeof(ofn);
-	ofn.lpstrFilter     = "Havok Skeleton File(.skl.hkx)\0*.skl.hkx\0";
-	ofn.nFilterIndex    = 1;
-	ofn.lpstrFile       = filename;
-    ofn.nMaxFile        = 1024;
-    ofn.lpstrTitle      = "Choose the Skeleton File you want to use";
-    ofn.Flags           = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST |
-                          OFN_LONGNAMES     | OFN_EXPLORER |
-                          OFN_HIDEREADONLY  | OFN_ENABLESIZING;
+	memset(&ofn, 0, sizeof(ofn));
+	ofn.lStructSize = sizeof(ofn);
+	ofn.lpstrFilter = "Havok Skeleton File(.skl.hkx)\0*.skl.hkx\0";
+	ofn.nFilterIndex = 1;
+	ofn.lpstrFile = filename;
+	ofn.nMaxFile = 1024;
+	ofn.lpstrTitle = "Choose the Skeleton File you want to use";
+	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST |
+		OFN_LONGNAMES | OFN_EXPLORER |
+		OFN_HIDEREADONLY | OFN_ENABLESIZING;
 
-    if(GetOpenFileName(&ofn)) {
+	if (GetOpenFileName(&ofn)) {
 		chdir(exe_path.c_str());
 
 		material_editor_skeleton_name = LibGens::File::nameFromFilenameNoExtension(ToString(filename));
@@ -853,28 +853,28 @@ void EditorApplication::loadMaterialEditorSkeletonGUI() {
 	}
 
 	chdir(exe_path.c_str());
-    free(filename);
+	free(filename);
 }
 
 
 
 void EditorApplication::loadMaterialEditorAnimationGUI() {
-	char *filename = (char *) malloc(1024);
+	char* filename = (char*)malloc(1024);
 	strcpy(filename, "");
 
 	OPENFILENAME    ofn;
-    memset(&ofn, 0, sizeof(ofn));
-	ofn.lStructSize     = sizeof(ofn);
-	ofn.lpstrFilter     = "Havok Animation File(.anm.hkx)\0*.anm.hkx\0";
-	ofn.nFilterIndex    = 1;
-	ofn.lpstrFile       = filename;
-    ofn.nMaxFile        = 1024;
-    ofn.lpstrTitle      = "Choose the Animation File you want to use";
-    ofn.Flags           = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST |
-                          OFN_LONGNAMES     | OFN_EXPLORER |
-                          OFN_HIDEREADONLY  | OFN_ENABLESIZING;
+	memset(&ofn, 0, sizeof(ofn));
+	ofn.lStructSize = sizeof(ofn);
+	ofn.lpstrFilter = "Havok Animation File(.anm.hkx)\0*.anm.hkx\0";
+	ofn.nFilterIndex = 1;
+	ofn.lpstrFile = filename;
+	ofn.nMaxFile = 1024;
+	ofn.lpstrTitle = "Choose the Animation File you want to use";
+	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST |
+		OFN_LONGNAMES | OFN_EXPLORER |
+		OFN_HIDEREADONLY | OFN_ENABLESIZING;
 
-    if(GetOpenFileName(&ofn)) {
+	if (GetOpenFileName(&ofn)) {
 		chdir(exe_path.c_str());
 
 		material_editor_animation_name = LibGens::File::nameFromFilenameNoExtension(ToString(filename));
@@ -886,7 +886,7 @@ void EditorApplication::loadMaterialEditorAnimationGUI() {
 	}
 
 	chdir(exe_path.c_str());
-    free(filename);
+	free(filename);
 }
 
 
@@ -933,13 +933,13 @@ void EditorApplication::updateMaterialEditorTextureIndex(int selection_index) {
 void EditorApplication::updateEditParameterMaterialEditor(size_t i, LibGens::Color parameter_color) {
 	if (!material_editor_material) return;
 
-	LibGens::Parameter *parameter = material_editor_material->getParameterByIndex(i);
+	LibGens::Parameter* parameter = material_editor_material->getParameterByIndex(i);
 	if (parameter) {
 		parameter->color = parameter_color;
 	}
 	else return;
 
-	Ogre::Material *ogre_material = Ogre::MaterialManager::getSingleton().getByName(material_editor_material->getExtra(), material_editor_mesh_group).getPointer();
+	Ogre::Material* ogre_material = Ogre::MaterialManager::getSingleton().getByName(material_editor_material->getExtra(), material_editor_mesh_group).getPointer();
 
 	if (ogre_material) {
 		updateMaterialShaderParameters(ogre_material, material_editor_material, !material_editor_material->hasExtraGI(), NULL, material_editor_shader_library);
@@ -951,7 +951,7 @@ void EditorApplication::updateEditShaderMaterialEditor(string shader_name) {
 	if (!material_editor_material) return;
 
 	material_editor_material->setShader(shader_name);
-	Ogre::Material *ogre_material = Ogre::MaterialManager::getSingleton().getByName(material_editor_material->getExtra(), material_editor_mesh_group).getPointer();
+	Ogre::Material* ogre_material = Ogre::MaterialManager::getSingleton().getByName(material_editor_material->getExtra(), material_editor_mesh_group).getPointer();
 
 	if (ogre_material) {
 		updateMaterialShaderParameters(ogre_material, material_editor_material, !material_editor_material->hasExtraGI(), NULL, material_editor_shader_library);
@@ -997,168 +997,168 @@ INT_PTR CALLBACK MaterialEditorCallback(HWND hDlg, UINT msg, WPARAM wParam, LPAR
 	int texture_index = ListView_GetNextItem(GetDlgItem(hDlg, IDL_MATERIAL_TEXTURE_UNIT_LIST), -1, LVIS_SELECTED | LVIS_FOCUSED);
 	editor_application->updateMaterialEditorTextureIndex(texture_index);
 
-	int n,r,g,b,a;
+	int n, r, g, b, a;
 
-	switch(msg) {
-		case WM_INITDIALOG:
-			return true;
+	switch (msg) {
+	case WM_INITDIALOG:
+		return true;
 
-		case WM_CLOSE:
-			DestroyWindow(hDlg);
-			editor_application->clearMaterialEditorGUI();
-			return true;
+	case WM_CLOSE:
+		DestroyWindow(hDlg);
+		editor_application->clearMaterialEditorGUI();
+		return true;
 
-		case WM_COMMAND:
-			if(HIWORD(wParam) == CBN_SELCHANGE) { 
-				char value_str[1024] = "";
-				int nIndex=SendDlgItemMessage(hDlg, LOWORD(wParam), (UINT) CB_GETCURSEL, (WPARAM) 0, (LPARAM) 0);
-				SendDlgItemMessage(hDlg, LOWORD(wParam), (UINT)CB_GETLBTEXT, (WPARAM)nIndex, (LPARAM)value_str);
+	case WM_COMMAND:
+		if (HIWORD(wParam) == CBN_SELCHANGE) {
+			char value_str[1024] = "";
+			int nIndex = SendDlgItemMessage(hDlg, LOWORD(wParam), (UINT)CB_GETCURSEL, (WPARAM)0, (LPARAM)0);
+			SendDlgItemMessage(hDlg, LOWORD(wParam), (UINT)CB_GETLBTEXT, (WPARAM)nIndex, (LPARAM)value_str);
 
-				if (LOWORD(wParam) == IDC_MATERIAL_SHADER)  {
-					editor_application->updateEditShaderMaterialEditor(ToString(value_str));
-				}
-				else if (LOWORD(wParam) == IDC_MATERIAL_TEXTURE_UNIT_SLOT) {
-					editor_application->updateEditTextureUnitMaterialEditor(ToString(value_str));
-				}
-				break;
+			if (LOWORD(wParam) == IDC_MATERIAL_SHADER) {
+				editor_application->updateEditShaderMaterialEditor(ToString(value_str));
 			}
-
-			if (HIWORD(wParam) == CBN_EDITCHANGE) {
-				char value_str[1024] = "";
-				GetDlgItemText(hDlg, LOWORD(wParam), value_str, 1024);
-
-				if (LOWORD(wParam) == IDC_MATERIAL_SHADER)  {
-					editor_application->updateEditShaderMaterialEditor(ToString(value_str));
-				}
-				else if (LOWORD(wParam) == IDC_MATERIAL_TEXTURE_UNIT_SLOT) {
-					editor_application->updateEditTextureUnitMaterialEditor(ToString(value_str));
-				}
-				break;
+			else if (LOWORD(wParam) == IDC_MATERIAL_TEXTURE_UNIT_SLOT) {
+				editor_application->updateEditTextureUnitMaterialEditor(ToString(value_str));
 			}
+			break;
+		}
 
-			if (HIWORD(wParam) == EN_CHANGE) {
-				if (LOWORD(wParam) == IDE_MATERIAL_TEXTURE_FILENAME) {
-					char value_str[1024] = "";
-					GetDlgItemText(hDlg, IDE_MATERIAL_TEXTURE_FILENAME, value_str, 1024);
-					editor_application->updateEditTextureMaterialEditor(ToString(value_str));
-					ListView_SetItemText(GetDlgItem(hDlg, IDL_MATERIAL_TEXTURE_UNIT_LIST), texture_index, 0, (LPSTR)value_str);
-				}
-				else {
-					for (size_t i = 0; i < 10; i++) {
-						if (i == 0) { n = IDE_MATERIAL_PARAMETER_1_N; r = IDE_MATERIAL_PARAMETER_1_R; g = IDE_MATERIAL_PARAMETER_1_G; b = IDE_MATERIAL_PARAMETER_1_B; a = IDE_MATERIAL_PARAMETER_1_A; }
-						if (i == 1) { n = IDE_MATERIAL_PARAMETER_2_N; r = IDE_MATERIAL_PARAMETER_2_R; g = IDE_MATERIAL_PARAMETER_2_G; b = IDE_MATERIAL_PARAMETER_2_B; a = IDE_MATERIAL_PARAMETER_2_A; }
-						if (i == 2) { n = IDE_MATERIAL_PARAMETER_3_N; r = IDE_MATERIAL_PARAMETER_3_R; g = IDE_MATERIAL_PARAMETER_3_G; b = IDE_MATERIAL_PARAMETER_3_B; a = IDE_MATERIAL_PARAMETER_3_A; }
-						if (i == 3) { n = IDE_MATERIAL_PARAMETER_4_N; r = IDE_MATERIAL_PARAMETER_4_R; g = IDE_MATERIAL_PARAMETER_4_G; b = IDE_MATERIAL_PARAMETER_4_B; a = IDE_MATERIAL_PARAMETER_4_A; }
-						if (i == 4) { n = IDE_MATERIAL_PARAMETER_5_N; r = IDE_MATERIAL_PARAMETER_5_R; g = IDE_MATERIAL_PARAMETER_5_G; b = IDE_MATERIAL_PARAMETER_5_B; a = IDE_MATERIAL_PARAMETER_5_A; }
-						if (i == 5) { n = IDE_MATERIAL_PARAMETER_6_N; r = IDE_MATERIAL_PARAMETER_6_R; g = IDE_MATERIAL_PARAMETER_6_G; b = IDE_MATERIAL_PARAMETER_6_B; a = IDE_MATERIAL_PARAMETER_6_A; }
-						if (i == 6) { n = IDE_MATERIAL_PARAMETER_7_N; r = IDE_MATERIAL_PARAMETER_7_R; g = IDE_MATERIAL_PARAMETER_7_G; b = IDE_MATERIAL_PARAMETER_7_B; a = IDE_MATERIAL_PARAMETER_7_A; }
-						if (i == 7) { n = IDE_MATERIAL_PARAMETER_8_N; r = IDE_MATERIAL_PARAMETER_8_R; g = IDE_MATERIAL_PARAMETER_8_G; b = IDE_MATERIAL_PARAMETER_8_B; a = IDE_MATERIAL_PARAMETER_8_A; }
-						if (i == 8) { n = IDE_MATERIAL_PARAMETER_9_N; r = IDE_MATERIAL_PARAMETER_9_R; g = IDE_MATERIAL_PARAMETER_9_G; b = IDE_MATERIAL_PARAMETER_9_B; a = IDE_MATERIAL_PARAMETER_9_A; }
-						if (i == 9) { n = IDE_MATERIAL_PARAMETER_10_N; r = IDE_MATERIAL_PARAMETER_10_R; g = IDE_MATERIAL_PARAMETER_10_G; b = IDE_MATERIAL_PARAMETER_10_B; a = IDE_MATERIAL_PARAMETER_10_A; }
+		if (HIWORD(wParam) == CBN_EDITCHANGE) {
+			char value_str[1024] = "";
+			GetDlgItemText(hDlg, LOWORD(wParam), value_str, 1024);
 
-						if ((LOWORD(wParam) == r) || (LOWORD(wParam) == g) || (LOWORD(wParam) == b) || (LOWORD(wParam) == a)) {
-							float value_r = 0.0f;
-							float value_g = 0.0f;
-							float value_b = 0.0f;
-							float value_a = 0.0f;
+			if (LOWORD(wParam) == IDC_MATERIAL_SHADER) {
+				editor_application->updateEditShaderMaterialEditor(ToString(value_str));
+			}
+			else if (LOWORD(wParam) == IDC_MATERIAL_TEXTURE_UNIT_SLOT) {
+				editor_application->updateEditTextureUnitMaterialEditor(ToString(value_str));
+			}
+			break;
+		}
 
-							value_r = GetDlgItemFloat(hDlg, r);
-							value_g = GetDlgItemFloat(hDlg, g);
-							value_b = GetDlgItemFloat(hDlg, b);
-							value_a = GetDlgItemFloat(hDlg, a);
+		if (HIWORD(wParam) == EN_CHANGE) {
+			if (LOWORD(wParam) == IDE_MATERIAL_TEXTURE_FILENAME) {
+				char value_str[1024] = "";
+				GetDlgItemText(hDlg, IDE_MATERIAL_TEXTURE_FILENAME, value_str, 1024);
+				editor_application->updateEditTextureMaterialEditor(ToString(value_str));
+				ListView_SetItemText(GetDlgItem(hDlg, IDL_MATERIAL_TEXTURE_UNIT_LIST), texture_index, 0, (LPSTR)value_str);
+			}
+			else {
+				for (size_t i = 0; i < 10; i++) {
+					if (i == 0) { n = IDE_MATERIAL_PARAMETER_1_N; r = IDE_MATERIAL_PARAMETER_1_R; g = IDE_MATERIAL_PARAMETER_1_G; b = IDE_MATERIAL_PARAMETER_1_B; a = IDE_MATERIAL_PARAMETER_1_A; }
+					if (i == 1) { n = IDE_MATERIAL_PARAMETER_2_N; r = IDE_MATERIAL_PARAMETER_2_R; g = IDE_MATERIAL_PARAMETER_2_G; b = IDE_MATERIAL_PARAMETER_2_B; a = IDE_MATERIAL_PARAMETER_2_A; }
+					if (i == 2) { n = IDE_MATERIAL_PARAMETER_3_N; r = IDE_MATERIAL_PARAMETER_3_R; g = IDE_MATERIAL_PARAMETER_3_G; b = IDE_MATERIAL_PARAMETER_3_B; a = IDE_MATERIAL_PARAMETER_3_A; }
+					if (i == 3) { n = IDE_MATERIAL_PARAMETER_4_N; r = IDE_MATERIAL_PARAMETER_4_R; g = IDE_MATERIAL_PARAMETER_4_G; b = IDE_MATERIAL_PARAMETER_4_B; a = IDE_MATERIAL_PARAMETER_4_A; }
+					if (i == 4) { n = IDE_MATERIAL_PARAMETER_5_N; r = IDE_MATERIAL_PARAMETER_5_R; g = IDE_MATERIAL_PARAMETER_5_G; b = IDE_MATERIAL_PARAMETER_5_B; a = IDE_MATERIAL_PARAMETER_5_A; }
+					if (i == 5) { n = IDE_MATERIAL_PARAMETER_6_N; r = IDE_MATERIAL_PARAMETER_6_R; g = IDE_MATERIAL_PARAMETER_6_G; b = IDE_MATERIAL_PARAMETER_6_B; a = IDE_MATERIAL_PARAMETER_6_A; }
+					if (i == 6) { n = IDE_MATERIAL_PARAMETER_7_N; r = IDE_MATERIAL_PARAMETER_7_R; g = IDE_MATERIAL_PARAMETER_7_G; b = IDE_MATERIAL_PARAMETER_7_B; a = IDE_MATERIAL_PARAMETER_7_A; }
+					if (i == 7) { n = IDE_MATERIAL_PARAMETER_8_N; r = IDE_MATERIAL_PARAMETER_8_R; g = IDE_MATERIAL_PARAMETER_8_G; b = IDE_MATERIAL_PARAMETER_8_B; a = IDE_MATERIAL_PARAMETER_8_A; }
+					if (i == 8) { n = IDE_MATERIAL_PARAMETER_9_N; r = IDE_MATERIAL_PARAMETER_9_R; g = IDE_MATERIAL_PARAMETER_9_G; b = IDE_MATERIAL_PARAMETER_9_B; a = IDE_MATERIAL_PARAMETER_9_A; }
+					if (i == 9) { n = IDE_MATERIAL_PARAMETER_10_N; r = IDE_MATERIAL_PARAMETER_10_R; g = IDE_MATERIAL_PARAMETER_10_G; b = IDE_MATERIAL_PARAMETER_10_B; a = IDE_MATERIAL_PARAMETER_10_A; }
 
-							editor_application->updateEditParameterMaterialEditor(i, LibGens::Color(value_r, value_g, value_b, value_a));
-							break;
-						}
+					if ((LOWORD(wParam) == r) || (LOWORD(wParam) == g) || (LOWORD(wParam) == b) || (LOWORD(wParam) == a)) {
+						float value_r = 0.0f;
+						float value_g = 0.0f;
+						float value_b = 0.0f;
+						float value_a = 0.0f;
+
+						value_r = GetDlgItemFloat(hDlg, r);
+						value_g = GetDlgItemFloat(hDlg, g);
+						value_b = GetDlgItemFloat(hDlg, b);
+						value_a = GetDlgItemFloat(hDlg, a);
+
+						editor_application->updateEditParameterMaterialEditor(i, LibGens::Color(value_r, value_g, value_b, value_a));
+						break;
 					}
 				}
-				break;
 			}
-
-
-			switch(LOWORD(wParam)) {
-				case IDCANCEL:
-					SendMessage(hDlg, WM_CLOSE, 0, 0);
-					return true;
-
-				case IDB_MATERIAL_LOAD_MODEL:
-					editor_application->loadMaterialEditorModelGUI();
-					return true;
-
-				case IDB_MATERIAL_LOAD_SKELETON:
-					editor_application->loadMaterialEditorSkeletonGUI();
-					return true;
-
-				case IDB_MATERIAL_LOAD_ANIMATION:
-					editor_application->loadMaterialEditorAnimationGUI();
-					return true;
-
-				case IDB_MATERIAL_SAVE_MODEL:
-					editor_application->saveMaterialEditorModelGUI();
-					return true;
-
-				case IDB_MATERIAL_SAVE_MATERIAL:
-					editor_application->saveMaterialEditorMaterial();
-					return true;
-
-				case IDR_MATERIAL_TERRAIN_MODE:
-					editor_application->materialEditorTerrainMode();
-					return true;
-
-				case IDR_MATERIAL_MODEL_MODE:
-					editor_application->materialEditorModelMode();
-					return true;
-				case IDB_MATERIAL_OPEN_TEXTURE_FILENAME:
-					editor_application->pickMaterialEditorTextureGUI();
-					return true;
-
-				case IDB_MATERIAL_NEW_TEXTURE_UNIT:
-					editor_application->addMaterialEditorTextureGUI();
-					return true;
-
-				case IDB_MATERIAL_DELETE_TEXTURE_UNIT:
-					editor_application->removeMaterialEditorTexture();
-					return true;
-
-				case IDB_MATERIAL_DEFAULTS:
-					editor_application->loadMaterialDefaultParams();
-					return true;
-			}
-
 			break;
+		}
 
-		case WM_NOTIFY:
-			/* SPIN CONTROL
-			if ((LOWORD(wParam) == IDS_EDIT_VECTOR_X) || (LOWORD(wParam) == IDS_EDIT_VECTOR_Y) || (LOWORD(wParam) == IDS_EDIT_VECTOR_Z)) {
-				if (((LPNMUPDOWN)lParam)->hdr.code == UDN_DELTAPOS) {
-					int delta = ((LPNMUPDOWN)lParam)->iDelta;
-				}
+
+		switch (LOWORD(wParam)) {
+		case IDCANCEL:
+			SendMessage(hDlg, WM_CLOSE, 0, 0);
+			return true;
+
+		case IDB_MATERIAL_LOAD_MODEL:
+			editor_application->loadMaterialEditorModelGUI();
+			return true;
+
+		case IDB_MATERIAL_LOAD_SKELETON:
+			editor_application->loadMaterialEditorSkeletonGUI();
+			return true;
+
+		case IDB_MATERIAL_LOAD_ANIMATION:
+			editor_application->loadMaterialEditorAnimationGUI();
+			return true;
+
+		case IDB_MATERIAL_SAVE_MODEL:
+			editor_application->saveMaterialEditorModelGUI();
+			return true;
+
+		case IDB_MATERIAL_SAVE_MATERIAL:
+			editor_application->saveMaterialEditorMaterial();
+			return true;
+
+		case IDR_MATERIAL_TERRAIN_MODE:
+			editor_application->materialEditorTerrainMode();
+			return true;
+
+		case IDR_MATERIAL_MODEL_MODE:
+			editor_application->materialEditorModelMode();
+			return true;
+		case IDB_MATERIAL_OPEN_TEXTURE_FILENAME:
+			editor_application->pickMaterialEditorTextureGUI();
+			return true;
+
+		case IDB_MATERIAL_NEW_TEXTURE_UNIT:
+			editor_application->addMaterialEditorTextureGUI();
+			return true;
+
+		case IDB_MATERIAL_DELETE_TEXTURE_UNIT:
+			editor_application->removeMaterialEditorTexture();
+			return true;
+
+		case IDB_MATERIAL_DEFAULTS:
+			editor_application->loadMaterialDefaultParams();
+			return true;
+		}
+
+		break;
+
+	case WM_NOTIFY:
+		/* SPIN CONTROL
+		if ((LOWORD(wParam) == IDS_EDIT_VECTOR_X) || (LOWORD(wParam) == IDS_EDIT_VECTOR_Y) || (LOWORD(wParam) == IDS_EDIT_VECTOR_Z)) {
+			if (((LPNMUPDOWN)lParam)->hdr.code == UDN_DELTAPOS) {
+				int delta = ((LPNMUPDOWN)lParam)->iDelta;
 			}
-			*/
+		}
+		*/
 
-			return false;
+		return false;
 	}
-	
+
 	return false;
 }
 
 
 
 INT_PTR CALLBACK MaterialEditorPreviewCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
-	switch(msg) {
-		case WM_INITDIALOG:
-			return true;
+	switch (msg) {
+	case WM_INITDIALOG:
+		return true;
 
-		case WM_CLOSE:
-			DestroyWindow(hDlg);
-			return true;
+	case WM_CLOSE:
+		DestroyWindow(hDlg);
+		return true;
 
-		case WM_COMMAND:
-			return true;
+	case WM_COMMAND:
+		return true;
 
-		case WM_NOTIFY:
-			return true;
+	case WM_NOTIFY:
+		return true;
 	}
-	
+
 	return false;
 }

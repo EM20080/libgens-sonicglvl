@@ -20,6 +20,11 @@
 #include "EditorApplication.h"
 #include "MessageTypes.h"
 
+// Add new menu command IDs for conversion actions
+#define IMD_CONVERT_MATERIALS_UNLEASHED      40101
+#define IMD_CONVERT_MATERIALS_GENERATIONS    40102
+#define IMD_CONVERT_MATERIALS_LOSTWORLD      40103
+
 int global_cursor_state=0;
 
 void EditorApplication::focus() {
@@ -259,6 +264,15 @@ LRESULT APIENTRY SubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 						"  Tap Right Mouse Button: Toggle Translation/Rotation Gizmo\n"
 						"  Ctrl+E: Toggle World/Local Transform\n"
 					);
+					break;
+				case IMD_CONVERT_MATERIALS_UNLEASHED:
+					editor_application->convertMaterialsToUnleashed();
+					break;
+				case IMD_CONVERT_MATERIALS_GENERATIONS:
+					editor_application->convertMaterialsToGenerations();
+					break;
+				case IMD_CONVERT_MATERIALS_LOSTWORLD:
+					editor_application->convertMaterialsToLostWorld();
 					break;
 			}
 			break;

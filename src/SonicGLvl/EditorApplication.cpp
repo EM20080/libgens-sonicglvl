@@ -1,3 +1,7 @@
+#ifdef _MSC_VER
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
 //=========================================================================
 //	  Copyright (c) 2016 SonicGLvl
 //
@@ -23,6 +27,14 @@
 #include "ObjectSet.h"
 #include "ObjectLibrary.h"
 #include "MessageTypes.h"
+#include <shlobj.h>
+#include <commdlg.h>
+#include <shlwapi.h>
+#include <filesystem>
+using namespace std;
+
+#include "Texture.h"
+#include "Material.h"
 
 Ogre::Rectangle2D* mMiniScreen=NULL;
 
@@ -68,7 +80,7 @@ void EditorApplication::updateSelection() {
 	for (list<EditorNode *>::iterator it=selected_nodes.begin(); it!=selected_nodes.end(); it++) {
 		center += (*it)->getPosition();
 	}
-	center /= selected_nodes.size();
+ center /= selected_nodes.size();
 
 	if ((selected_nodes.size() == 1) && !world_transform) {
 		rotation = (*selected_nodes.begin())->getRotation();
@@ -451,7 +463,7 @@ void EditorApplication::redoHistory() {
 			bool is_list = current_properties_types[current_property_index] == LibGens::OBJECT_ELEMENT_VECTOR_LIST;
 
 			for (int index = 0; index < property_vector_nodes.size(); ++index)
-				updateEditPropertyVectorGUI(index, is_list);
+			 updateEditPropertyVectorGUI(index, is_list);
 			if (is_list)
 			{
 				updateEditPropertyVectorList(temp_property_vector_list);
@@ -581,7 +593,7 @@ void EditorApplication::snapToClosestPath() {
 		++editor_node_index;
 	}
 
-	pushHistory(wrapper);
+pushHistory(wrapper);
 	updateSelection();
 }
 
@@ -744,6 +756,7 @@ void EditorApplication::windowResized(Ogre::RenderWindow* rw) {
 	HWND hHelpText  = GetDlgItem(hLeftDlg, IDT_HELP_DESCRIPTION);
 	// Help Group
 	int help_y_coordinate=left_window_height - 90;
+	temp_rect.left = 2;
 	temp_rect.left = 2;
 	temp_rect.top = 0;
 	temp_rect.right = 181 + temp_rect.left;
@@ -1009,33 +1022,22 @@ bool EditorApplication::keyPressed(const OIS::KeyEvent &arg) {
 		}
 
 		if(arg.key == OIS::KC_2) {
-			editor_application->toggleNodeVisibility(EDITOR_NODE_TERRAIN);
+		 editor_application->toggleNodeVisibility(EDITOR_NODE_TERRAIN);
 		}
 
 		if(arg.key == OIS::KC_3) {
 			editor_application->toggleNodeVisibility(EDITOR_NODE_TERRAIN_AUTODRAW);
 		}
 
-		if(arg.key == OIS::KC_4) {
-			editor_application->toggleNodeVisibility(EDITOR_NODE_HAVOK);
-		}
-
-		if(arg.key == OIS::KC_5) {
-			editor_application->toggleNodeVisibility(EDITOR_NODE_PATH);
-		}
-
-		if(arg.key == OIS::KC_6) {
-			editor_application->toggleNodeVisibility(EDITOR_NODE_GHOST);
-		}
-		if (arg.key == OIS::KC_O)
+		if(arg.key == 0x34) { editor_application->toggleNodeVisibility(EDITOR_NODE_HAVOK); }
+		if(arg.key == 0x35) { editor_application->toggleNodeVisibility(EDITOR_NODE_PATH); }
+		if(arg.key == 0x36) { editor_application->toggleNodeVisibility(EDITOR_NODE_GHOST); }
+		if (arg.key == 0x4F) // 'O'
 		{
 			editor_application->openLevelGUI();
 		}
 	}
-
-    return true;
 }
-
 
 bool EditorApplication::keyReleased(const OIS::KeyEvent &arg) {
 	viewport->keyReleased(arg);
@@ -1345,108 +1347,112 @@ bool EditorApplication::frameRenderingQueued(const Ogre::FrameEvent& evt) {
 
 void EditorApplication::loadGhostRecording() 
 {
-	char filename[MAX_PATH];
-	ZeroMemory(filename, sizeof(filename));
-	OPENFILENAME ofn;
-	memset(&ofn, 0, sizeof(ofn));
-	ofn.lStructSize = sizeof(ofn);
-	ofn.lpstrFilter = "Ghost Recording(.gst.bin)\0*.gst.bin\0";
-	ofn.nFilterIndex = 1;
-	ofn.nMaxFile = 1024;
-	ofn.lpstrTitle = "Open Ghost Recording";
-	ofn.lpstrFile = filename;
-	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_LONGNAMES | OFN_EXPLORER | OFN_ENABLESIZING;
+    char filename[MAX_PATH];
+    ZeroMemory(filename, sizeof(filename));
+    OPENFILENAME ofn;
+    memset(&ofn, 0, sizeof(ofn));
+    ofn.lStructSize = sizeof(ofn);
+    ofn.lpstrFilter = "Ghost Recording(.gst.bin)\0*.gst.bin\0";
+    ofn.nFilterIndex = 1;
+    ofn.nMaxFile = MAX_PATH - 1;
+    ofn.lpstrTitle = "Open Ghost Recording";
+    ofn.lpstrFile = filename;
+    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_LONGNAMES | OFN_EXPLORER | OFN_ENABLESIZING;
 
-	if (!GetOpenFileName(&ofn))
-		return;
+    if (!GetOpenFileName(&ofn))
+        return;
 
-	chdir(exe_path.c_str());
-	LibGens::Ghost* gst = new LibGens::Ghost(std::string(filename));
-	setGhost(gst);
+    filename[MAX_PATH-1] = '\0'; // Ensure zero-termination
+    if (chdir(exe_path.c_str()) != 0) return;
+    LibGens::Ghost* gst = new LibGens::Ghost(std::string(filename));
+    setGhost(gst);
 }
 
 void EditorApplication::saveGhostRecording()
 {
-	if (!ghost_data)
-		return;
+    if (!ghost_data)
+        return;
 
-	char filename[MAX_PATH];
-	ZeroMemory(filename, sizeof(filename));
-	OPENFILENAME ofn;
-	memset(&ofn, 0, sizeof(ofn));
-	ofn.lStructSize = sizeof(ofn);
-	ofn.lpstrFilter = "Ghost Recording(.gst.bin)\0*.gst.bin\0";
-	ofn.nFilterIndex = 1;
-	ofn.nMaxFile = 1024;
-	ofn.lpstrTitle = "Save Ghost Recording";
-	ofn.lpstrFile = filename;
-	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_LONGNAMES | OFN_EXPLORER | OFN_ENABLESIZING;
+    char filename[MAX_PATH];
+    ZeroMemory(filename, sizeof(filename));
+    OPENFILENAME ofn;
+    memset(&ofn, 0, sizeof(ofn));
+    ofn.lStructSize = sizeof(ofn);
+    ofn.lpstrFilter = "Ghost Recording(.gst.bin)\0*.gst.bin\0";
+    ofn.nFilterIndex = 1;
+    ofn.nMaxFile = MAX_PATH - 1;
+    ofn.lpstrTitle = "Save Ghost Recording";
+    ofn.lpstrFile = filename;
+    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_LONGNAMES | OFN_EXPLORER | OFN_ENABLESIZING;
 
-	if (!GetSaveFileName(&ofn))
-		return;
+    if (!GetSaveFileName(&ofn))
+        return;
 
-	chdir(exe_path.c_str());
-	ghost_data->save(std::string(filename));
+    filename[MAX_PATH-1] = '\0'; // Ensure zero-termination
+    if (chdir(exe_path.c_str()) != 0) return;
+    ghost_data->save(std::string(filename));
 }
 
 void EditorApplication::saveGhostRecordingFbx()
 {
-	if (!ghost_data)
-		return;
+    if (!ghost_data)
+        return;
 
-	char filename[MAX_PATH];
-	ZeroMemory(filename, sizeof(filename));
-	OPENFILENAME ofn;
-	memset(&ofn, 0, sizeof(ofn));
-	ofn.lStructSize = sizeof(ofn);
-	ofn.lpstrFilter = "FBX File(.fbx)\0*.fbx\0";
-	ofn.nFilterIndex = 1;
-	ofn.nMaxFile = 1024;
-	ofn.lpstrTitle = "Export Ghost Recording";
-	ofn.lpstrFile = filename;
-	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_LONGNAMES | OFN_EXPLORER | OFN_ENABLESIZING;
+    char filename[MAX_PATH];
+    ZeroMemory(filename, sizeof(filename));
+    OPENFILENAME ofn;
+    memset(&ofn, 0, sizeof(ofn));
+    ofn.lStructSize = sizeof(ofn);
+    ofn.lpstrFilter = "FBX File(.fbx)\0*.fbx\0";
+    ofn.nFilterIndex = 1;
+    ofn.nMaxFile = MAX_PATH - 1;
+    ofn.lpstrTitle = "Export Ghost Recording";
+    ofn.lpstrFile = filename;
+    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_LONGNAMES | OFN_EXPLORER | OFN_ENABLESIZING;
 
-	if (!GetSaveFileName(&ofn))
-		return;
+    if (!GetSaveFileName(&ofn))
+        return;
 
-	chdir(exe_path.c_str());
-	LibGens::FBX* lFbx = ghost_data->buildFbx(fbx_manager, model_library->getModel("chr_Sonic_HD"), material_library);
-	fbx_manager->exportFBX(lFbx, filename);
+    filename[MAX_PATH-1] = '\0'; // Ensure zero-termination
+    if (chdir(exe_path.c_str()) != 0) return;
+    LibGens::FBX* lFbx = ghost_data->buildFbx(fbx_manager, model_library->getModel("chr_Sonic_HD"), material_library);
+    fbx_manager->exportFBX(lFbx, filename);
 
-	delete lFbx;
+    delete lFbx;
 }
 
 void EditorApplication::launchGame()
 {
-	if (GetFileAttributes(configuration->game_path.c_str()) == INVALID_FILE_ATTRIBUTES)
-	{
-		char filename[MAX_PATH];
-		ZeroMemory(filename, sizeof(filename));
-		OPENFILENAME ofn;
-		memset(&ofn, 0, sizeof(ofn));
-		ofn.lStructSize = sizeof(ofn);
-		ofn.lpstrFilter = "Windows Executable(.exe)\0*.exe\0";
-		ofn.nFilterIndex = 1;
-		ofn.nMaxFile = 1024;
-		ofn.lpstrTitle = "Select Sonic Generations";
-		ofn.lpstrFile = filename;
-		ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_LONGNAMES | OFN_EXPLORER | OFN_ENABLESIZING;
+    if (GetFileAttributes(configuration->game_path.c_str()) == INVALID_FILE_ATTRIBUTES)
+    {
+        char filename[MAX_PATH];
+        ZeroMemory(filename, sizeof(filename));
+        OPENFILENAME ofn;
+        memset(&ofn, 0, sizeof(ofn));
+        ofn.lStructSize = sizeof(ofn);
+        ofn.lpstrFilter = "Windows Executable(.exe)\0*.exe\0";
+        ofn.nFilterIndex = 1;
+        ofn.nMaxFile = MAX_PATH - 1;
+        ofn.lpstrTitle = "Select Sonic Generations";
+        ofn.lpstrFile = filename;
+        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_LONGNAMES | OFN_EXPLORER | OFN_ENABLESIZING;
 
-		if (GetOpenFileName(&ofn))
-		{
-			chdir(exe_path.c_str());
-			configuration->game_path = std::string(ofn.lpstrFile);
-		}
-	}
+        if (GetOpenFileName(&ofn))
+        {
+            filename[MAX_PATH-1] = '\0'; // Ensure zero-termination
+            if (chdir(exe_path.c_str()) != 0) return;
+            configuration->game_path = std::string(ofn.lpstrFile);
+        }
+    }
 
-	string directory = configuration->game_path.substr(0, configuration->game_path.find_last_of('\\'));
-	STARTUPINFO si;
-	PROCESS_INFORMATION pi;
-	memset(&si, 0, sizeof(si));
-	memset(&pi, 0, sizeof(pi));
-	si.cb = sizeof(si);
+    string directory = configuration->game_path.substr(0, configuration->game_path.find_last_of('\\'));
+    STARTUPINFO si;
+    PROCESS_INFORMATION pi;
+    memset(&si, 0, sizeof(si));
+    memset(&pi, 0, sizeof(pi));
+    si.cb = sizeof(si);
 
-	CreateProcess(configuration->game_path.c_str(), NULL, NULL, NULL, FALSE, 0, FALSE, directory.c_str(), &si, &pi);
+    CreateProcess(configuration->game_path.c_str(), NULL, NULL, NULL, FALSE, 0, FALSE, directory.c_str(), &si, &pi);
 }
 
 bool EditorApplication::connectGame() {
@@ -1615,4 +1621,206 @@ void EditorApplication::removeAllTrajectoryNodes()
 		delete* it;
 
 	trajectory_preview_nodes.clear();
+}
+
+// Adds a bunch of includes to check for lost world includes so that it can convert to either Unleashed/Generations.
+#include <fstream>
+#include <vector>
+
+static bool StripMirageHeaderIfPresent(const std::string& inputPath, std::string& outTempPath) {
+    std::ifstream in(inputPath, std::ios::binary);
+    if (!in) return false;
+    char header[4] = {0};
+    in.read(header, 4);
+    if (in.gcount() != 4) return false;
+    if (header[0] == 'M' && header[1] == 'R' && header[2] == 'G' && header[3] == 0) {
+        in.seekg(0x20, std::ios::beg);
+        std::vector<char> data((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+        outTempPath = inputPath + ".tmp_unmirage";
+        std::ofstream out(outTempPath, std::ios::binary);
+        out.write(data.data(), data.size());
+        out.close();
+        return true;
+    }
+    return false;
+}
+
+void EditorApplication::convertMaterialsToUnleashed() {
+    std::string folderStr = SelectFolderWithIFileDialog(L"Select folder containing materials to convert (To Unleashed)");
+    if (folderStr.empty()) return;
+    WIN32_FIND_DATA findFileData;
+    HANDLE hFind = FindFirstFile((folderStr + "\\*.material").c_str(), &findFileData);
+    int converted = 0;
+    int failed = 0;
+    std::vector<std::string> convertedFiles;
+    if (hFind != INVALID_HANDLE_VALUE) {
+        do {
+            std::string filePath = folderStr + "\\" + findFileData.cFileName;
+            try {
+                std::string tempPath;
+                bool stripped = StripMirageHeaderIfPresent(filePath, tempPath);
+                // Check if already Unleashed
+                LibGens::Material mat(stripped ? tempPath : filePath);
+                if (mat.isUnleashed() && !stripped) {
+                    // Already Unleashed, skip
+                    if (stripped) std::remove(tempPath.c_str());
+                    continue;
+                }
+                mat.save(folderStr + "\\" + mat.getName() + ".material", LIBGENS_MATERIAL_ROOT_UNLEASHED);
+                if (stripped) std::remove(tempPath.c_str());
+                ++converted;
+                convertedFiles.push_back(findFileData.cFileName);
+            } catch (...) {
+                ++failed;
+            }
+        } while (FindNextFile(hFind, &findFileData));
+        FindClose(hFind);
+    }
+    std::string msg = "Converted materials\nConverted : " + std::to_string(converted) + "    Failed : " + std::to_string(failed);
+    if (!convertedFiles.empty()) {
+        msg += "\n\nFiles converted:";
+        for (const auto& name : convertedFiles) {
+            msg += "\n" + name;
+        }
+    } else {
+        msg += "\n(No files needed conversion)";
+    }
+    SHOW_MSG(msg.c_str());
+}
+
+void EditorApplication::convertMaterialsToGenerations() {
+    std::string folderStr = SelectFolderWithIFileDialog(L"Select folder containing materials to convert (To Generations)");
+    if (folderStr.empty()) return;
+    WIN32_FIND_DATA findFileData;
+    HANDLE hFind = FindFirstFile((folderStr + "\\*.material").c_str(), &findFileData);
+    int converted = 0;
+    int failed = 0;
+    if (hFind != INVALID_HANDLE_VALUE) {
+        do {
+            std::string filePath = folderStr + "\\" + findFileData.cFileName;
+            try {
+                LibGens::Material mat(filePath);
+                bool isV1 = mat.isUnleashed();
+                mat.save(folderStr + "\\" + mat.getName() + ".material", LIBGENS_MATERIAL_ROOT_GENERATIONS);
+                std::string base = folderStr + "\\" + mat.getName();
+                std::vector<LibGens::Texture*> textures = mat.getTextureUnits();
+                for (auto tex : textures) {
+                    if (tex) {
+                        std::string texFile = folderStr + "\\" + tex->getTexset() + ".dds";
+                        if (GetFileAttributesA(texFile.c_str()) != INVALID_FILE_ATTRIBUTES) {
+                            DeleteFileA(texFile.c_str());
+                        }
+                        // Also try deleting .texture for each texset
+                        std::string textureFile = folderStr + "\\" + tex->getTexset() + ".texture";
+                        if (GetFileAttributesA(textureFile.c_str()) != INVALID_FILE_ATTRIBUTES) {
+                            DeleteFileA(textureFile.c_str());
+                        }
+                    }
+                }
+                if (isV1) {
+                    std::string texsetFile = base + ".texset";
+                    std::string textureFile = base + ".texture";
+                    if (GetFileAttributesA(texsetFile.c_str()) != INVALID_FILE_ATTRIBUTES) {
+                        DeleteFileA(texsetFile.c_str());
+                    }
+                    if (GetFileAttributesA(textureFile.c_str()) != INVALID_FILE_ATTRIBUTES) {
+                        DeleteFileA(textureFile.c_str());
+                    }
+                }
+                ++converted;
+            } catch (...) {
+                ++failed;
+            }
+        } while (FindNextFile(hFind, &findFileData));
+        FindClose(hFind);
+    }
+    char msg[128];
+    sprintf(msg, "Converted materials\nConverted : %d    Failed : %d", converted, failed);
+    SHOW_MSG(msg);
+}
+
+void EditorApplication::convertMaterialsToLostWorld() {
+    std::string folderStr = SelectFolderWithIFileDialog(L"Select folder containing materials to convert (To Lost World)");
+    if (folderStr.empty()) return;
+    WIN32_FIND_DATA findFileData;
+    HANDLE hFind = FindFirstFile((folderStr + "\\*.material").c_str(), &findFileData);
+    int converted = 0;
+    int failed = 0;
+    if (hFind != INVALID_HANDLE_VALUE) {
+        do {
+            std::string filePath = folderStr + "\\" + findFileData.cFileName;
+            try {
+                LibGens::Material mat(filePath);
+                bool isV1 = mat.isUnleashed();
+                mat.save(folderStr + "\\" + mat.getName() + ".material", LIBGENS_FILE_HEADER_ROOT_TYPE_LOST_WORLD);
+                std::string base = folderStr + "\\" + mat.getName();
+                std::vector<LibGens::Texture*> textures = mat.getTextureUnits();
+                for (auto tex : textures) {
+                    if (tex) {
+                        std::string texFile = folderStr + "\\" + tex->getTexset() + ".dds";
+                        if (GetFileAttributesA(texFile.c_str()) != INVALID_FILE_ATTRIBUTES) {
+                            DeleteFileA(texFile.c_str());
+                        }
+						// Deletes .texture for each texset
+                        std::string textureFile = folderStr + "\\" + tex->getTexset() + ".texture";
+                        if (GetFileAttributesA(textureFile.c_str()) != INVALID_FILE_ATTRIBUTES) {
+                            DeleteFileA(textureFile.c_str());
+                        }
+                    }
+                }
+                if (isV1) {
+                    std::string texsetFile = base + ".texset";
+                    std::string textureFile = base + ".texture";
+                    if (GetFileAttributesA(texsetFile.c_str()) != INVALID_FILE_ATTRIBUTES) {
+                        DeleteFileA(texsetFile.c_str());
+                    }
+                    if (GetFileAttributesA(textureFile.c_str()) != INVALID_FILE_ATTRIBUTES) {
+                        DeleteFileA(textureFile.c_str());
+                    }
+                }
+                ++converted;
+            } catch (...) {
+                ++failed;
+            }
+        } while (FindNextFile(hFind, &findFileData));
+        FindClose(hFind);
+    }
+    char msg[128];
+    sprintf(msg, "Converted materials\nConverted : %d    Failed : %d", converted, failed);
+    SHOW_MSG(msg);
+}
+
+std::string EditorApplication::SelectFolderWithIFileDialog(const wchar_t* title) {
+    std::string result;
+    IFileDialog* pFileDialog = nullptr;
+    HRESULT hr = CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pFileDialog));
+    if (SUCCEEDED(hr)) {
+        DWORD dwOptions;
+        pFileDialog->GetOptions(&dwOptions);
+        pFileDialog->SetOptions(dwOptions | FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM);
+        if (title) pFileDialog->SetTitle(title);
+        hr = pFileDialog->Show(NULL);
+        if (SUCCEEDED(hr)) {
+            IShellItem* pItem = nullptr;
+            hr = pFileDialog->GetResult(&pItem);
+            if (SUCCEEDED(hr)) {
+                PWSTR pszFilePath = nullptr;
+                hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
+                if (SUCCEEDED(hr)) {
+                    char pathA[MAX_PATH];
+                    WideCharToMultiByte(CP_ACP, 0, pszFilePath, -1, pathA, MAX_PATH, NULL, NULL);
+                    result = pathA;
+                    CoTaskMemFree(pszFilePath);
+                }
+                pItem->Release();
+            }
+        }
+        pFileDialog->Release();
+    }
+    return result;
+}
+
+void EditorApplication::addXmlObjectData(const std::string& setXmlPath, const std::string& cacheFolder) {
+    // Minimal stub implementation; replace with actual logic as needed
+    // For now, just print or log the paths (or leave empty if not needed)
 }

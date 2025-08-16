@@ -49,6 +49,7 @@
 #include "ObjectSet.h"
 #include "PipeClient.h"
 #include "TrajectoryNode.h"
+#include <shobjidl.h> 
 
 #ifndef EDITOR_APPLICATION_H_INCLUDED
 #define EDITOR_APPLICATION_H_INCLUDED
@@ -460,6 +461,11 @@ class EditorApplication : public BaseApplication {
 		void materialEditorModelMode();
 		void saveMaterialEditorModelGUI();
 		void saveMaterialEditorMaterial();
+		void saveAllMaterialEditorMaterials();
+		void convertMaterialsToV1();
+		void convertMaterialsToUnleashed();
+		void convertMaterialsToGenerations();
+		void convertMaterialsToLostWorld();
 		void pickMaterialEditorTextureGUI();
 		void addMaterialEditorTextureGUI();
 
@@ -662,6 +668,12 @@ class EditorApplication : public BaseApplication {
 
 		void updateBottomSelectionPosition(float value_x, float value_y, float value_z);
 		void updateBottomSelectionRotation(float value_x, float value_y, float value_z);
+
+		static std::string SelectFolderWithIFileDialog(const wchar_t* title = L"Select Folder");
+
+		void addLayerToStageXml(const std::string& stageXmlPath, const std::string& layerName, const std::string& fileName);
+		// Adds a new set from XML and updates Stage.stg.xml in the cache
+		void addXmlObjectData(const std::string& setXmlPath, const std::string& cacheFolder);
 };
 
 extern EditorApplication *editor_application;

@@ -24,6 +24,7 @@
 
 #define NEW_SET_OPTION "New..."
 #define DELETE_SET_OPTION "Delete..."
+#define ADD_XML_OBJECT_DATA_OPTION "Add XML Object Data..."
 
 void EditorApplication::updateBottomSelectionGUI() {
 	HWND hSelectionEditPosX = GetDlgItem(hBottomDlg, IDE_BOTTOM_SELECTION_POS_X);
@@ -211,6 +212,27 @@ INT_PTR CALLBACK BottomBarCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lP
 					else if (change_set == DELETE_SET_OPTION) {
 						editor_application->deleteCurrentSet();
 					}
+					else if (change_set == ADD_XML_OBJECT_DATA_OPTION) {
+						// Prompt for XML file
+						OPENFILENAME ofn;
+						char szFile[MAX_PATH] = {0};
+						ZeroMemory(&ofn, sizeof(ofn));
+						ofn.lStructSize = sizeof(ofn);
+						ofn.lpstrFilter = "Object Set XML (*.xml)\0*.xml\0";
+						ofn.nFilterIndex = 1;
+						ofn.nMaxFile = MAX_PATH - 1;
+						ofn.lpstrTitle = "Import Object Set XML";
+						ofn.lpstrFile = szFile;
+						ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_LONGNAMES | OFN_EXPLORER | OFN_ENABLESIZING;
+						if (GetOpenFileName(&ofn)) {
+							szFile[MAX_PATH-1] = '\0';
+							std::string xmlPath = szFile;
+							std::string cacheFolder = editor_application->getCurrentLevel()->getLevel()->getFolder();
+							editor_application->addXmlObjectData(xmlPath, cacheFolder);
+							// Refresh sets GUI
+							editor_application->updateSetsGUI();
+						}
+					}
 					else {
 						editor_application->changeCurrentSet(change_set);
 					}
@@ -275,6 +297,7 @@ void EditorApplication::updateSetsGUI() {
 
 	SendDlgItemMessage(hBottomDlg, IDC_BOTTOM_CURRENT_OBJECT_SET, (UINT)CB_ADDSTRING, (WPARAM)0, (LPARAM) NEW_SET_OPTION);
 	SendDlgItemMessage(hBottomDlg, IDC_BOTTOM_CURRENT_OBJECT_SET, (UINT)CB_ADDSTRING, (WPARAM)0, (LPARAM) DELETE_SET_OPTION);
+	SendDlgItemMessage(hBottomDlg, IDC_BOTTOM_CURRENT_OBJECT_SET, (UINT)CB_ADDSTRING, (WPARAM)0, (LPARAM) ADD_XML_OBJECT_DATA_OPTION);
 }
 
 void EditorApplication::updateSelectedSetGUI() {
