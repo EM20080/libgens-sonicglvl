@@ -7,7 +7,7 @@
 #define IDD_LEFT_DIALOG                         107
 #define IDD_BOTTOM_DIALOG                       111
 #define IDD_TOP_DIALOG                          115
-#define IDD_EDIT_BOOL_DIALOG                    117
+#define IDD_EDIT_BOOL_DIALOG                    117		
 #define IDD_EDIT_FLOAT_DIALOG                   119
 #define IDD_EDIT_STRING_DIALOG                  121
 #define IDD_EDIT_VECTOR_DIALOG                  123
@@ -277,3 +277,4 @@
 #define IMD_CONVERT_MATERIALS_LOSTWORLD      40103
 #define IDL_EDIT_ID_LIST 40100
 #define IDB_MATERIAL_FIX_SHADER 40110
+#define IMD_CONVERT_MATERIALS_UNLEASHED_SHADERS      40105

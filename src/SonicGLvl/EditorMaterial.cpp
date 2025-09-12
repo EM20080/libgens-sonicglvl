@@ -27,6 +27,99 @@ INT_PTR CALLBACK MaterialEditorCallback(HWND hDlg, UINT msg, WPARAM wParam, LPAR
 INT_PTR CALLBACK MaterialEditorPreviewCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam);
 bool hasScene;
 
+void EditorApplication::closePreviewMaterialEditorGUI() {
+	if (!hasScene) return;
+	if (material_editor_preview_window && material_editor_preview_listener) {
+		Ogre::WindowEventUtilities::removeWindowEventListener(material_editor_preview_window, material_editor_preview_listener);
+		root->removeFrameListener(material_editor_preview_listener);
+	}
+	if (material_editor_preview_window) {
+		material_editor_preview_window->destroy();
+		material_editor_preview_window = NULL;
+	}
+	Ogre::RenderTarget* existingRT = root->getRenderTarget("Preview Window");
+	if (existingRT) {
+		root->getRenderSystem()->destroyRenderTarget("Preview Window");
+	}
+	if (material_editor_viewport) {
+		delete material_editor_viewport;
+		material_editor_viewport = NULL;
+	}
+	if (material_editor_preview_scene_manager) {
+		root->destroySceneManager(material_editor_preview_scene_manager);
+		material_editor_preview_scene_manager = NULL;
+	}
+	if (material_editor_preview_bogus_scene_manager) {
+		root->destroySceneManager(material_editor_preview_bogus_scene_manager);
+		material_editor_preview_bogus_scene_manager = NULL;
+	}
+	if (material_editor_preview_listener) {
+		delete material_editor_preview_listener;
+		material_editor_preview_listener = NULL;
+	}
+	material_editor_scene_node = NULL;
+	material_editor_animation_state = NULL;
+	hasScene = false;
+}
+
+void EditorApplication::createPreviewMaterialEditorGUI() {
+	Ogre::RenderTarget* existingRT = root->getRenderTarget("Preview Window");
+	if (existingRT && !hasScene) {
+		root->getRenderSystem()->destroyRenderTarget("Preview Window");
+	}
+	if (hasScene && (!material_editor_preview_window || material_editor_preview_window->isClosed())) {
+		closePreviewMaterialEditorGUI();
+	}
+	if (!hasScene) {
+		material_editor_preview_scene_manager = root->createSceneManager("DefaultSceneManager");
+		material_editor_preview_scene_manager->setAmbientLight(Ogre::ColourValue(0.5, 0.5, 0.5));
+		material_editor_preview_bogus_scene_manager = root->createSceneManager("DefaultSceneManager");
+		Ogre::Light* dir_light = material_editor_preview_scene_manager->createLight("Preview Directional Light");
+		dir_light->setSpecularColour(Ogre::ColourValue::White);
+		dir_light->setDiffuseColour(Ogre::ColourValue(1.0, 1.0, 1.0));
+		dir_light->setType(Ogre::Light::LT_DIRECTIONAL);
+		dir_light->setDirection(Ogre::Vector3(1, 1, 1).normalisedCopy());
+		Ogre::NameValuePairList misc;
+		misc["FSAA"] = Ogre::StringConverter::toString(8);
+		misc["vsync"] = Ogre::StringConverter::toString(true);
+		material_editor_preview_window = root->createRenderWindow("Preview Window", 640, 480, false, &misc);
+		material_editor_preview_window->setDeactivateOnFocusChange(false);
+		material_editor_preview_window->setAutoUpdated(true);
+		material_editor_viewport = new EditorViewport(material_editor_preview_scene_manager, material_editor_preview_bogus_scene_manager, material_editor_preview_window, SONICGLVL_CAMERA_PREVIEW_NAME);
+		material_editor_viewport->setPanningMultiplier(3);
+		material_editor_viewport->setZoomingMultiplier(0.04);
+		material_editor_viewport->setNearClipDistance(0.001f);
+		material_editor_viewport->setFarClipDistance(100.0f);
+		material_editor_preview_listener = new MaterialEditorPreviewListener();
+		material_editor_preview_listener->setEditorViewport(material_editor_viewport);
+		material_editor_preview_listener->setEditorWindow(material_editor_preview_window);
+		OIS::ParamList pl;
+		size_t windowHnd = 0; std::ostringstream windowHndStr; material_editor_preview_window->getCustomAttribute("WINDOW", &windowHnd); windowHndStr << windowHnd; pl.insert(std::make_pair(std::string("WINDOW"), windowHndStr.str())); pl.insert(std::make_pair(std::string("w32_mouse"), std::string("DISCL_FOREGROUND"))); pl.insert(std::make_pair(std::string("w32_mouse"), std::string("DISCL_NONEXCLUSIVE"))); pl.insert(std::make_pair(std::string("w32_keyboard"), std::string("DISCL_FOREGROUND"))); pl.insert(std::make_pair(std::string("w32_keyboard"), std::string("DISCL_NONEXCLUSIVE")));
+		material_editor_input_manager = OIS::InputManager::createInputSystem(pl);
+		material_editor_keyboard = static_cast<OIS::Keyboard*>(material_editor_input_manager->createInputObject(OIS::OISKeyboard, true));
+		material_editor_mouse = static_cast<OIS::Mouse*>(material_editor_input_manager->createInputObject(OIS::OISMouse, true));
+		material_editor_mouse->setEventCallback(material_editor_preview_listener);
+		material_editor_keyboard->setEventCallback(material_editor_preview_listener);
+		Ogre::WindowEventUtilities::addWindowEventListener(material_editor_preview_window, material_editor_preview_listener);
+		root->addFrameListener(material_editor_preview_listener);
+		material_editor_preview_listener->setMouse(material_editor_mouse);
+		material_editor_preview_listener->setKeyboard(material_editor_keyboard);
+		unsigned int width, height, depth; int left, top; material_editor_preview_window->getMetrics(width, height, depth, left, top); const OIS::MouseState& ms = material_editor_mouse->getMouseState(); ms.width = width; ms.height = height; 
+	}
+	rebuildMaterialPreviewNodes();
+	material_editor_model->buildAABB();
+	LibGens::AABB model_aabb = material_editor_model->getAABB();
+	LibGens::Vector3 aabb_center = model_aabb.center();
+	Ogre::Vector3 camera_center = Ogre::Vector3(aabb_center.x, aabb_center.y, aabb_center.z);
+	float size_max = model_aabb.sizeMax();
+	Ogre::Camera* camera = material_editor_viewport->getCamera();
+	camera->setPosition(camera_center);
+	camera->setDirection(Ogre::Vector3(0, 0, -1).normalisedCopy());
+	camera->moveRelative(Ogre::Vector3::UNIT_Z * size_max * 1.5f);
+	hasScene = true;
+}
+
+
 void EditorApplication::openMaterialEditorGUI() {
 	if (!hMaterialEditorDlg) {
 		hMaterialEditorDlg = CreateDialog(NULL, MAKEINTRESOURCE(IDD_MATERIAL_EDITOR), NULL, MaterialEditorCallback);
@@ -48,17 +141,12 @@ void EditorApplication::openMaterialEditorGUI() {
 		clearSelectionMaterialEditorGUI();
 		enableMaterialEditorListGUI();
 
-		// Create Texture Units List
 		HWND hMaterialTextureUnitsList = GetDlgItem(hMaterialEditorDlg, IDL_MATERIAL_TEXTURE_UNIT_LIST);
 		ListView_SetExtendedListViewStyleEx(hMaterialTextureUnitsList, LVS_EX_FULLROWSELECT, LVS_EX_FULLROWSELECT);
 
-		// Only enable terrain mode if theres a level
 		EnableWindow(GetDlgItem(hMaterialEditorDlg, IDR_MATERIAL_TERRAIN_MODE), current_level != NULL);
-
-		// Disable non-functional modes for now
 		EnableWindow(GetDlgItem(hMaterialEditorDlg, IDR_MATERIAL_MATERIAL_MODE), false);
 	}
-
 	SetFocus(hMaterialEditorDlg);
 }
 
@@ -383,6 +471,7 @@ void EditorApplication::materialEditorModelMode() {
 
 void EditorApplication::clearMaterialEditorGUI() {
 	cleanMaterialEditorModelGUI();
+	closePreviewMaterialEditorGUI();
 	hMaterialEditorDlg = NULL;
 }
 
@@ -407,104 +496,6 @@ void EditorApplication::clearTextureInfo() {
 	SetDlgItemText(hMaterialEditorDlg, IDE_MATERIAL_TEXTURE_FILENAME, "");
 	SetDlgItemText(hMaterialEditorDlg, IDE_MATERIAL_TEXTURE_UNIT, "");
 	SetDlgItemText(hMaterialEditorDlg, IDC_MATERIAL_TEXTURE_UNIT_SLOT, "");
-}
-
-void EditorApplication::createPreviewMaterialEditorGUI() {
-	/*
-	hMaterialEditorPreviewDlg = CreateDialog(NULL, MAKEINTRESOURCE(IDD_MATERIAL_EDITOR_PREVIEW), NULL, NULL);
-
-	RECT window_rect;
-	GetWindowRect(hMaterialEditorPreviewDlg, &window_rect);
-	MoveWindow(hMaterialEditorPreviewDlg, window_rect.left, window_rect.top, 640, 480, true);
-	*/
-
-	// Create Scene for Preview
-	if (!hasScene) {
-		material_editor_preview_scene_manager = root->createSceneManager("DefaultSceneManager");
-		material_editor_preview_scene_manager->setAmbientLight(Ogre::ColourValue(0.5, 0.5, 0.5));
-
-		// FIXME: Implement properly
-		Ogre::SceneManager* bogus_manager = root->createSceneManager("DefaultSceneManager");
-
-		Ogre::Light* dir_light = material_editor_preview_scene_manager->createLight("Preview Directional Light");
-		dir_light->setSpecularColour(Ogre::ColourValue::White);
-		dir_light->setDiffuseColour(Ogre::ColourValue(1.0, 1.0, 1.0));
-		dir_light->setType(Ogre::Light::LT_DIRECTIONAL);
-		dir_light->setDirection(Ogre::Vector3(1, 1, 1).normalisedCopy());
-
-		// Create Render Window
-		Ogre::NameValuePairList misc;
-		//misc["externalWindowHandle"] = Ogre::StringConverter::toString((int)hMaterialEditorPreviewDlg);
-		misc["FSAA"] = Ogre::StringConverter::toString((int)8);
-		misc["vsync"] = Ogre::StringConverter::toString((bool)true);
-		material_editor_preview_window = root->createRenderWindow("Preview Window", 640, 480, false, &misc);
-		material_editor_preview_window->setDeactivateOnFocusChange(false);
-
-		material_editor_preview_window->setAutoUpdated(true);
-
-
-		// Create Viewport for Preview
-		material_editor_viewport = new EditorViewport(material_editor_preview_scene_manager, bogus_manager, material_editor_preview_window, SONICGLVL_CAMERA_PREVIEW_NAME);
-		material_editor_viewport->setPanningMultiplier(3);
-		material_editor_viewport->setZoomingMultiplier(0.04);
-		material_editor_viewport->setNearClipDistance(0.001f);
-		material_editor_viewport->setFarClipDistance(100.0f);
-
-		// Create Listener for Window
-		material_editor_preview_listener = new MaterialEditorPreviewListener();
-		material_editor_preview_listener->setEditorViewport(material_editor_viewport);
-		material_editor_preview_listener->setEditorWindow(material_editor_preview_window);
-
-		// Create Input Manager for new Window and set the listener
-		OIS::ParamList pl;
-		size_t windowHnd = 0;
-		std::ostringstream windowHndStr;
-		material_editor_preview_window->getCustomAttribute("WINDOW", &windowHnd);
-		windowHndStr << windowHnd;
-		pl.insert(std::make_pair(std::string("WINDOW"), windowHndStr.str()));
-		pl.insert(std::make_pair(std::string("w32_mouse"), std::string("DISCL_FOREGROUND")));
-		pl.insert(std::make_pair(std::string("w32_mouse"), std::string("DISCL_NONEXCLUSIVE")));
-		pl.insert(std::make_pair(std::string("w32_keyboard"), std::string("DISCL_FOREGROUND")));
-		pl.insert(std::make_pair(std::string("w32_keyboard"), std::string("DISCL_NONEXCLUSIVE")));
-		material_editor_input_manager = OIS::InputManager::createInputSystem(pl);
-		material_editor_keyboard = static_cast<OIS::Keyboard*>(material_editor_input_manager->createInputObject(OIS::OISKeyboard, true));
-		material_editor_mouse = static_cast<OIS::Mouse*>(material_editor_input_manager->createInputObject(OIS::OISMouse, true));
-
-		material_editor_mouse->setEventCallback(material_editor_preview_listener);
-		material_editor_keyboard->setEventCallback(material_editor_preview_listener);
-		Ogre::WindowEventUtilities::addWindowEventListener(material_editor_preview_window, material_editor_preview_listener);
-		root->addFrameListener(material_editor_preview_listener);
-
-		material_editor_preview_listener->setMouse(material_editor_mouse);
-		material_editor_preview_listener->setKeyboard(material_editor_keyboard);
-
-		//mouse->setEventCallback(material_editor_preview_listener);
-		//keyboard->setEventCallback(material_editor_preview_listener);
-
-
-		unsigned int width, height, depth;
-		int left, top;
-		material_editor_preview_window->getMetrics(width, height, depth, left, top);
-		const OIS::MouseState& ms = material_editor_mouse->getMouseState();
-		ms.width = width;
-		ms.height = height;
-	}
-
-	rebuildMaterialPreviewNodes();
-
-	// Certain models have invalid AABB values so rebuild it.
-	material_editor_model->buildAABB();
-
-	LibGens::AABB model_aabb = material_editor_model->getAABB();
-	LibGens::Vector3 aabb_center = model_aabb.center();
-	Ogre::Vector3 camera_center = Ogre::Vector3(aabb_center.x, aabb_center.y, aabb_center.z);
-	float size_max = model_aabb.sizeMax();
-	Ogre::Camera* camera = material_editor_viewport->getCamera();
-
-	camera->setPosition(camera_center);
-	camera->setDirection(Ogre::Vector3(0, 0, -1).normalisedCopy());
-	camera->moveRelative(Ogre::Vector3::UNIT_Z * size_max * 1.5);
-	hasScene = true;
 }
 
 
@@ -659,6 +650,22 @@ void EditorApplication::saveMaterialEditorMaterial() {
 	}
 
 	material_editor_material->save(material_editor_library_folder + "\\" + material_editor_material->getName() + ".material", save_unleashed ? LIBGENS_MATERIAL_ROOT_UNLEASHED : LIBGENS_MATERIAL_ROOT_GENERATIONS);
+}
+
+// Self Explanatory, its the Save All Button. 
+void EditorApplication::saveAllMaterialEditorMaterials() {
+	if (material_editor_materials.empty()) return;
+	bool save_unleashed = false;
+	if (material_editor_mode == SONICGLVL_MATERIAL_EDITOR_MODE_TERRAIN && current_level != NULL) {
+		save_unleashed = (current_level->getGameMode() == LIBGENS_LEVEL_GAME_UNLEASHED);
+	} else {
+		save_unleashed = material_editor_unleashed;
+	}
+	for (LibGens::Material* mat : material_editor_materials) {
+		if (mat) {
+			mat->save(material_editor_library_folder + "\\" + mat->getName() + ".material", save_unleashed ? LIBGENS_MATERIAL_ROOT_UNLEASHED : LIBGENS_MATERIAL_ROOT_GENERATIONS);
+		}
+	}
 }
 
 void EditorApplication::loadMaterialEditorModelGUI() {
@@ -1099,6 +1106,10 @@ INT_PTR CALLBACK MaterialEditorCallback(HWND hDlg, UINT msg, WPARAM wParam, LPAR
 
 		case IDB_MATERIAL_SAVE_MATERIAL:
 			editor_application->saveMaterialEditorMaterial();
+			return true;
+
+		case IDB_MATERIAL_SAVE_ALL:
+			editor_application->saveAllMaterialEditorMaterials();
 			return true;
 
 		case IDR_MATERIAL_TERRAIN_MODE:

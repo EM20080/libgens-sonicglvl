@@ -290,6 +290,7 @@ class EditorApplication : public BaseApplication {
 		Ogre::Viewport *material_editor_preview_viewport;
 		Ogre::Camera *material_editor_preview_camera;
 		Ogre::SceneManager *material_editor_preview_scene_manager;
+		Ogre::SceneManager *material_editor_preview_bogus_scene_manager;
 		LibGens::MaterialLibrary *material_editor_material_library;
 		LibGens::Material *material_editor_material;
 		LibGens::Texture *material_editor_texture;
@@ -466,6 +467,7 @@ class EditorApplication : public BaseApplication {
 		void convertMaterialsToUnleashed();
 		void convertMaterialsToGenerations();
 		void convertMaterialsToLostWorld();
+		void convertMaterialsToUnleashedShaders();
 		void pickMaterialEditorTextureGUI();
 		void addMaterialEditorTextureGUI();
 
@@ -474,6 +476,7 @@ class EditorApplication : public BaseApplication {
 		void clearTextureInfo();
 		void rebuildListMaterialEditorGUI();
 		void createPreviewMaterialEditorGUI();
+		void closePreviewMaterialEditorGUI();
 		void updateMaterialEditorIndex(int selection_index);
 		void updateMaterialEditorTextureIndex(int selection_index);
 		void updateMaterialEditorInfo();
@@ -671,7 +674,7 @@ class EditorApplication : public BaseApplication {
 
 		static std::string SelectFolderWithIFileDialog(const wchar_t* title = L"Select Folder");
 
-		void addLayerToStageXml(const std::string& stageXmlPath, const std::string& layerName, const std::string& fileName);
+		
 		// Adds a new set from XML and updates Stage.stg.xml in the cache
 		void addXmlObjectData(const std::string& setXmlPath, const std::string& cacheFolder);
 };

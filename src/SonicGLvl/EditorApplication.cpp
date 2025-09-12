@@ -1,7 +1,3 @@
-#ifdef _MSC_VER
-#define _CRT_SECURE_NO_WARNINGS
-#endif
-
 //=========================================================================
 //	  Copyright (c) 2016 SonicGLvl
 //
@@ -35,8 +31,9 @@ using namespace std;
 
 #include "Texture.h"
 #include "Material.h"
+#include "Level.h"
 
-Ogre::Rectangle2D* mMiniScreen=NULL;
+Ogre::Rectangle2D* mMiniScreen = NULL;
 
 INT_PTR CALLBACK LeftBarCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam);
 INT_PTR CALLBACK BottomBarCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -74,13 +71,13 @@ void EditorApplication::selectNode(EditorNode* node)
 }
 
 void EditorApplication::updateSelection() {
-	Ogre::Vector3 center=Ogre::Vector3::ZERO;
-	Ogre::Quaternion rotation=Ogre::Quaternion::IDENTITY;
+	Ogre::Vector3 center = Ogre::Vector3::ZERO;
+	Ogre::Quaternion rotation = Ogre::Quaternion::IDENTITY;
 
-	for (list<EditorNode *>::iterator it=selected_nodes.begin(); it!=selected_nodes.end(); it++) {
+	for (list<EditorNode*>::iterator it = selected_nodes.begin(); it != selected_nodes.end(); it++) {
 		center += (*it)->getPosition();
 	}
- center /= selected_nodes.size();
+	center /= selected_nodes.size();
 
 	if ((selected_nodes.size() == 1) && !world_transform) {
 		rotation = (*selected_nodes.begin())->getRotation();
@@ -106,25 +103,25 @@ void EditorApplication::deleteSelection() {
 	bool msp_deleted = false;
 
 	if (editor_mode == EDITOR_NODE_QUERY_OBJECT) {
-		HistoryActionWrapper *wrapper = new HistoryActionWrapper();
+		HistoryActionWrapper* wrapper = new HistoryActionWrapper();
 
-		for (list<EditorNode *>::iterator it=selected_nodes.begin(); it!=selected_nodes.end(); it++) {
+		for (list<EditorNode*>::iterator it = selected_nodes.begin(); it != selected_nodes.end(); it++) {
 			// Cast to appropiate types depending on the type of editor node
 			if ((*it)->getType() == EDITOR_NODE_OBJECT) {
-				ObjectNode *object_node=static_cast<ObjectNode *>(*it);
+				ObjectNode* object_node = static_cast<ObjectNode*>(*it);
 
-				LibGens::Object *object=object_node->getObject();
+				LibGens::Object* object = object_node->getObject();
 				if (object) {
-					LibGens::ObjectSet *object_set=object->getParentSet();
+					LibGens::ObjectSet* object_set = object->getParentSet();
 					if (object_set) {
 						object_set->eraseObject(object);
 					}
 
 					object_node_manager->hideObjectNode(object, true);
-					HistoryActionDeleteObjectNode *action = new HistoryActionDeleteObjectNode(object, object_node_manager);
+					HistoryActionDeleteObjectNode* action = new HistoryActionDeleteObjectNode(object, object_node_manager);
 					wrapper->push(action);
 
-					HistoryActionSelectNode *action_select = new HistoryActionSelectNode((*it), true, false, &selected_nodes);
+					HistoryActionSelectNode* action_select = new HistoryActionSelectNode((*it), true, false, &selected_nodes);
 					(*it)->setSelect(false);
 					wrapper->push(action_select);
 				}
@@ -149,13 +146,13 @@ void EditorApplication::clearSelection() {
 	if (!selected_nodes.size()) return;
 
 	bool stuff_deselected = false;
-	HistoryActionWrapper *wrapper = new HistoryActionWrapper();
+	HistoryActionWrapper* wrapper = new HistoryActionWrapper();
 
-	for (list<EditorNode *>::iterator it=selected_nodes.begin(); it!=selected_nodes.end(); it++) {
+	for (list<EditorNode*>::iterator it = selected_nodes.begin(); it != selected_nodes.end(); it++) {
 		if ((*it)->isSelected()) {
 			stuff_deselected = true;
 
-			HistoryActionSelectNode *action_select = new HistoryActionSelectNode((*it), true, false, &selected_nodes);
+			HistoryActionSelectNode* action_select = new HistoryActionSelectNode((*it), true, false, &selected_nodes);
 			(*it)->setSelect(false);
 			wrapper->push(action_select);
 		}
@@ -175,10 +172,10 @@ void EditorApplication::clearSelection() {
 
 void EditorApplication::showSelectionNames() {
 	string message = "";
-	for (list<EditorNode *>::iterator it=selected_nodes.begin(); it!=selected_nodes.end(); it++) {
+	for (list<EditorNode*>::iterator it = selected_nodes.begin(); it != selected_nodes.end(); it++) {
 		if ((*it)->isSelected()) {
 			if ((*it)->getType() == EDITOR_NODE_TERRAIN) {
-				TerrainNode *terrain_node = (TerrainNode *) (*it);
+				TerrainNode* terrain_node = (TerrainNode*)(*it);
 				message += terrain_node->getTerrainInstance()->getName() + "\n";
 			}
 		}
@@ -189,14 +186,14 @@ void EditorApplication::showSelectionNames() {
 
 void EditorApplication::selectAll() {
 	bool stuff_selected = false;
-	HistoryActionWrapper *wrapper = new HistoryActionWrapper();
+	HistoryActionWrapper* wrapper = new HistoryActionWrapper();
 
 	if (editor_mode == EDITOR_NODE_QUERY_OBJECT) {
-		list<ObjectNode *> object_nodes = object_node_manager->getObjectNodes();
-		for (list<ObjectNode *>::iterator it=object_nodes.begin(); it!=object_nodes.end(); it++) {
+		list<ObjectNode*> object_nodes = object_node_manager->getObjectNodes();
+		for (list<ObjectNode*>::iterator it = object_nodes.begin(); it != object_nodes.end(); it++) {
 			if (!(*it)->isSelected() && !(*it)->isForceHidden()) {
 				stuff_selected = true;
-				HistoryActionSelectNode *action_select = new HistoryActionSelectNode((*it), false, true, &selected_nodes);
+				HistoryActionSelectNode* action_select = new HistoryActionSelectNode((*it), false, true, &selected_nodes);
 				(*it)->setSelect(true);
 				wrapper->push(action_select);
 				selected_nodes.push_back(*it);
@@ -231,39 +228,39 @@ list<EditorNode*> EditorApplication::getSelectedNodes()
 void EditorApplication::cloneSelection() {
 	if (!selected_nodes.size()) return;
 
-	list<EditorNode *> nodes_to_clone = selected_nodes;
+	list<EditorNode*> nodes_to_clone = selected_nodes;
 	clearSelection();
-	
-	HistoryActionWrapper *wrapper = new HistoryActionWrapper();
-	for (list<EditorNode *>::iterator it=nodes_to_clone.begin(); it!=nodes_to_clone.end(); it++) {
+
+	HistoryActionWrapper* wrapper = new HistoryActionWrapper();
+	for (list<EditorNode*>::iterator it = nodes_to_clone.begin(); it != nodes_to_clone.end(); it++) {
 		// Cast to appropiate types depending on the type of editor node
 		if ((*it)->getType() == EDITOR_NODE_OBJECT) {
-			ObjectNode *object_node=static_cast<ObjectNode *>(*it);
+			ObjectNode* object_node = static_cast<ObjectNode*>(*it);
 
-			LibGens::Object *object=object_node->getObject();
+			LibGens::Object* object = object_node->getObject();
 			if (object) {
-				LibGens::Object *new_object = new LibGens::Object(object);
+				LibGens::Object* new_object = new LibGens::Object(object);
 
 				if (current_level) {
 					if (current_level->getLevel()) {
 						new_object->setID(current_level->getLevel()->newObjectID());
 					}
 				}
-			
-				LibGens::ObjectSet *parent_set = object->getParentSet();
+
+				LibGens::ObjectSet* parent_set = object->getParentSet();
 				if (parent_set) {
 					parent_set->addObject(new_object);
 				}
 
 				// Create
-				ObjectNode *new_object_node = object_node_manager->createObjectNode(new_object);
+				ObjectNode* new_object_node = object_node_manager->createObjectNode(new_object);
 
 				// Push to History
-				HistoryActionCreateObjectNode *action = new HistoryActionCreateObjectNode(new_object, object_node_manager);
+				HistoryActionCreateObjectNode* action = new HistoryActionCreateObjectNode(new_object, object_node_manager);
 				wrapper->push(action);
 
 				// Add to current selection
-				HistoryActionSelectNode *action_select = new HistoryActionSelectNode(new_object_node, false, true, &selected_nodes);
+				HistoryActionSelectNode* action_select = new HistoryActionSelectNode(new_object_node, false, true, &selected_nodes);
 				new_object_node->setSelect(true);
 				selected_nodes.push_back(new_object_node);
 				wrapper->push(action_select);
@@ -315,7 +312,7 @@ void EditorApplication::temporaryCloneSelection() {
 }
 
 void EditorApplication::translateSelection(Ogre::Vector3 v) {
-	for (list<EditorNode *>::iterator it=selected_nodes.begin(); it!=selected_nodes.end(); it++) {
+	for (list<EditorNode*>::iterator it = selected_nodes.begin(); it != selected_nodes.end(); it++) {
 		(*it)->translate(v);
 	}
 }
@@ -332,7 +329,7 @@ void EditorApplication::rotateSelection(Ogre::Quaternion q) {
 		Ogre::Matrix4 matrix;
 		matrix.makeTransform(axis->getPosition(), Ogre::Vector3::UNIT_SCALE, q);
 
-		for (list<EditorNode *>::iterator it=selected_nodes.begin(); it!=selected_nodes.end(); it++) {
+		for (list<EditorNode*>::iterator it = selected_nodes.begin(); it != selected_nodes.end(); it++) {
 			Ogre::Vector3 new_pos = matrix * ((*it)->getPosition() - axis->getPosition());
 			(*it)->setPosition(new_pos);
 			//(*it)->rotate(q);
@@ -343,14 +340,14 @@ void EditorApplication::rotateSelection(Ogre::Quaternion q) {
 
 void EditorApplication::setSelectionRotation(Ogre::Quaternion q) {
 	if (selected_nodes.size() == 1) {
-		EditorNode *node = *selected_nodes.begin();
+		EditorNode* node = *selected_nodes.begin();
 		node->setRotation(q);
 	}
 }
 
 
 void EditorApplication::rememberSelection(bool mode) {
-	for (list<EditorNode *>::iterator it=selected_nodes.begin(); it!=selected_nodes.end(); it++) {
+	for (list<EditorNode*>::iterator it = selected_nodes.begin(); it != selected_nodes.end(); it++) {
 		if (!mode) (*it)->rememberPosition();
 		else {
 			if (selected_nodes.size() > 1) (*it)->rememberPosition();
@@ -360,12 +357,12 @@ void EditorApplication::rememberSelection(bool mode) {
 }
 
 void EditorApplication::makeHistorySelection(bool mode) {
-	HistoryActionWrapper *wrapper = new HistoryActionWrapper();
+	HistoryActionWrapper* wrapper = new HistoryActionWrapper();
 	int index = 0;
 	bool is_list = current_properties_types[current_property_index] == LibGens::OBJECT_ELEMENT_VECTOR_LIST;
-	for (list<EditorNode *>::iterator it=selected_nodes.begin(); it!=selected_nodes.end(); it++) {
+	for (list<EditorNode*>::iterator it = selected_nodes.begin(); it != selected_nodes.end(); it++) {
 		if (!mode) {
-			HistoryActionMoveNode *action = new HistoryActionMoveNode((*it), (*it)->getLastPosition(), (*it)->getPosition());
+			HistoryActionMoveNode* action = new HistoryActionMoveNode((*it), (*it)->getLastPosition(), (*it)->getPosition());
 			wrapper->push(action);
 			if (editor_mode == EDITOR_NODE_QUERY_VECTOR) {
 				VectorNode* vector_node = static_cast<VectorNode*>(*it);
@@ -386,16 +383,16 @@ void EditorApplication::makeHistorySelection(bool mode) {
 			// Push only a rotation history if it's only one node. 
 			// If it's more, push a Rotation/Move wrapper
 			if (selected_nodes.size() == 1) {
-				HistoryActionRotateNode *action = new HistoryActionRotateNode((*it), (*it)->getLastRotation(), (*it)->getRotation());
+				HistoryActionRotateNode* action = new HistoryActionRotateNode((*it), (*it)->getLastRotation(), (*it)->getRotation());
 				wrapper->push(action);
 			}
 			else {
-				HistoryActionWrapper *sub_wrapper = new HistoryActionWrapper();
+				HistoryActionWrapper* sub_wrapper = new HistoryActionWrapper();
 
-				HistoryActionMoveNode *action_mov   = new HistoryActionMoveNode((*it), (*it)->getLastPosition(), (*it)->getPosition());
+				HistoryActionMoveNode* action_mov = new HistoryActionMoveNode((*it), (*it)->getLastPosition(), (*it)->getPosition());
 				sub_wrapper->push(action_mov);
 
-				HistoryActionRotateNode *action_rot = new HistoryActionRotateNode((*it), (*it)->getLastRotation(), (*it)->getRotation());
+				HistoryActionRotateNode* action_rot = new HistoryActionRotateNode((*it), (*it)->getLastRotation(), (*it)->getRotation());
 				sub_wrapper->push(action_rot);
 
 				wrapper->push(sub_wrapper);
@@ -463,7 +460,7 @@ void EditorApplication::redoHistory() {
 			bool is_list = current_properties_types[current_property_index] == LibGens::OBJECT_ELEMENT_VECTOR_LIST;
 
 			for (int index = 0; index < property_vector_nodes.size(); ++index)
-			 updateEditPropertyVectorGUI(index, is_list);
+				updateEditPropertyVectorGUI(index, is_list);
 			if (is_list)
 			{
 				updateEditPropertyVectorList(temp_property_vector_list);
@@ -481,7 +478,7 @@ void EditorApplication::redoHistory() {
 }
 
 
-void EditorApplication::pushHistory(HistoryAction *action) {
+void EditorApplication::pushHistory(HistoryAction* action) {
 	if (editor_mode == EDITOR_NODE_QUERY_VECTOR)
 	{
 		property_vector_history->push(action);
@@ -495,8 +492,8 @@ void EditorApplication::toggleWorldTransform() {
 	world_transform = !world_transform;
 
 	// Update WinAPI Menu Check
-	const int viewMenuPos=2;
-	HMENU hViewSubMenu=GetSubMenu(hMenu, viewMenuPos);
+	const int viewMenuPos = 2;
+	HMENU hViewSubMenu = GetSubMenu(hMenu, viewMenuPos);
 
 	if (hViewSubMenu) {
 		CheckMenuItem(hViewSubMenu, IMD_WORLD_TRANSFORM, (world_transform ? MF_CHECKED : MF_UNCHECKED));
@@ -513,8 +510,8 @@ void EditorApplication::togglePlacementSnap() {
 	}
 
 	// Update WinAPI Menu Check
-	const int viewMenuPos=2;
-	HMENU hViewSubMenu=GetSubMenu(hMenu, viewMenuPos);
+	const int viewMenuPos = 2;
+	HMENU hViewSubMenu = GetSubMenu(hMenu, viewMenuPos);
 
 	if (hViewSubMenu) {
 		CheckMenuItem(hViewSubMenu, IMD_PLACEMENT_SNAP, ((placement_grid_snap > 0.0f) ? MF_CHECKED : MF_UNCHECKED));
@@ -551,13 +548,13 @@ void EditorApplication::snapToClosestPath() {
 	vector<float> closest_distances(selected_nodes.size(), FLT_MAX);
 	vector<LibGens::Vector3> closest_positions(selected_nodes.size());
 
-	for (LibGens::Path *path : current_level->getLevel()->getPaths()) {
+	for (LibGens::Path* path : current_level->getLevel()->getPaths()) {
 		LibGens::PathNodeList path_node_list = path->getNodes();
 
 		for (auto& pair : path_node_list) {
 			size_t editor_node_index = 0;
 
-			for (EditorNode *editor_node : selected_nodes) {
+			for (EditorNode* editor_node : selected_nodes) {
 				if ((editor_node->getType() == EDITOR_NODE_OBJECT) || (editor_node->getType() == EDITOR_NODE_OBJECT_MSP)) {
 					Ogre::Vector3 position = editor_node->getPosition();
 					float closest_distance = FLT_MAX;
@@ -574,10 +571,10 @@ void EditorApplication::snapToClosestPath() {
 		}
 	}
 
-	HistoryActionWrapper *wrapper = new HistoryActionWrapper();
+	HistoryActionWrapper* wrapper = new HistoryActionWrapper();
 	size_t editor_node_index = 0;
 
-	for (EditorNode *editor_node : selected_nodes) {
+	for (EditorNode* editor_node : selected_nodes) {
 		if (closest_distances[editor_node_index] != FLT_MAX) {
 			LibGens::Vector3 closest_position = closest_positions[editor_node_index];
 
@@ -586,39 +583,39 @@ void EditorApplication::snapToClosestPath() {
 
 			editor_node->setPosition(new_position);
 
-			HistoryActionMoveNode *action_move = new HistoryActionMoveNode(editor_node, previous_position, new_position);
+			HistoryActionMoveNode* action_move = new HistoryActionMoveNode(editor_node, previous_position, new_position);
 			wrapper->push(action_move);
 		}
 
 		++editor_node_index;
 	}
 
-pushHistory(wrapper);
+	pushHistory(wrapper);
 	updateSelection();
 }
 
 void EditorApplication::createScene(void) {
 	// Initialize LibGens Managers
 	havok_enviroment = new LibGens::HavokEnviroment(100 * 1024 * 1024);
-	fbx_manager      = new LibGens::FBXManager();
+	fbx_manager = new LibGens::FBXManager();
 
 	// Initialize Editor Managers
-	havok_property_database    = new LibGens::HavokPropertyDatabase(SONICGLVL_HAVOK_PROPERTY_DATABASE_PATH);
-	history                    = new History();
-	property_vector_history    = new History();
-	look_at_vector_history     = new History();
-	level_database             = new EditorLevelDatabase(SONICGLVL_LEVEL_DATABASE_PATH);
-	material_library           = new LibGens::MaterialLibrary(SONICGLVL_RESOURCES_PATH);
-	model_library              = new LibGens::ModelLibrary(SONICGLVL_RESOURCES_PATH);
+	havok_property_database = new LibGens::HavokPropertyDatabase(SONICGLVL_HAVOK_PROPERTY_DATABASE_PATH);
+	history = new History();
+	property_vector_history = new History();
+	look_at_vector_history = new History();
+	level_database = new EditorLevelDatabase(SONICGLVL_LEVEL_DATABASE_PATH);
+	material_library = new LibGens::MaterialLibrary(SONICGLVL_RESOURCES_PATH);
+	model_library = new LibGens::ModelLibrary(SONICGLVL_RESOURCES_PATH);
 	generations_shader_library = new LibGens::ShaderLibrary(SONICGLVL_SHADERS_PATH);
-	unleashed_shader_library   = new LibGens::ShaderLibrary(SONICGLVL_SHADERS_PATH);
-	uv_animation_library       = new LibGens::UVAnimationLibrary(SONICGLVL_RESOURCES_PATH);
-	generations_library        = new LibGens::ObjectLibrary(SONICGLVL_LIBRARY_PATH);
-	unleashed_library          = new LibGens::ObjectLibrary(SONICGLVL_LIBRARY_PATH);
-	library                    = generations_library;
-	animations_list            = new EditorAnimationsList();
+	unleashed_shader_library = new LibGens::ShaderLibrary(SONICGLVL_SHADERS_PATH);
+	uv_animation_library = new LibGens::UVAnimationLibrary(SONICGLVL_RESOURCES_PATH);
+	generations_library = new LibGens::ObjectLibrary(SONICGLVL_LIBRARY_PATH);
+	unleashed_library = new LibGens::ObjectLibrary(SONICGLVL_LIBRARY_PATH);
+	library = generations_library;
+	animations_list = new EditorAnimationsList();
 
-	bool loaded_generations_shader_library = 
+	bool loaded_generations_shader_library =
 		generations_shader_library->loadShaderArchive("shader_r.ar.00") &&
 		generations_shader_library->loadShaderArchive("shader_r_add.ar.00");
 
@@ -627,7 +624,7 @@ void EditorApplication::createScene(void) {
 		generations_shader_library = NULL;
 	}
 
-	bool loaded_unleashed_shader_library = 
+	bool loaded_unleashed_shader_library =
 		unleashed_shader_library->loadShaderArchive("shader.ar") &&
 		unleashed_shader_library->loadShaderArchive("shader_d3d9.ar");
 
@@ -639,7 +636,7 @@ void EditorApplication::createScene(void) {
 	generations_library->loadDatabase(SONICGLVL_GENERATIONS_OBJECTS_DATABASE_PATH);
 	unleashed_library->loadDatabase(SONICGLVL_UNLEASHED_OBJECTS_DATABASE_PATH);
 
-	configuration    = new EditorConfiguration();
+	configuration = new EditorConfiguration();
 	configuration->load(SONICGLVL_CONFIGURATION_FILE);
 
 	object_production = new LibGens::ObjectProduction();
@@ -651,10 +648,10 @@ void EditorApplication::createScene(void) {
 	hMenu = LoadMenu(NULL, MAKEINTRESOURCE(IDR_TOOLMENU));
 	SetMenu(hwnd, hMenu);
 
-	hLeftDlg=CreateDialog(NULL, MAKEINTRESOURCE(IDD_LEFT_DIALOG), hwnd, LeftBarCallback);
+	hLeftDlg = CreateDialog(NULL, MAKEINTRESOURCE(IDD_LEFT_DIALOG), hwnd, LeftBarCallback);
 	SetParent(hLeftDlg, hwnd);
 
-	hBottomDlg=CreateDialog(NULL, MAKEINTRESOURCE(IDD_BOTTOM_DIALOG), hwnd, BottomBarCallback);
+	hBottomDlg = CreateDialog(NULL, MAKEINTRESOURCE(IDD_BOTTOM_DIALOG), hwnd, BottomBarCallback);
 	SetParent(hBottomDlg, hwnd);
 
 	hEditPropertyDlg = NULL;
@@ -663,29 +660,29 @@ void EditorApplication::createScene(void) {
 	hMultiSetParamDlg = NULL;
 	hFindObjectDlg = NULL;
 	hLookAtPointDlg = NULL;
-	
+
 	updateVisibilityGUI();
 	updateObjectCategoriesGUI();
 	updateObjectsPaletteGUI();
 	createObjectsPropertiesGUI();
 
-	current_category_index     = 0;
-	palette_cloning_mode       = false;
+	current_category_index = 0;
+	palette_cloning_mode = false;
 	ignore_mouse_clicks_frames = 0;
-	last_palette_selection     = NULL;
-	current_palette_selection  = NULL;
-	current_set                = NULL;
+	last_palette_selection = NULL;
+	current_palette_selection = NULL;
+	current_set = NULL;
 	current_single_property_object = NULL;
 	history_edit_property_wrapper = NULL;
 	cloning_mode = SONICGLVL_MULTISETPARAM_MODE_CLONE;
 	is_pick_target = false;
 	is_pick_target_position = false;
-	is_update_look_at_vector = 
+	is_update_look_at_vector =
 
-	// Set up Scene Managers
-	scene_manager = root->createSceneManager("OctreeSceneManager");
+		// Set up Scene Managers
+		scene_manager = root->createSceneManager("OctreeSceneManager");
 	axis_scene_manager = root->createSceneManager(Ogre::ST_GENERIC);
-	
+
 	// Set up Node Managers
 	object_node_manager = new ObjectNodeManager(scene_manager, model_library, material_library, object_production);
 
@@ -718,12 +715,12 @@ void EditorApplication::createScene(void) {
 
 	global_illumination_listener = new GlobalIlluminationListener();
 	//global_illumination_listener->setPassToIgnore(depth_listener->getDepthPass());
-	scene_manager->addRenderObjectListener(global_illumination_listener); 
+	scene_manager->addRenderObjectListener(global_illumination_listener);
 
 	current_node = NULL;
 	editor_mode = EDITOR_NODE_QUERY_OBJECT;
 	world_transform = false;
-	
+
 	terrain_streamer = NULL;
 	terrain_update_counter = 0;
 	current_level = NULL;
@@ -743,19 +740,19 @@ void EditorApplication::createScene(void) {
 void EditorApplication::windowResized(Ogre::RenderWindow* rw) {
 	BaseApplication::windowResized(rw);
 
-	int left_window_height=screen_height-SONICGLVL_GUI_BOTTOM_HEIGHT+1;
+	int left_window_height = screen_height - SONICGLVL_GUI_BOTTOM_HEIGHT + 1;
 
 	// Move Windows
-	if (hLeftDlg)   MoveWindow(hLeftDlg,   0, 0, SONICGLVL_GUI_LEFT_WIDTH, left_window_height, true);
-	if (hBottomDlg) MoveWindow(hBottomDlg, 0, screen_height-SONICGLVL_GUI_BOTTOM_HEIGHT, screen_width+1, SONICGLVL_GUI_BOTTOM_HEIGHT+1, true);
+	if (hLeftDlg)   MoveWindow(hLeftDlg, 0, 0, SONICGLVL_GUI_LEFT_WIDTH, left_window_height, true);
+	if (hBottomDlg) MoveWindow(hBottomDlg, 0, screen_height - SONICGLVL_GUI_BOTTOM_HEIGHT, screen_width + 1, SONICGLVL_GUI_BOTTOM_HEIGHT + 1, true);
 
 	// Move Left Bar Elements
 	RECT temp_rect;
-	
+
 	HWND hHelpGroup = GetDlgItem(hLeftDlg, IDG_HELP_GROUP);
-	HWND hHelpText  = GetDlgItem(hLeftDlg, IDT_HELP_DESCRIPTION);
+	HWND hHelpText = GetDlgItem(hLeftDlg, IDT_HELP_DESCRIPTION);
 	// Help Group
-	int help_y_coordinate=left_window_height - 90;
+	int help_y_coordinate = left_window_height - 90;
 	temp_rect.left = 2;
 	temp_rect.left = 2;
 	temp_rect.top = 0;
@@ -779,9 +776,9 @@ void EditorApplication::windowResized(Ogre::RenderWindow* rw) {
 	InvalidateRect(hLeftDlg, &temp_rect, true);
 
 
-	HWND hPaletteGroup      = GetDlgItem(hLeftDlg, IDG_PALETTE_GROUP);
-	HWND hPaletteList       = GetDlgItem(hLeftDlg, IDL_PALETTE_LIST);
-	int left_window_palette_properties_height=(left_window_height - 90 - 90) / 2;
+	HWND hPaletteGroup = GetDlgItem(hLeftDlg, IDG_PALETTE_GROUP);
+	HWND hPaletteList = GetDlgItem(hLeftDlg, IDL_PALETTE_LIST);
+	int left_window_palette_properties_height = (left_window_height - 90 - 90) / 2;
 	// Palette Group
 	temp_rect.left = 2;
 	temp_rect.top = 55;
@@ -803,9 +800,9 @@ void EditorApplication::windowResized(Ogre::RenderWindow* rw) {
 	InvalidateRect(hLeftDlg, &temp_rect, true);
 
 	HWND hPropertiesGroup = GetDlgItem(hLeftDlg, IDG_PROPERTIES_GROUP);
-	HWND hPropertiesList  = GetDlgItem(hLeftDlg, IDL_PROPERTIES_LIST);
+	HWND hPropertiesList = GetDlgItem(hLeftDlg, IDL_PROPERTIES_LIST);
 
-	int properties_y_coordinate= 93 + left_window_palette_properties_height;
+	int properties_y_coordinate = 93 + left_window_palette_properties_height;
 	// Properties Group
 	temp_rect.left = 2;
 	temp_rect.top = 0;
@@ -831,10 +828,10 @@ void EditorApplication::windowResized(Ogre::RenderWindow* rw) {
 	InvalidateRect(hLeftDlg, &temp_rect, true);
 
 	// Resize Viewport
-	float left  = (float)SONICGLVL_GUI_LEFT_WIDTH / (float)screen_width;
-	float top   = 0.0f;
-	float width = (float)(screen_width  - SONICGLVL_GUI_LEFT_WIDTH) / (float)screen_width;
-	float height= (float)(screen_height - SONICGLVL_GUI_BOTTOM_HEIGHT) / (float)screen_height;
+	float left = (float)SONICGLVL_GUI_LEFT_WIDTH / (float)screen_width;
+	float top = 0.0f;
+	float width = (float)(screen_width - SONICGLVL_GUI_LEFT_WIDTH) / (float)screen_width;
+	float height = (float)(screen_height - SONICGLVL_GUI_BOTTOM_HEIGHT) / (float)screen_height;
 	/*
 	float left   = 0.0f;
 	float top    = 0.0f;
@@ -846,30 +843,30 @@ void EditorApplication::windowResized(Ogre::RenderWindow* rw) {
 }
 
 
-bool EditorApplication::keyPressed(const OIS::KeyEvent &arg) {
+bool EditorApplication::keyPressed(const OIS::KeyEvent& arg) {
 	if (axis->isHolding()) return true;
 	viewport->keyPressed(arg);
 
 	bool regular_mode = isRegularMode();
 
-	if(arg.key == OIS::KC_NUMPAD4) {
+	if (arg.key == OIS::KC_NUMPAD4) {
 		farPlaneChange = -1.0f;
 	}
 
-	if(arg.key == OIS::KC_NUMPAD6) {
+	if (arg.key == OIS::KC_NUMPAD6) {
 		farPlaneChange = 1.0f;
 	}
 
-	if(arg.key == OIS::KC_NUMPAD8) {
+	if (arg.key == OIS::KC_NUMPAD8) {
 		farPlaneChange = 10.0f;
 	}
 
-	if(arg.key == OIS::KC_NUMPAD2) {
+	if (arg.key == OIS::KC_NUMPAD2) {
 		farPlaneChange = -10.0f;
 	}
 
 	// Quit Special Placement Modes
-	if(arg.key == OIS::KC_ESCAPE) {
+	if (arg.key == OIS::KC_ESCAPE) {
 		if (isPalettePreviewActive()) {
 			clearObjectsPalettePreviewGUI();
 		}
@@ -895,76 +892,76 @@ bool EditorApplication::keyPressed(const OIS::KeyEvent &arg) {
 
 	// Regular Mode Shorcuts
 	if (regular_mode && inFocus() && !viewport->isMoving()) {
-		if(arg.key == OIS::KC_DELETE) {
+		if (arg.key == OIS::KC_DELETE) {
 			deleteSelection();
 			updateSelection();
 		}
 
 		if (keyboard->isModifierDown(OIS::Keyboard::Ctrl)) {
-			if(arg.key == OIS::KC_C) {
+			if (arg.key == OIS::KC_C) {
 				copySelection();
 			}
 
-			if(arg.key == OIS::KC_V) {
+			if (arg.key == OIS::KC_V) {
 				clearSelection();
 				pasteSelection();
 			}
 
-			if(arg.key == OIS::KC_P) {
+			if (arg.key == OIS::KC_P) {
 				if (ghost_node) ghost_node->setPlay(true);
 			}
 
-			if(arg.key == OIS::KC_R) {
+			if (arg.key == OIS::KC_R) {
 				if (ghost_node) {
 					ghost_node->setPlay(false);
 					ghost_node->setTime(0);
 				}
 			}
 
-			if(arg.key == OIS::KC_F) {
+			if (arg.key == OIS::KC_F) {
 				if (!hFindObjectDlg)
 					openFindGUI();
 			}
 
-			if(arg.key == OIS::KC_D) {
+			if (arg.key == OIS::KC_D) {
 				clearSelection();
 				updateSelection();
 			}
 
-			if(arg.key == OIS::KC_Z) {
+			if (arg.key == OIS::KC_Z) {
 				undoHistory();
 				updateSelection();
 			}
 
-			if(arg.key == OIS::KC_Y) {
+			if (arg.key == OIS::KC_Y) {
 				redoHistory();
 				updateSelection();
 			}
 
-			if(arg.key == OIS::KC_E) {
+			if (arg.key == OIS::KC_E) {
 				toggleWorldTransform();
 				updateSelection();
 			}
 
-			if(arg.key == OIS::KC_I) {
+			if (arg.key == OIS::KC_I) {
 				//SHOW_MSG(ToString(farPlane).c_str());
 			}
 
-			if(arg.key == OIS::KC_A) {
+			if (arg.key == OIS::KC_A) {
 				//saveXNAnimation();
 				selectAll();
 			}
 
-			if(arg.key == OIS::KC_T) {
+			if (arg.key == OIS::KC_T) {
 				clearSelection();
 				editor_mode = (editor_mode == EDITOR_NODE_QUERY_TERRAIN ? EDITOR_NODE_QUERY_OBJECT : EDITOR_NODE_QUERY_TERRAIN);
 			}
 
-			if(arg.key == OIS::KC_I) {
+			if (arg.key == OIS::KC_I) {
 				showSelectionNames();
 			}
 
-			if(arg.key == OIS::KC_G) {
+			if (arg.key == OIS::KC_G) {
 				setupGhost();
 				clearSelection();
 				editor_mode = (editor_mode == EDITOR_NODE_QUERY_GHOST ? EDITOR_NODE_QUERY_OBJECT : EDITOR_NODE_QUERY_GHOST);
@@ -995,7 +992,7 @@ bool EditorApplication::keyPressed(const OIS::KeyEvent &arg) {
 				}
 			}
 
-			if (arg.key == OIS::KC_G) 
+			if (arg.key == OIS::KC_G)
 			{
 				if (editor_mode == EDITOR_NODE_QUERY_GHOST)
 				{
@@ -1016,22 +1013,22 @@ bool EditorApplication::keyPressed(const OIS::KeyEvent &arg) {
 
 	// Global Mode Shortcuts
 	if (keyboard->isModifierDown(OIS::Keyboard::Ctrl)) {
-		if(arg.key == OIS::KC_1) {
+		if (arg.key == OIS::KC_1) {
 			editor_application->toggleNodeVisibility(EDITOR_NODE_OBJECT);
 			editor_application->toggleNodeVisibility(EDITOR_NODE_OBJECT_MSP);
 		}
 
-		if(arg.key == OIS::KC_2) {
-		 editor_application->toggleNodeVisibility(EDITOR_NODE_TERRAIN);
+		if (arg.key == OIS::KC_2) {
+			editor_application->toggleNodeVisibility(EDITOR_NODE_TERRAIN);
 		}
 
-		if(arg.key == OIS::KC_3) {
+		if (arg.key == OIS::KC_3) {
 			editor_application->toggleNodeVisibility(EDITOR_NODE_TERRAIN_AUTODRAW);
 		}
 
-		if(arg.key == 0x34) { editor_application->toggleNodeVisibility(EDITOR_NODE_HAVOK); }
-		if(arg.key == 0x35) { editor_application->toggleNodeVisibility(EDITOR_NODE_PATH); }
-		if(arg.key == 0x36) { editor_application->toggleNodeVisibility(EDITOR_NODE_GHOST); }
+		if (arg.key == OIS::KC_4) { editor_application->toggleNodeVisibility(EDITOR_NODE_HAVOK); }
+		if (arg.key == OIS::KC_5) { editor_application->toggleNodeVisibility(EDITOR_NODE_PATH); }
+		if (arg.key == OIS::KC_6) { editor_application->toggleNodeVisibility(EDITOR_NODE_GHOST); }
 		if (arg.key == 0x4F) // 'O'
 		{
 			editor_application->openLevelGUI();
@@ -1039,30 +1036,30 @@ bool EditorApplication::keyPressed(const OIS::KeyEvent &arg) {
 	}
 }
 
-bool EditorApplication::keyReleased(const OIS::KeyEvent &arg) {
+bool EditorApplication::keyReleased(const OIS::KeyEvent& arg) {
 	viewport->keyReleased(arg);
 
-	if(arg.key == OIS::KC_NUMPAD4) {
+	if (arg.key == OIS::KC_NUMPAD4) {
 		farPlaneChange = 0;
 	}
 
-	if(arg.key == OIS::KC_NUMPAD6) {
+	if (arg.key == OIS::KC_NUMPAD6) {
 		farPlaneChange = 0;
 	}
 
-	if(arg.key == OIS::KC_NUMPAD8) {
+	if (arg.key == OIS::KC_NUMPAD8) {
 		farPlaneChange = 0;
 	}
 
-	if(arg.key == OIS::KC_NUMPAD2) {
+	if (arg.key == OIS::KC_NUMPAD2) {
 		farPlaneChange = 0;
 	}
 
-    return true;
+	return true;
 }
 
 
-bool EditorApplication::mouseMoved(const OIS::MouseEvent &arg) {
+bool EditorApplication::mouseMoved(const OIS::MouseEvent& arg) {
 	viewport->setQueryFlags(editor_mode);
 
 	if (!axis->isHolding()) {
@@ -1078,13 +1075,13 @@ bool EditorApplication::mouseMoved(const OIS::MouseEvent &arg) {
 		}
 	}
 	else if (!isPalettePreviewActive()) {
-		Ogre::Entity *entity=viewport->getCurrentEntity();
+		Ogre::Entity* entity = viewport->getCurrentEntity();
 		if (entity) {
-			Ogre::SceneNode *node=entity->getParentSceneNode();
+			Ogre::SceneNode* node = entity->getParentSceneNode();
 			if (node) {
-				Ogre::Any ptr_container=node->getUserObjectBindings().getUserAny(EDITOR_NODE_BINDING);
+				Ogre::Any ptr_container = node->getUserObjectBindings().getUserAny(EDITOR_NODE_BINDING);
 				if (!ptr_container.isEmpty()) {
-					EditorNode *editor_node=Ogre::any_cast<EditorNode *>(ptr_container);
+					EditorNode* editor_node = Ogre::any_cast<EditorNode*>(ptr_container);
 					if (current_node && (editor_node != current_node)) current_node->setHighlight(false);
 					current_node = editor_node;
 				}
@@ -1100,7 +1097,7 @@ bool EditorApplication::mouseMoved(const OIS::MouseEvent &arg) {
 		}
 
 		if (current_node) current_node->setHighlight(true);
-	
+
 		if (axis->mouseMoved(viewport, arg)) {
 			if (!axis->getMode())
 				translateSelection(axis->getTranslate());
@@ -1131,10 +1128,10 @@ bool EditorApplication::mouseMoved(const OIS::MouseEvent &arg) {
 		}
 	}
 
-    return true;
+	return true;
 }
 
-bool EditorApplication::mousePressed(const OIS::MouseEvent &arg, OIS::MouseButtonID id) {
+bool EditorApplication::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id) {
 	// Only register mouse clicks if it's inside the viewport
 	if (viewport->isMouseInLocalScreen(arg)) {
 		focus();
@@ -1183,7 +1180,7 @@ bool EditorApplication::mousePressed(const OIS::MouseEvent &arg, OIS::MouseButto
 					{
 						if (current_node->getType() == EDITOR_NODE_OBJECT)
 						{
-							
+
 							ObjectNode* object_node = static_cast<ObjectNode*>(current_node);
 							size_t id = object_node->getObject()->getID();
 
@@ -1253,11 +1250,11 @@ bool EditorApplication::mousePressed(const OIS::MouseEvent &arg, OIS::MouseButto
 
 		viewport->mousePressed(arg, id);
 	}
-    return true;
+	return true;
 }
 
 
-bool EditorApplication::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id) {
+bool EditorApplication::mouseReleased(const OIS::MouseEvent& arg, OIS::MouseButtonID id) {
 	bool last_holding = axis->mouseReleased(arg, id);
 
 	if (id == OIS::MB_Left) {
@@ -1295,11 +1292,11 @@ bool EditorApplication::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButt
 	}
 
 	viewport->mouseReleased(arg, id);
-    return true;
+	return true;
 }
 
 bool EditorApplication::frameRenderingQueued(const Ogre::FrameEvent& evt) {
-    BaseApplication::frameRenderingQueued(evt);
+	BaseApplication::frameRenderingQueued(evt);
 
 	Ogre::Real timeSinceLastFrame = evt.timeSinceLastFrame;
 
@@ -1342,117 +1339,117 @@ bool EditorApplication::frameRenderingQueued(const Ogre::FrameEvent& evt) {
 	// Update Animations
 	object_node_manager->addTime(timeSinceLastFrame);
 	animations_list->addTime(timeSinceLastFrame);
-    return true;
+	return true;
 }
 
-void EditorApplication::loadGhostRecording() 
+void EditorApplication::loadGhostRecording()
 {
-    char filename[MAX_PATH];
-    ZeroMemory(filename, sizeof(filename));
-    OPENFILENAME ofn;
-    memset(&ofn, 0, sizeof(ofn));
-    ofn.lStructSize = sizeof(ofn);
-    ofn.lpstrFilter = "Ghost Recording(.gst.bin)\0*.gst.bin\0";
-    ofn.nFilterIndex = 1;
-    ofn.nMaxFile = MAX_PATH - 1;
-    ofn.lpstrTitle = "Open Ghost Recording";
-    ofn.lpstrFile = filename;
-    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_LONGNAMES | OFN_EXPLORER | OFN_ENABLESIZING;
+	char filename[MAX_PATH];
+	ZeroMemory(filename, sizeof(filename));
+	OPENFILENAME ofn;
+	memset(&ofn, 0, sizeof(ofn));
+	ofn.lStructSize = sizeof(ofn);
+	ofn.lpstrFilter = "Ghost Recording(.gst.bin)\0*.gst.bin\0";
+	ofn.nFilterIndex = 1;
+	ofn.nMaxFile = MAX_PATH - 1;
+	ofn.lpstrTitle = "Open Ghost Recording";
+	ofn.lpstrFile = filename;
+	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_LONGNAMES | OFN_EXPLORER | OFN_ENABLESIZING;
 
-    if (!GetOpenFileName(&ofn))
-        return;
+	if (!GetOpenFileName(&ofn))
+		return;
 
-    filename[MAX_PATH-1] = '\0'; // Ensure zero-termination
-    if (chdir(exe_path.c_str()) != 0) return;
-    LibGens::Ghost* gst = new LibGens::Ghost(std::string(filename));
-    setGhost(gst);
+	filename[MAX_PATH - 1] = '\0'; // Ensure zero-termination
+	if (chdir(exe_path.c_str()) != 0) return;
+	LibGens::Ghost* gst = new LibGens::Ghost(std::string(filename));
+	setGhost(gst);
 }
 
 void EditorApplication::saveGhostRecording()
 {
-    if (!ghost_data)
-        return;
+	if (!ghost_data)
+		return;
 
-    char filename[MAX_PATH];
-    ZeroMemory(filename, sizeof(filename));
-    OPENFILENAME ofn;
-    memset(&ofn, 0, sizeof(ofn));
-    ofn.lStructSize = sizeof(ofn);
-    ofn.lpstrFilter = "Ghost Recording(.gst.bin)\0*.gst.bin\0";
-    ofn.nFilterIndex = 1;
-    ofn.nMaxFile = MAX_PATH - 1;
-    ofn.lpstrTitle = "Save Ghost Recording";
-    ofn.lpstrFile = filename;
-    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_LONGNAMES | OFN_EXPLORER | OFN_ENABLESIZING;
+	char filename[MAX_PATH];
+	ZeroMemory(filename, sizeof(filename));
+	OPENFILENAME ofn;
+	memset(&ofn, 0, sizeof(ofn));
+	ofn.lStructSize = sizeof(ofn);
+	ofn.lpstrFilter = "Ghost Recording(.gst.bin)\0*.gst.bin\0";
+	ofn.nFilterIndex = 1;
+	ofn.nMaxFile = MAX_PATH - 1;
+	ofn.lpstrTitle = "Save Ghost Recording";
+	ofn.lpstrFile = filename;
+	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_LONGNAMES | OFN_EXPLORER | OFN_ENABLESIZING;
 
-    if (!GetSaveFileName(&ofn))
-        return;
+	if (!GetSaveFileName(&ofn))
+		return;
 
-    filename[MAX_PATH-1] = '\0'; // Ensure zero-termination
-    if (chdir(exe_path.c_str()) != 0) return;
-    ghost_data->save(std::string(filename));
+	filename[MAX_PATH - 1] = '\0'; // Ensure zero-termination
+	if (chdir(exe_path.c_str()) != 0) return;
+	ghost_data->save(std::string(filename));
 }
 
 void EditorApplication::saveGhostRecordingFbx()
 {
-    if (!ghost_data)
-        return;
+	if (!ghost_data)
+		return;
 
-    char filename[MAX_PATH];
-    ZeroMemory(filename, sizeof(filename));
-    OPENFILENAME ofn;
-    memset(&ofn, 0, sizeof(ofn));
-    ofn.lStructSize = sizeof(ofn);
-    ofn.lpstrFilter = "FBX File(.fbx)\0*.fbx\0";
-    ofn.nFilterIndex = 1;
-    ofn.nMaxFile = MAX_PATH - 1;
-    ofn.lpstrTitle = "Export Ghost Recording";
-    ofn.lpstrFile = filename;
-    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_LONGNAMES | OFN_EXPLORER | OFN_ENABLESIZING;
+	char filename[MAX_PATH];
+	ZeroMemory(filename, sizeof(filename));
+	OPENFILENAME ofn;
+	memset(&ofn, 0, sizeof(ofn));
+	ofn.lStructSize = sizeof(ofn);
+	ofn.lpstrFilter = "FBX File(.fbx)\0*.fbx\0";
+	ofn.nFilterIndex = 1;
+	ofn.nMaxFile = MAX_PATH - 1;
+	ofn.lpstrTitle = "Export Ghost Recording";
+	ofn.lpstrFile = filename;
+	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_LONGNAMES | OFN_EXPLORER | OFN_ENABLESIZING;
 
-    if (!GetSaveFileName(&ofn))
-        return;
+	if (!GetSaveFileName(&ofn))
+		return;
 
-    filename[MAX_PATH-1] = '\0'; // Ensure zero-termination
-    if (chdir(exe_path.c_str()) != 0) return;
-    LibGens::FBX* lFbx = ghost_data->buildFbx(fbx_manager, model_library->getModel("chr_Sonic_HD"), material_library);
-    fbx_manager->exportFBX(lFbx, filename);
+	filename[MAX_PATH - 1] = '\0'; // Ensure zero-termination
+	if (chdir(exe_path.c_str()) != 0) return;
+	LibGens::FBX* lFbx = ghost_data->buildFbx(fbx_manager, model_library->getModel("chr_Sonic_HD"), material_library);
+	fbx_manager->exportFBX(lFbx, filename);
 
-    delete lFbx;
+	delete lFbx;
 }
 
 void EditorApplication::launchGame()
 {
-    if (GetFileAttributes(configuration->game_path.c_str()) == INVALID_FILE_ATTRIBUTES)
-    {
-        char filename[MAX_PATH];
-        ZeroMemory(filename, sizeof(filename));
-        OPENFILENAME ofn;
-        memset(&ofn, 0, sizeof(ofn));
-        ofn.lStructSize = sizeof(ofn);
-        ofn.lpstrFilter = "Windows Executable(.exe)\0*.exe\0";
-        ofn.nFilterIndex = 1;
-        ofn.nMaxFile = MAX_PATH - 1;
-        ofn.lpstrTitle = "Select Sonic Generations";
-        ofn.lpstrFile = filename;
-        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_LONGNAMES | OFN_EXPLORER | OFN_ENABLESIZING;
+	if (GetFileAttributes(configuration->game_path.c_str()) == INVALID_FILE_ATTRIBUTES)
+	{
+		char filename[MAX_PATH];
+		ZeroMemory(filename, sizeof(filename));
+		OPENFILENAME ofn;
+		memset(&ofn, 0, sizeof(ofn));
+		ofn.lStructSize = sizeof(ofn);
+		ofn.lpstrFilter = "Windows Executable(.exe)\0*.exe\0";
+		ofn.nFilterIndex = 1;
+		ofn.nMaxFile = MAX_PATH - 1;
+		ofn.lpstrTitle = "Select Sonic Generations";
+		ofn.lpstrFile = filename;
+		ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_LONGNAMES | OFN_EXPLORER | OFN_ENABLESIZING;
 
-        if (GetOpenFileName(&ofn))
-        {
-            filename[MAX_PATH-1] = '\0'; // Ensure zero-termination
-            if (chdir(exe_path.c_str()) != 0) return;
-            configuration->game_path = std::string(ofn.lpstrFile);
-        }
-    }
+		if (GetOpenFileName(&ofn))
+		{
+			filename[MAX_PATH - 1] = '\0'; // Ensure zero-termination
+			if (chdir(exe_path.c_str()) != 0) return;
+			configuration->game_path = std::string(ofn.lpstrFile);
+		}
+	}
 
-    string directory = configuration->game_path.substr(0, configuration->game_path.find_last_of('\\'));
-    STARTUPINFO si;
-    PROCESS_INFORMATION pi;
-    memset(&si, 0, sizeof(si));
-    memset(&pi, 0, sizeof(pi));
-    si.cb = sizeof(si);
+	string directory = configuration->game_path.substr(0, configuration->game_path.find_last_of('\\'));
+	STARTUPINFO si;
+	PROCESS_INFORMATION pi;
+	memset(&si, 0, sizeof(si));
+	memset(&pi, 0, sizeof(pi));
+	si.cb = sizeof(si);
 
-    CreateProcess(configuration->game_path.c_str(), NULL, NULL, NULL, FALSE, 0, FALSE, directory.c_str(), &si, &pi);
+	CreateProcess(configuration->game_path.c_str(), NULL, NULL, NULL, FALSE, 0, FALSE, directory.c_str(), &si, &pi);
 }
 
 bool EditorApplication::connectGame() {
@@ -1489,7 +1486,7 @@ void ColorListener::preRenderTargetUpdate(const Ogre::RenderTargetEvent& evt)
 	scene_manager->addSpecialCaseRenderQueue(Ogre::RENDER_QUEUE_WORLD_GEOMETRY_2);
 	scene_manager->addSpecialCaseRenderQueue(Ogre::RENDER_QUEUE_MAX);
 }
- 
+
 void ColorListener::postRenderTargetUpdate(const Ogre::RenderTargetEvent& evt)
 {
 	scene_manager->clearSpecialCaseRenderQueues();
@@ -1498,19 +1495,19 @@ void ColorListener::postRenderTargetUpdate(const Ogre::RenderTargetEvent& evt)
 void DepthListener::preRenderTargetUpdate(const Ogre::RenderTargetEvent& evt)
 {
 	queue = scene_manager->getRenderQueue();
-    queue->setRenderableListener(this); 
+	queue->setRenderableListener(this);
 
 	scene_manager->setSpecialCaseRenderQueueMode(Ogre::SceneManager::SCRQM_EXCLUDE);
 	scene_manager->addSpecialCaseRenderQueue(Ogre::RENDER_QUEUE_WORLD_GEOMETRY_2);
 	scene_manager->addSpecialCaseRenderQueue(Ogre::RENDER_QUEUE_MAX);
 }
- 
+
 void DepthListener::postRenderTargetUpdate(const Ogre::RenderTargetEvent& evt)
 {
 	scene_manager->clearSpecialCaseRenderQueues();
 
 	queue = scene_manager->getRenderQueue();
-	queue->setRenderableListener(0); 
+	queue->setRenderableListener(0);
 }
 
 bool DepthListener::renderableQueued(Ogre::Renderable* rend, Ogre::uint8 groupID, Ogre::ushort priority, Ogre::Technique** ppTech, Ogre::RenderQueue* pQueue)
@@ -1544,12 +1541,12 @@ TrajectoryMode EditorApplication::getTrajectoryMode(EditorNode* node)
 
 	TrajectoryMode mode = NONE;
 
-	if ((object_name ==  "Spring") || (object_name == "AirSpring") || (object_name == "SpringFake") ||
+	if ((object_name == "Spring") || (object_name == "AirSpring") || (object_name == "SpringFake") ||
 		(object_name == "SpringClassic") || (object_name == "SpringClassicYellow"))
 		mode = SPRING;
 	else if (object_name == "WideSpring")
 		mode = WIDE_SPRING;
-	else if (object_name ==  "JumpPole")
+	else if (object_name == "JumpPole")
 		mode = JUMP_POLE;
 	else if ((object_name == "JumpBoard") || (object_name == "JumpBoard3D") || (object_name == "AdlibTrickJump"))
 		mode = JUMP_PANEL;
@@ -1565,7 +1562,7 @@ void EditorApplication::addTrajectory(TrajectoryMode mode)
 		return;
 
 	trajectory_preview_nodes.push_back(new TrajectoryNode(scene_manager, mode));
-	
+
 	// JumpBoards need two nodes. One for normal, and the other for boost
 	if (mode == JUMP_PANEL)
 		trajectory_preview_nodes.push_back(new TrajectoryNode(scene_manager, mode));
@@ -1623,204 +1620,551 @@ void EditorApplication::removeAllTrajectoryNodes()
 	trajectory_preview_nodes.clear();
 }
 
-// Adds a bunch of includes to check for lost world includes so that it can convert to either Unleashed/Generations.
-#include <fstream>
-#include <vector>
-
-static bool StripMirageHeaderIfPresent(const std::string& inputPath, std::string& outTempPath) {
-    std::ifstream in(inputPath, std::ios::binary);
-    if (!in) return false;
-    char header[4] = {0};
-    in.read(header, 4);
-    if (in.gcount() != 4) return false;
-    if (header[0] == 'M' && header[1] == 'R' && header[2] == 'G' && header[3] == 0) {
-        in.seekg(0x20, std::ios::beg);
-        std::vector<char> data((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-        outTempPath = inputPath + ".tmp_unmirage";
-        std::ofstream out(outTempPath, std::ios::binary);
-        out.write(data.data(), data.size());
-        out.close();
-        return true;
-    }
-    return false;
-}
-
 void EditorApplication::convertMaterialsToUnleashed() {
-    std::string folderStr = SelectFolderWithIFileDialog(L"Select folder containing materials to convert (To Unleashed)");
-    if (folderStr.empty()) return;
-    WIN32_FIND_DATA findFileData;
-    HANDLE hFind = FindFirstFile((folderStr + "\\*.material").c_str(), &findFileData);
-    int converted = 0;
-    int failed = 0;
-    std::vector<std::string> convertedFiles;
-    if (hFind != INVALID_HANDLE_VALUE) {
-        do {
-            std::string filePath = folderStr + "\\" + findFileData.cFileName;
-            try {
-                std::string tempPath;
-                bool stripped = StripMirageHeaderIfPresent(filePath, tempPath);
-                // Check if already Unleashed
-                LibGens::Material mat(stripped ? tempPath : filePath);
-                if (mat.isUnleashed() && !stripped) {
-                    // Already Unleashed, skip
-                    if (stripped) std::remove(tempPath.c_str());
-                    continue;
-                }
-                mat.save(folderStr + "\\" + mat.getName() + ".material", LIBGENS_MATERIAL_ROOT_UNLEASHED);
-                if (stripped) std::remove(tempPath.c_str());
-                ++converted;
-                convertedFiles.push_back(findFileData.cFileName);
-            } catch (...) {
-                ++failed;
-            }
-        } while (FindNextFile(hFind, &findFileData));
-        FindClose(hFind);
-    }
-    std::string msg = "Converted materials\nConverted : " + std::to_string(converted) + "    Failed : " + std::to_string(failed);
-    if (!convertedFiles.empty()) {
-        msg += "\n\nFiles converted:";
-        for (const auto& name : convertedFiles) {
-            msg += "\n" + name;
-        }
-    } else {
-        msg += "\n(No files needed conversion)";
-    }
-    SHOW_MSG(msg.c_str());
+	std::string folderStr = SelectFolderWithIFileDialog(L"Select folder containing materials to convert (Unleashed)");
+	if (folderStr.empty()) return;
+	WIN32_FIND_DATA findFileData;
+	HANDLE hFind = FindFirstFile((folderStr + "\\*.material").c_str(), &findFileData);
+	int converted = 0;
+	int failed = 0;
+	if (hFind != INVALID_HANDLE_VALUE) {
+		do {
+			std::string filePath = folderStr + "\\" + findFileData.cFileName;
+			LibGens::Material mat(filePath);
+			bool success = true;
+			if (success) {
+				mat.save(folderStr + "\\" + mat.getName() + ".material", LIBGENS_MATERIAL_ROOT_UNLEASHED);
+				++converted;
+			}
+			else {
+				++failed;
+			}
+		} while (FindNextFile(hFind, &findFileData));
+		FindClose(hFind);
+	}
+	char msg[128];
+	sprintf(msg, "Converted materials\nConverted : %d    Failed : %d", converted, failed);
+	SHOW_MSG(msg);
 }
 
 void EditorApplication::convertMaterialsToGenerations() {
-    std::string folderStr = SelectFolderWithIFileDialog(L"Select folder containing materials to convert (To Generations)");
-    if (folderStr.empty()) return;
-    WIN32_FIND_DATA findFileData;
-    HANDLE hFind = FindFirstFile((folderStr + "\\*.material").c_str(), &findFileData);
-    int converted = 0;
-    int failed = 0;
-    if (hFind != INVALID_HANDLE_VALUE) {
-        do {
-            std::string filePath = folderStr + "\\" + findFileData.cFileName;
-            try {
-                LibGens::Material mat(filePath);
-                bool isV1 = mat.isUnleashed();
-                mat.save(folderStr + "\\" + mat.getName() + ".material", LIBGENS_MATERIAL_ROOT_GENERATIONS);
-                std::string base = folderStr + "\\" + mat.getName();
-                std::vector<LibGens::Texture*> textures = mat.getTextureUnits();
-                for (auto tex : textures) {
-                    if (tex) {
-                        std::string texFile = folderStr + "\\" + tex->getTexset() + ".dds";
-                        if (GetFileAttributesA(texFile.c_str()) != INVALID_FILE_ATTRIBUTES) {
-                            DeleteFileA(texFile.c_str());
-                        }
-                        // Also try deleting .texture for each texset
-                        std::string textureFile = folderStr + "\\" + tex->getTexset() + ".texture";
-                        if (GetFileAttributesA(textureFile.c_str()) != INVALID_FILE_ATTRIBUTES) {
-                            DeleteFileA(textureFile.c_str());
-                        }
-                    }
-                }
-                if (isV1) {
-                    std::string texsetFile = base + ".texset";
-                    std::string textureFile = base + ".texture";
-                    if (GetFileAttributesA(texsetFile.c_str()) != INVALID_FILE_ATTRIBUTES) {
-                        DeleteFileA(texsetFile.c_str());
-                    }
-                    if (GetFileAttributesA(textureFile.c_str()) != INVALID_FILE_ATTRIBUTES) {
-                        DeleteFileA(textureFile.c_str());
-                    }
-                }
-                ++converted;
-            } catch (...) {
-                ++failed;
-            }
-        } while (FindNextFile(hFind, &findFileData));
-        FindClose(hFind);
-    }
-    char msg[128];
-    sprintf(msg, "Converted materials\nConverted : %d    Failed : %d", converted, failed);
-    SHOW_MSG(msg);
+	std::string folderStr = SelectFolderWithIFileDialog(L"Select folder containing materials to convert (Generations)");
+	if (folderStr.empty()) return;
+	WIN32_FIND_DATA findFileData;
+	HANDLE hFind = FindFirstFile((folderStr + "\\*.material").c_str(), &findFileData);
+	int converted = 0;
+	int failed = 0;
+	if (hFind != INVALID_HANDLE_VALUE) {
+		do {
+			std::string filePath = folderStr + "\\" + findFileData.cFileName;
+			LibGens::Material mat(filePath);
+			bool success = true;
+			if (success) {
+				mat.save(folderStr + "\\" + mat.getName() + ".material", LIBGENS_MATERIAL_ROOT_GENERATIONS);
+				++converted;
+			}
+			else {
+				++failed;
+			}
+		} while (FindNextFile(hFind, &findFileData));
+		FindClose(hFind);
+	}
+	WIN32_FIND_DATA cleanupData;
+	HANDLE hTexset = FindFirstFile((folderStr + "\\*.texset").c_str(), &cleanupData);
+	if (hTexset != INVALID_HANDLE_VALUE) {
+		do { DeleteFileA((folderStr + "\\" + cleanupData.cFileName).c_str()); } while (FindNextFile(hTexset, &cleanupData));
+		FindClose(hTexset);
+	}
+	HANDLE hTexture = FindFirstFile((folderStr + "\\*.texture").c_str(), &cleanupData);
+	if (hTexture != INVALID_HANDLE_VALUE) {
+		do { DeleteFileA((folderStr + "\\" + cleanupData.cFileName).c_str()); } while (FindNextFile(hTexture, &cleanupData));
+		FindClose(hTexture);
+	}
+	char msg[128];
+	sprintf(msg, "Converted materials\nConverted : %d    Failed : %d", converted, failed);
+	SHOW_MSG(msg);
 }
 
 void EditorApplication::convertMaterialsToLostWorld() {
-    std::string folderStr = SelectFolderWithIFileDialog(L"Select folder containing materials to convert (To Lost World)");
-    if (folderStr.empty()) return;
-    WIN32_FIND_DATA findFileData;
-    HANDLE hFind = FindFirstFile((folderStr + "\\*.material").c_str(), &findFileData);
-    int converted = 0;
-    int failed = 0;
-    if (hFind != INVALID_HANDLE_VALUE) {
-        do {
-            std::string filePath = folderStr + "\\" + findFileData.cFileName;
-            try {
-                LibGens::Material mat(filePath);
-                bool isV1 = mat.isUnleashed();
-                mat.save(folderStr + "\\" + mat.getName() + ".material", LIBGENS_FILE_HEADER_ROOT_TYPE_LOST_WORLD);
-                std::string base = folderStr + "\\" + mat.getName();
-                std::vector<LibGens::Texture*> textures = mat.getTextureUnits();
-                for (auto tex : textures) {
-                    if (tex) {
-                        std::string texFile = folderStr + "\\" + tex->getTexset() + ".dds";
-                        if (GetFileAttributesA(texFile.c_str()) != INVALID_FILE_ATTRIBUTES) {
-                            DeleteFileA(texFile.c_str());
-                        }
-						// Deletes .texture for each texset
-                        std::string textureFile = folderStr + "\\" + tex->getTexset() + ".texture";
-                        if (GetFileAttributesA(textureFile.c_str()) != INVALID_FILE_ATTRIBUTES) {
-                            DeleteFileA(textureFile.c_str());
-                        }
-                    }
-                }
-                if (isV1) {
-                    std::string texsetFile = base + ".texset";
-                    std::string textureFile = base + ".texture";
-                    if (GetFileAttributesA(texsetFile.c_str()) != INVALID_FILE_ATTRIBUTES) {
-                        DeleteFileA(texsetFile.c_str());
-                    }
-                    if (GetFileAttributesA(textureFile.c_str()) != INVALID_FILE_ATTRIBUTES) {
-                        DeleteFileA(textureFile.c_str());
-                    }
-                }
-                ++converted;
-            } catch (...) {
-                ++failed;
-            }
-        } while (FindNextFile(hFind, &findFileData));
-        FindClose(hFind);
-    }
-    char msg[128];
-    sprintf(msg, "Converted materials\nConverted : %d    Failed : %d", converted, failed);
-    SHOW_MSG(msg);
+	std::string folderStr = SelectFolderWithIFileDialog(L"Select folder containing materials to convert (Lost World)");
+	if (folderStr.empty()) return;
+	WIN32_FIND_DATA findFileData;
+	HANDLE hFind = FindFirstFile((folderStr + "\\*.material").c_str(), &findFileData);
+	int converted = 0;
+	int failed = 0;
+	if (hFind != INVALID_HANDLE_VALUE) {
+		do {
+			std::string filePath = folderStr + "\\" + findFileData.cFileName;
+			LibGens::Material mat(filePath);
+			mat.save(folderStr + "\\" + mat.getName() + ".material", LIBGENS_FILE_HEADER_ROOT_TYPE_LOST_WORLD);
+			++converted;
+		} while (FindNextFile(hFind, &findFileData));
+		FindClose(hFind);
+	}
+	WIN32_FIND_DATA cleanupData;
+	HANDLE hTexset = FindFirstFile((folderStr + "\\*.texset").c_str(), &cleanupData);
+	if (hTexset != INVALID_HANDLE_VALUE) {
+		do { DeleteFileA((folderStr + "\\" + cleanupData.cFileName).c_str()); } while (FindNextFile(hTexset, &cleanupData));
+		FindClose(hTexset);
+	}
+	HANDLE hTexture = FindFirstFile((folderStr + "\\*.texture").c_str(), &cleanupData);
+	if (hTexture != INVALID_HANDLE_VALUE) {
+		do { DeleteFileA((folderStr + "\\" + cleanupData.cFileName).c_str()); } while (FindNextFile(hTexture, &cleanupData));
+		FindClose(hTexture);
+	}
+	char msg[128];
+	sprintf(msg, "Converted materials\nConverted : %d    Failed : %d", converted, failed);
+	SHOW_MSG(msg);
+}
+
+void EditorApplication::convertMaterialsToUnleashedShaders() {
+	std::string folderStr = SelectFolderWithIFileDialog(L"Select folder containing materials to convert (Unleashed Shaders)");
+	if (folderStr.empty()) return;
+	WIN32_FIND_DATA findFileData;
+	HANDLE hFind = FindFirstFile((folderStr + "\\*.material").c_str(), &findFileData);
+	int converted = 0;
+	int failed = 0;
+	if (hFind != INVALID_HANDLE_VALUE) {
+		do {
+			std::string filePath = folderStr + "\\" + findFileData.cFileName;
+			LibGens::Material mat(filePath);
+			std::string shader = mat.getShader();   // TODO: Lost world shaders to Unleashed.
+			if (shader == "BillboardParticle_da[sv]") shader = "BillboardParticle_da[sv]";
+			if (shader == "BillboardParticle_da[v]") shader = "BillboardParticle_da[v]";
+			if (shader == "BillboardParticle_d[fv]") shader = "Common_d";
+			if (shader == "BillboardParticle_d[lsv]") shader = "BillboardParticle_d[lsv]";
+			if (shader == "BillboardParticle_d[lv]") shader = "BillboardParticle_d[lv]";
+			if (shader == "BillboardParticle_d[sv]") shader = "BillboardParticle_d[sv]";
+			if (shader == "BillboardParticle_d[v]") shader = "BillboardParticle_d[v]";
+			if (shader == "BillboardY_d") shader = "Common_d";
+			if (shader == "BlbBlend_dd") shader = "Blend_dd";
+			if (shader == "BlbCommon_dpne1") shader = "Common_d";
+			if (shader == "BlbIndirect_dopn") shader = "Common_d";
+			if (shader == "BlbLuminescence_d") shader = "Common_d";
+			if (shader == "BlbLuminescence_dpne1E") shader = "Common_d";
+			if (shader == "Blend_dbd") shader = "Blend_dd";
+			if (shader == "Blend_dd") shader = "Blend_dd";
+			if (shader == "Blend_dnbdn") shader = "Blend_dndn";
+			if (shader == "Blend_dndn") shader = "Blend_dndn";
+			if (shader == "Blend_dndn[w]") shader = "Blend_dndn[w]";
+			if (shader == "Blend_dpbdp") shader = "Common_d";
+			if (shader == "Blend_dpdp") shader = "Blend_dpdp";
+			if (shader == "Blend_dpdpe") shader = "Common_dpe";
+			if (shader == "Blend_dpdpe1") shader = "Common_dpe";
+			if (shader == "Blend_dpdpe2") shader = "Common_dpe";
+			if (shader == "Blend_dpdpn") shader = "Common_dpn";
+			if (shader == "Blend_dpnd") shader = "Blend_dpndpn";
+			if (shader == "Blend_dpndn") shader = "Blend_dpndn";
+			if (shader == "Blend_dpndn[w]") shader = "Blend_dpndn[w]";
+			if (shader == "Blend_dpndp") shader = "Blend_dpndpn";
+			if (shader == "Blend_dpndpn") shader = "Blend_dpndpn";
+			if (shader == "Blend_dsnbdse1") shader = "Common_dsne[b]";
+			if (shader == "ChaosV_dsnne1") shader = "Common_dsne[b]";
+			if (shader == "Chaos_da") shader = "Common_d[v]";
+			if (shader == "Chaos_dsae1") shader = "Common_dsne[b]";
+			if (shader == "Chaos_dsbnne1") shader = "Common_dsne[b]";
+			if (shader == "Chaos_dsnne1") shader = "Common_dsne[b]";
+			if (shader == "ChrEye_dpne") shader = "Common_dpne[b]";
+			if (shader == "ChrEye_dpne1") shader = "Common_dpne[b]";
+			if (shader == "ChrEye_dpne2") shader = "Common_d[b]";
+			if (shader == "ChrEye_dpne[c]") shader = "Common_d[bcv]";
+			if (shader == "ChrSkinHalf_dse11") shader = "Ring_dse[b]";
+			if (shader == "ChrSkinIgnore_dsle11") shader = "Ring_dse[b]";
+			if (shader == "ChrSkin_ds") shader = "Common_ds[b]";
+			if (shader == "ChrSkin_dse") shader = "Ring_dse[b]";
+			if (shader == "ChrSkin_dse1") shader = "Ring_dse";
+			if (shader == "ChrSkin_dse2") shader = "Ring_dse";
+			if (shader == "ChrSkin_dsf") shader = "SonicSkin_dspf[b]";
+			if (shader == "ChrSkin_dsfe") shader = "SonicSkin_dspf[b]";
+			if (shader == "ChrSkin_dsfe1") shader = "SonicSkin_dspf[b]";
+			if (shader == "ChrSkin_dsfe2") shader = "SonicSkin_dspf[b]";
+			if (shader == "ChrSkin_dsn") shader = "Common_dsne[b]";
+			if (shader == "ChrSkin_dsne") shader = "Common_dsne[b]";
+			if (shader == "ChrSkin_dsne1") shader = "Common_dsne[b]";
+			if (shader == "ChrSkin_dsnf") shader = "SonicSkin_dspf[b]";
+			if (shader == "ChrSkin_dsnfe") shader = "Common_dsne[b]";
+			if (shader == "ChrSkin_dsnfe1") shader = "Common_dsne[b]";
+			if (shader == "Cloak_do") shader = "Common_d";
+			if (shader == "Cloak_doe1") shader = "Common_d";
+			if (shader == "Cloth_dsnt") shader = "Cloth_dsnt";
+			if (shader == "Cloth_dsnt[b]") shader = "Cloth_dsnt[b]";
+			if (shader == "Cloud_nfe1") shader = "Common_d";
+			if (shader == "Common_d") shader = "Common_d[v]";
+			if (shader == "Common_da") shader = "Common_d[v]";
+			if (shader == "Common_de") shader = "Common_de";
+			if (shader == "Common_de1") shader = "Common_de";
+			if (shader == "Common_de2") shader = "Common_de";
+			if (shader == "Common_de[bw]") shader = "Common_de[bw]";
+			if (shader == "Common_de[b]") shader = "Common_de[b]";
+			if (shader == "Common_de[c]") shader = "Common_de";
+			if (shader == "Common_dn") shader = "Common_dn";
+			if (shader == "Common_dne") shader = "Common_dne";
+			if (shader == "Common_dne1") shader = "Common_dne";
+			if (shader == "Common_dne1[v]") shader = "Common_dne";
+			if (shader == "Common_dne2") shader = "Common_dne";
+			if (shader == "Common_dne2[v]") shader = "Common_dne";
+			if (shader == "Common_dne[bcv]") shader = "Common_dne";
+			if (shader == "Common_dne[bc]") shader = "Common_dne[bc]";
+			if (shader == "Common_dne[b]") shader = "Common_dne[b]";
+			if (shader == "Common_dne[cv]") shader = "Common_dne[c]";
+			if (shader == "Common_dne[c]") shader = "Common_dne[c]";
+			if (shader == "Common_dn[bv]") shader = "Common_dn[bv]";
+			if (shader == "Common_dn[bw]") shader = "Common_dn[bw]";
+			if (shader == "Common_dn[b]") shader = "Common_dn[b]";
+			if (shader == "Common_dp") shader = "Common_dp[v]";
+			if (shader == "Common_dpe") shader = "Common_dpe";
+			if (shader == "Common_dpe1") shader = "Common_dpe[v]";
+			if (shader == "Common_dpe2") shader = "Common_dpe[v]";
+			if (shader == "Common_dpe[bc]") shader = "Common_dpe[bc]";
+			if (shader == "Common_dpe[b]") shader = "Common_dpe[b]";
+			if (shader == "Common_dpe[c]") shader = "Common_dpe[c]";
+			if (shader == "Common_dpe[uv]") shader = "Common_dpe[uv]";
+			if (shader == "Common_dpe[v]") shader = "Common_dpe[uv]";
+			if (shader == "Common_dpe[w]") shader = "Common_dpe[w]";
+			if (shader == "Common_dpn") shader = "Common_dpn";
+			if (shader == "Common_dpne") shader = "Common_dpne";
+			if (shader == "Common_dpne1") shader = "Common_dpne[v]";
+			if (shader == "Common_dpne2") shader = "Common_dpne[v]";
+			if (shader == "Common_dpne[bcw]") shader = "Common_dpne[bcw]";
+			if (shader == "Common_dpne[bc]") shader = "Common_dpne[bc]";
+			if (shader == "Common_dpne[bw]") shader = "Common_dpne[bw]";
+			if (shader == "Common_dpne[b]") shader = "Common_dpne[b]";
+			if (shader == "Common_dpne[c]") shader = "Common_dpne[c]";
+			if (shader == "Common_dpne[v]") shader = "Common_dpne[v]";
+			if (shader == "Common_dpnne2") shader = "Common_dpne[v]";
+			if (shader == "Common_dpnr") shader = "Common_dpnr";
+			if (shader == "Common_dpn[bv]") shader = "Common_dpn[bv]";
+			if (shader == "Common_dpn[bw]") shader = "Common_dpn[bw]";
+			if (shader == "Common_dpn[b]") shader = "Common_dpn[b]";
+			if (shader == "Common_dpn[E]") shader = "Common_dpne[v]";
+			if (shader == "Common_dpn[uv]") shader = "Common_dpn[uv]";
+			if (shader == "Common_dpn[u]") shader = "Common_dpn[u]";
+			if (shader == "Common_dpn[v]") shader = "Common_dpn[v]";
+			if (shader == "Common_dpn[w]") shader = "Common_dpn[w]";
+			if (shader == "Common_dpr") shader = "Common_dpr";
+			if (shader == "Common_dp[bu]") shader = "Common_dp[bu]";
+			if (shader == "Common_dp[bw]") shader = "Common_dp[bw]";
+			if (shader == "Common_dp[b]") shader = "Common_dp[b]";
+			if (shader == "Common_dp[E]") shader = "Common_dpe";
+			if (shader == "Common_dp[uv]") shader = "Common_dp[uv]";
+			if (shader == "Common_dp[u]") shader = "Common_dp[u]";
+			if (shader == "Common_dp[v]") shader = "Common_dp[v]";
+			if (shader == "Common_dp[w]") shader = "Common_dp[w]";
+			if (shader == "Common_dsae1") shader = "Common_d";
+			if (shader == "Common_dse") shader = "Ring_dse";
+			if (shader == "Common_dse1") shader = "Ring_dse";
+			if (shader == "Common_dse2") shader = "Ring_dse";
+			if (shader == "Common_dse[c]") shader = "Common_d";
+			if (shader == "Common_dsn") shader = "Common_dn";
+			if (shader == "Common_dsne") shader = "Common_dsne[b]";
+			if (shader == "Common_dsne1") shader = "Common_d";
+			if (shader == "Common_dsne[b]") shader = "Common_dsne[b]";
+			if (shader == "Common_dsnne1") shader = "Common_d";
+			if (shader == "Common_dsn[bw]") shader = "Common_dsn[bw]";
+			if (shader == "Common_dsn[b]") shader = "Common_dsn[b]";
+			if (shader == "Common_dsp") shader = "Ring_ds";
+			if (shader == "Common_dspe") shader = "Ring_dse";
+			if (shader == "Common_dspn") shader = "Common_dsne[b]";
+			if (shader == "Common_dspne") shader = "Common_dsne[b]";
+			if (shader == "Common_dspne2") shader = "Common_dsne[b]";
+			if (shader == "Common_dspne[c]") shader = "Common_dsne[b]";
+			if (shader == "Common_d[bu]") shader = "Common_d[bu]";
+			if (shader == "Common_d[bv]") shader = "Common_d[bv]";
+			if (shader == "Common_d[bw]") shader = "Common_d[bw]";
+			if (shader == "Common_d[b]") shader = "Common_d[b]";
+			if (shader == "Common_d[uv]") shader = "Common_d[uv]";
+			if (shader == "Common_d[u]") shader = "Common_d[u]";
+			if (shader == "Common_d[v]") shader = "Common_d[v]";
+			if (shader == "Common_d[w]") shader = "Common_d[w]";
+			if (shader == "csd") shader = "csd";
+			if (shader == "csdNoTex") shader = "csdNoTex";
+			if (shader == "DeformationParticle_d") shader = "DeformationParticle_d";
+			if (shader == "Deformation_d") shader = "Common_d";
+			if (shader == "DimIgnore_dE") shader = "Luminescence_dE";
+			if (shader == "DimIgnore_dpE") shader = "Luminescence_dpeE";
+			if (shader == "DimIgnore_e1") shader = "Common_de";
+			if (shader == "Dim_dE") shader = "Luminescence_dE";
+			if (shader == "Dim_dpE") shader = "Luminescence_dpE";
+			if (shader == "Dim_dpnE") shader = "Luminescence_dpnE";
+			if (shader == "DistortionOverlayChaos_dn") shader = "Common_dn[v]";
+			if (shader == "DistortionOverlayChaos_dnn") shader = "Common_dn[v]";
+			if (shader == "DistortionOverlay_dn") shader = "Common_dn[v]";
+			if (shader == "DistortionOverlay_dnn") shader = "Common_dn[v]";
+			if (shader == "Distortion_dsne1") shader = "Common_dsne[b]";
+			if (shader == "Distortion_dsnne1") shader = "Common_dsne[b]";
+			if (shader == "EnmCloud_nfe1") shader = "Common_d";
+			if (shader == "EnmEmission_d") shader = "Luminescence_dE";
+			if (shader == "EnmEmission_dl") shader = "Luminescence_dE";
+			if (shader == "EnmEmission_dsl") shader = "Luminescence_dE";
+			if (shader == "EnmEmission_dsle1") shader = "Luminescence_dE";
+			if (shader == "EnmEmission_dsnl") shader = "Luminescence_dE";
+			if (shader == "EnmEmission_dsnle1") shader = "Luminescence_dE";
+			if (shader == "EnmGlass_dse1") shader = "Glass_de";
+			if (shader == "EnmGlass_dsle1") shader = "Glass_de";
+			if (shader == "EnmGlass_dsne1") shader = "Common_dsne[b]";
+			if (shader == "EnmGlass_dsnle1") shader = "Common_dsne[b]";
+			if (shader == "EnmGlass_e1") shader = "Glass_de";
+			if (shader == "EnmMetal_dsnfe1") shader = "SonicSkin_dspnf[b]";
+			if (shader == "EnmIgnore_dl") shader = "IgnoreLight_d";
+			if (shader == "EnmIgnore_dle1") shader = "IgnoreLight_d";
+			if (shader == "EnmIgnore_dsle1") shader = "Ring_dse";
+			if (shader == "FadeOutNormal_dn") shader = "FadeOutNormal_dn";
+			if (shader == "FakeGlass_dse1") shader = "Glass_de";
+			if (shader == "FakeGlass_dsle1") shader = "Glass_de";
+			if (shader == "FakeGlass_dsne1") shader = "Glass_de";
+			if (shader == "FakeGlass_dsnle1") shader = "Glass_de";
+			if (shader == "FakeGlass_e1") shader = "Glass_de";
+			if (shader == "FallOffV_dn") shader = "FallOffV_dn";
+			if (shader == "FallOffV_dnn") shader = "FallOffV_dn";
+			if (shader == "FallOffV_dnn[bu]") shader = "FallOffV_dnn[bu]";
+			if (shader == "FallOffV_dp") shader = "FallOffV_dp[b]";
+			if (shader == "FallOffV_dp[b]") shader = "FallOffV_dp[b]";
+			if (shader == "FallOff_df") shader = "FallOff_df[bw]";
+			if (shader == "FallOff_df[bw]") shader = "FallOff_df[bw]";
+			if (shader == "FallOff_dpf[v]") shader = "FallOff_dpf[v]";
+			if (shader == "FallOff_dpnf") shader = "FallOff_dpnf[bw]";
+			if (shader == "FallOff_dpnf[bw]") shader = "FallOff_dpnf[bw]";
+			if (shader == "FontDirect_d") shader = "Common_d";
+			if (shader == "Font_d") shader = "Common_d";
+			if (shader == "GlassRefraction_de1") shader = "Glass_de";
+			if (shader == "GlassRefraction_de2") shader = "Glass_de";
+			if (shader == "Glass_d") shader = "Glass_de";
+			if (shader == "Glass_de") shader = "Glass_de";
+			if (shader == "Glass_de2") shader = "Glass_de[c]";
+			if (shader == "Glass_de[bw]") shader = "Glass_de[bw]";
+			if (shader == "Glass_de[b]") shader = "Glass_de[b]";
+			if (shader == "Glass_de[c]") shader = "Glass_de";
+			if (shader == "Glass_dpe") shader = "Glass_dpe";
+			if (shader == "Glass_dpe2") shader = "Glass_dpe[c]";
+			if (shader == "Glass_dpe[bw]") shader = "Glass_dpe[bw]";
+			if (shader == "Glass_dpe[b]") shader = "Glass_dpe[b]";
+			if (shader == "Glass_dpe[c]") shader = "Glass_dpe[c]";
+			if (shader == "Glass_dpne") shader = "Glass_dpne";
+			if (shader == "Glass_dspe") shader = "Glass_dspe";
+			if (shader == "Glass_dspe2") shader = "Glass_dspe[c]";
+			if (shader == "Glass_dspe[c]") shader = "Glass_dspe[c]";
+			if (shader == "Glass_dspne") shader = "Glass_dspne[bw]";
+			if (shader == "Glass_dspne[bw]") shader = "Glass_dspne[bw]";
+			if (shader == "GrassInstance_L1") shader = "GrassInstance_L1";
+			if (shader == "GrassInstance_L2") shader = "GrassInstance_L2";
+			if (shader == "Ice_der[bv]") shader = "Ice_der[bv]";
+			if (shader == "Ice_der[b]") shader = "Ice_der[b]";
+			if (shader == "Ice_der[v]") shader = "Ice_der[v]";
+			if (shader == "Ice_dnenr[cuv]") shader = "Ice_dnenr[cuv]";
+			if (shader == "Ice_dnenr[cu]") shader = "Ice_dnenr[cu]";
+			if (shader == "Ice_dnenr[uv]") shader = "Ice_dnenr[uv]";
+			if (shader == "Ice_dnenr[u]") shader = "Ice_dnenr[u]";
+			if (shader == "Ice_dner[bv]") shader = "Ice_dner[bv]";
+			if (shader == "Ice_dner[v]") shader = "Ice_dner[v]";
+			if (shader == "Ice_dpnenr") shader = "Ice_dpnenr";
+			if (shader == "Ice_dpnenr[bc]") shader = "Ice_dpnenr[bc]";
+			if (shader == "Ice_dpnenr[bw]") shader = "Ice_dpnenr[bw]";
+			if (shader == "Ice_dpnenr[b]") shader = "Ice_dpnenr[b]";
+			if (shader == "Ice_dpnenr[v]") shader = "Ice_dpnenr[v]";
+			if (shader == "Ice_dpnr") shader = "Ice_dpnr";
+			if (shader == "IgnoreLightTwice_d") shader = "IgnoreLight_d[v]";
+			if (shader == "IgnoreLightV_d[s]") shader = "IgnoreLight_d[v]";
+			if (shader == "IgnoreLight_d") shader = "IgnoreLight_d[v]";
+			if (shader == "IgnoreLight_da") shader = "IgnoreLight_d[v]";
+			if (shader == "IgnoreLight_dE") shader = "Luminescence_dE[v]";
+			if (shader == "IgnoreLight_d[buv]") shader = "IgnoreLight_d[buv]";
+			if (shader == "IgnoreLight_d[bu]") shader = "IgnoreLight_d[bu]";
+			if (shader == "IgnoreLight_d[bv]") shader = "IgnoreLight_d[bv]";
+			if (shader == "IgnoreLight_d[b]") shader = "IgnoreLight_d[b]";
+			if (shader == "IgnoreLight_d[uv]") shader = "IgnoreLight_d[uv]";
+			if (shader == "IgnoreLight_d[u]") shader = "IgnoreLight_d[u]";
+			if (shader == "IgnoreLight_d[v]") shader = "IgnoreLight_d[v]";
+			if (shader == "IndirectVnoGIs_doapn") shader = "Common_dpne";
+			if (shader == "IndirectV_doap") shader = "Common_dpne";
+			if (shader == "IndirectV_doapn") shader = "Common_dpne";
+			if (shader == "Indirect_dop") shader = "Common_dp[v]";
+			if (shader == "Indirect_dopn") shader = "Common_dpne[v]";
+			if (shader == "Lava_dnE[u]") shader = "Lava_dnE";
+			if (shader == "LightSpeedDashReady") shader = "LightSpeedDashReady";
+			if (shader == "LuminescenceV_d") shader = "Luminescence_d[bv]";
+			if (shader == "LuminescenceV_dn") shader = "Luminescence_d";
+			if (shader == "LuminescenceV_dp") shader = "Luminescence_dpE";
+			if (shader == "LuminescenceV_dpdpv") shader = "Luminescence_dpE";
+			if (shader == "LuminescenceV_dpe1") shader = "Luminescence_d";
+			if (shader == "LuminescenceV_dpe2") shader = "Luminescence_d";
+			if (shader == "LuminescenceV_dpn") shader = "Luminescence_dpnE";
+			if (shader == "LuminescenceV_dpndp") shader = "Luminescence_d";
+			if (shader == "LuminescenceV_dpnv") shader = "Luminescence_d";
+			if (shader == "Luminescence_d") shader = "Luminescence_d";
+			if (shader == "Luminescence_dE") shader = "Luminescence_dE[bv]";
+			if (shader == "Luminescence_dE[bv]") shader = "Luminescence_dE[bv]";
+			if (shader == "Luminescence_dE[b]") shader = "Luminescence_dE[bv]";
+			if (shader == "Luminescence_dE[v]") shader = "Luminescence_dE[bv]";
+			if (shader == "Luminescence_dnE") shader = "Luminescence_dnE";
+			if (shader == "Luminescence_dne1E") shader = "Luminescence_dnE";
+			if (shader == "Luminescence_dne2E") shader = "Luminescence_dnE";
+			if (shader == "Luminescence_dnE[uv]") shader = "Luminescence_dnE";
+			if (shader == "Luminescence_dnE[u]") shader = "Luminescence_dnE[uv]";
+			if (shader == "Luminescence_dnE[v]") shader = "Luminescence_dE[bv]";
+			if (shader == "Luminescence_dpE") shader = "Luminescence_dpE";
+			if (shader == "Luminescence_dpe1E") shader = "Luminescence_dpE";
+			if (shader == "Luminescence_dpe2E") shader = "Luminescence_dpE";
+			if (shader == "Luminescence_dpE[v]") shader = "Luminescence_dpE";
+			if (shader == "Luminescence_dpnE") shader = "Luminescence_dpnE";
+			if (shader == "Luminescence_dpne1E") shader = "Luminescence_dpE";
+			if (shader == "Luminescence_dpne2E") shader = "Luminescence_dpE";
+			if (shader == "Luminescence_dpnE[v]") shader = "Luminescence_dpE";
+			if (shader == "Luminescence_d[buv]") shader = "Luminescence_d";
+			if (shader == "Luminescence_d[bu]") shader = "Luminescence_d[b]";
+			if (shader == "Luminescence_d[bv]") shader = "Luminescence_d";
+			if (shader == "Luminescence_d[b]") shader = "Luminescence_d";
+			if (shader == "Luminescence_d[v]") shader = "Luminescence_d";
+			if (shader == "MakeShadowMap") shader = "MakeShadowMap";
+			if (shader == "MakeShadowMapImage") shader = "MakeShadowMapImage";
+			if (shader == "MakeShadowMapTransparent") shader = "MakeShadowMapTransparent";
+			if (shader == "MeshParticleLightingShadow_d") shader = "";
+			if (shader == "MeshParticleRef_d[v]") shader = "MeshParticleRef_d[v]";
+			if (shader == "MeshParticle_d") shader = "MeshParticle_d";
+			if (shader == "MeshParticle_dE[uv]") shader = "MeshParticle_d[uv]";
+			if (shader == "MeshParticle_dE[v]") shader = "MeshParticle_d[v]";
+			if (shader == "MeshParticle_d[uv]") shader = "MeshParticle_d[uv]";
+			if (shader == "MeshParticle_d[u]") shader = "MeshParticle_d[u]";
+			if (shader == "MeshParticle_d[v]") shader = "MeshParticle_d[v]";
+			if (shader == "Mirror2_d") shader = "Glass_de";
+			if (shader == "Mirror_d") shader = "Glass_de";
+			if (shader == "Myst_d[bu]") shader = "Common_d[bu]";
+			if (shader == "Myst_d[u]") shader = "Common_d[u]";
+			if (shader == "Parallax_dpnh") shader = "Parallax_dpnh";
+			if (shader == "RenderBuffer") shader = "RenderBuffer";
+			if (shader == "Ring_dse") shader = "Ring_dse";
+			if (shader == "Ring_dse[b]") shader = "Ring_dse[b]";
+			if (shader == "SkyIndirect_dao[uv]") shader = "";
+			if (shader == "SkyIndirect_do[uv]") shader = "";
+			if (shader == "SkyInFocus_d") shader = "Sky_d";
+			if (shader == "SkyInFocus_d[uv]") shader = "Sky_d[u]";
+			if (shader == "SkyInFocus_d[u]") shader = "Sky_d[u]";
+			if (shader == "SkyInFocus_d[v]") shader = "Sky_d[v]";
+			if (shader == "Sky_d") shader = "Sky_d";
+			if (shader == "Sky_daE[uv]") shader = "Sky_d[v]";
+			if (shader == "Sky_da[uv]") shader = "Sky_d[v]";
+			if (shader == "Sky_dE") shader = "Sky_d";
+			if (shader == "Sky_dE[uv]") shader = "Sky_d[u]";
+			if (shader == "Sky_dE[u]") shader = "Sky_d[u]";
+			if (shader == "Sky_dE[v]") shader = "Sky_d[v]";
+			if (shader == "Sky_d[uv]") shader = "Sky_d[u]";
+			if (shader == "Sky_d[u]") shader = "Sky_d[u]";
+			if (shader == "Sky_d[v]") shader = "Sky_d[v]";
+			if (shader == "SysDiffuse") shader = "Common_d";
+			if (shader == "SysError") shader = "Common_d";
+			if (shader == "SysNormal") shader = "Common_d";
+			if (shader == "test") shader = "test";
+			if (shader == "TimeEaterDistortion_dsne1") shader = "Common_dsne[b]";
+			if (shader == "TimeEaterEmission_dl") shader = "Luminescence_dE";
+			if (shader == "TimeEaterGlass_dsne1") shader = "Common_dsne[b]";
+			if (shader == "TimeEaterIndirect_dol") shader = "Common_d";
+			if (shader == "TimeEaterMetal_dsnfe1") shader = "SonicSkin_dspf[b]";
+			if (shader == "TimeEater_dbnn") shader = "Common_d";
+			if (shader == "TimeEater_dsbnne1") shader = "Common_d";
+			if (shader == "TransThin_dnt") shader = "TransThin_dnt";
+			if (shader == "TransThin_dnt[b]") shader = "TransThin_dnt[b]";
+			if (shader == "TransThin_dpnt") shader = "TransThin_dpnt";
+			if (shader == "TransThin_dpnt[b]") shader = "TransThin_dpnt[b]";
+			if (shader == "TransThin_dpt") shader = "TransThin_dpt";
+			if (shader == "TransThin_dpt[b]") shader = "TransThin_dpt[b]";
+			if (shader == "TransThin_dt") shader = "TransThin_dt";
+			if (shader == "TransThin_dt[b]") shader = "TransThin_dt[b]";
+			if (shader == "Water_Add") shader = "Water_Add";
+			if (shader == "Water_Add[u]") shader = "Water_Add[u]";
+			if (shader == "Water_Add_Ref") shader = "Water_Add_Ref[u]";
+			if (shader == "Water_Add_Ref[u]") shader = "Water_Add_Ref[u]";
+			if (shader == "Water_Add_SoftEdge") shader = "Water_Add_SoftEdge";
+			if (shader == "Water_Add_SoftEdge[u]") shader = "Water_Add_SoftEdge[u]";
+			if (shader == "Water_Add_SoftEdge_Ref") shader = "";
+			if (shader == "Water_Add_SoftEdge_Ref[u]") shader = "";
+			if (shader == "Water_Mul") shader = "Water_Mul";
+			if (shader == "Water_Mul[u]") shader = "Water_Mul[u]";
+			if (shader == "Water_Mul_Cube") shader = "Water_Mul_Cube[u]";
+			if (shader == "Water_Mul_Cube[u]") shader = "Water_Mul_Cube[u]";
+			if (shader == "Water_Mul_Offset") shader = "Water_Mul";
+			if (shader == "Water_Mul_Offset_Lite") shader = "Water_Mul";
+			if (shader == "Water_Mul_Ref") shader = "Water_Mul_Ref[u]";
+			if (shader == "Water_Mul_Ref[u]") shader = "Water_Mul_Ref[u]";
+			if (shader == "Water_Mul_SoftEdge") shader = "Water_Mul_SoftEdge";
+			if (shader == "Water_Mul_SoftEdge[u]") shader = "Water_Mul_SoftEdge[u]";
+			if (shader == "Water_Mul_SoftEdge_Ref") shader = "Water_Mul_SoftEdge_Ref";
+			if (shader == "Water_Mul_SoftEdge_Ref[u]") shader = "Water_Mul_SoftEdge_Ref[u]";
+			if (shader == "Water_Opacity") shader = "Water_Opacity";
+			if (shader == "Water_Opacity[u]") shader = "Water_Opacity[u]";
+			if (shader == "Water_Opacity_Cube") shader = "Water_Opacity_Cube[u]";
+			if (shader == "Water_Opacity_Cube[u]") shader = "Water_Opacity_Cube[u]";
+			if (shader == "Water_Opacity_Ref") shader = "Water_Opacity_Ref[u]";
+			if (shader == "Water_Opacity_Ref[u]") shader = "Water_Opacity_Ref[u]";
+			if (shader == "Water_Opacity_SoftEdge") shader = "Water_Add_SoftEdge";
+			mat.setShader(shader);
+			bool success = true;
+			if (success) {
+				mat.save(folderStr + "\\" + mat.getName() + ".material", LIBGENS_MATERIAL_ROOT_UNLEASHED);
+				++converted;
+			}
+			else {
+				++failed;
+			}
+		} while (FindNextFile(hFind, &findFileData));
+		FindClose(hFind);
+	}
+	char msg[128];
+	sprintf(msg, "Converted materials\nConverted : %d    Failed : %d", converted, failed);
+	SHOW_MSG(msg);
 }
 
 std::string EditorApplication::SelectFolderWithIFileDialog(const wchar_t* title) {
-    std::string result;
-    IFileDialog* pFileDialog = nullptr;
-    HRESULT hr = CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pFileDialog));
-    if (SUCCEEDED(hr)) {
-        DWORD dwOptions;
-        pFileDialog->GetOptions(&dwOptions);
-        pFileDialog->SetOptions(dwOptions | FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM);
-        if (title) pFileDialog->SetTitle(title);
-        hr = pFileDialog->Show(NULL);
-        if (SUCCEEDED(hr)) {
-            IShellItem* pItem = nullptr;
-            hr = pFileDialog->GetResult(&pItem);
-            if (SUCCEEDED(hr)) {
-                PWSTR pszFilePath = nullptr;
-                hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
-                if (SUCCEEDED(hr)) {
-                    char pathA[MAX_PATH];
-                    WideCharToMultiByte(CP_ACP, 0, pszFilePath, -1, pathA, MAX_PATH, NULL, NULL);
-                    result = pathA;
-                    CoTaskMemFree(pszFilePath);
-                }
-                pItem->Release();
-            }
-        }
-        pFileDialog->Release();
-    }
-    return result;
+	std::string result;
+	IFileDialog* pFileDialog = nullptr;
+	HRESULT hr = CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pFileDialog));
+	if (SUCCEEDED(hr)) {
+		DWORD dwOptions;
+		pFileDialog->GetOptions(&dwOptions);
+		pFileDialog->SetOptions(dwOptions | FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM);
+		if (title) pFileDialog->SetTitle(title);
+		hr = pFileDialog->Show(NULL);
+		if (SUCCEEDED(hr)) {
+			IShellItem* pItem = nullptr;
+			hr = pFileDialog->GetResult(&pItem);
+			if (SUCCEEDED(hr)) {
+				PWSTR pszFilePath = nullptr;
+				hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
+				if (SUCCEEDED(hr)) {
+					char pathA[MAX_PATH];
+					WideCharToMultiByte(CP_ACP, 0, pszFilePath, -1, pathA, MAX_PATH, NULL, NULL);
+					result = pathA;
+					CoTaskMemFree(pszFilePath);
+				}
+				pItem->Release();
+			}
+		}
+		pFileDialog->Release();
+	}
+	return result;
 }
 
 void EditorApplication::addXmlObjectData(const std::string& setXmlPath, const std::string& cacheFolder) {
-    // Minimal stub implementation; replace with actual logic as needed
-    // For now, just print or log the paths (or leave empty if not needed)
+	if (!current_level || !current_level->getLevel()) return;
+	std::string source = setXmlPath;
+	if (source.empty()) return;
+	std::string filename = source.substr(source.find_last_of("/\\") + 1);
+		if (filename.size() < 8 || filename.substr(filename.size() - 8) != ".set.xml") return;
+	std::string name_no_ext = filename.substr(0, filename.size() - 8);
+	std::string dest_folder = current_level->getLevel()->getFolder();
+	std::string dest_path = dest_folder + filename;
+	{
+		std::ifstream in(source, std::ios::binary);
+		if (!in) return;
+		std::ofstream out(dest_path, std::ios::binary);
+		if (!out) return;
+		out << in.rdbuf();
+	}
+	LibGens::ObjectSet* object_set = new LibGens::ObjectSet(dest_path);
+	object_set->setName(name_no_ext);
+	current_level->getLevel()->addSet(object_set);
+	if (object_node_manager) {
+		list<LibGens::Object*> objects = object_set->getObjects();
+		for (list<LibGens::Object*>::iterator it = objects.begin(); it != objects.end(); ++it) {
+			object_node_manager->createObjectNode(*it);
+		}
+	}
 }

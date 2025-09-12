@@ -35,47 +35,47 @@ void EditorConfiguration::load(string filename) {
 	TiXmlElement* pElem;
 	TiXmlHandle hRoot(0);
 
-	pElem=hDoc.FirstChildElement().Element();
+	pElem = hDoc.FirstChildElement().Element();
 	if (!pElem) {
 		LibGens::Error::addMessage(LibGens::Error::EXCEPTION, SONICGLVL_CONFIGURATION_ERROR_FILE_ROOT);
 		return;
 	}
 
-	pElem=pElem->FirstChildElement();
-	for(pElem; pElem; pElem=pElem->NextSiblingElement()) {
-		string entry_name="";
-		string filename="";
-		string value="";
+	pElem = pElem->FirstChildElement();
+	for (pElem; pElem; pElem = pElem->NextSiblingElement()) {
+		string entry_name = "";
+		string filename = "";
+		string value = "";
 
 		entry_name = pElem->ValueStr();
 		pElem->QueryValueAttribute(SONICGLVL_CONFIGURATION_FILENAME_ATTRIBUTE, &filename);
 		pElem->QueryValueAttribute(SONICGLVL_CONFIGURATION_VALUE_ATTRIBUTE, &value);
 
-		if (entry_name==SONICGLVL_CONFIGURATION_OBJECT_PRODUCTION_PATH) {
+		if (entry_name == SONICGLVL_CONFIGURATION_OBJECT_PRODUCTION_PATH) {
 			object_production_path = filename;
 		}
 
-		if (entry_name==SONICGLVL_CONFIGURATION_TERRAIN_VIEW_DISTANCE) {
+		if (entry_name == SONICGLVL_CONFIGURATION_TERRAIN_VIEW_DISTANCE) {
 			FromString<float>(terrain_view_distance, value, std::dec);
 		}
 
-		if (entry_name==SONICGLVL_CONFIGURATION_TERRAIN_CAMERA_OFFSET) {
+		if (entry_name == SONICGLVL_CONFIGURATION_TERRAIN_CAMERA_OFFSET) {
 			FromString<float>(terrain_camera_offset, value, std::dec);
 		}
 
-		if (entry_name==SONICGLVL_CONFIGURATION_GI_LEVEL_1_QUALITY_OFFSET) {
+		if (entry_name == SONICGLVL_CONFIGURATION_GI_LEVEL_1_QUALITY_OFFSET) {
 			FromString<float>(gi_level_1_quality_offset, value, std::dec);
 		}
 
-		if (entry_name==SONICGLVL_CONFIGURATION_GI_LEVEL_2_QUALITY_OFFSET) {
+		if (entry_name == SONICGLVL_CONFIGURATION_GI_LEVEL_2_QUALITY_OFFSET) {
 			FromString<float>(gi_level_2_quality_offset, value, std::dec);
 		}
 
-		if (entry_name==SONICGLVL_CONFIGURATION_TERRAIN_UPDATE_INTERVAL_S) {
+		if (entry_name == SONICGLVL_CONFIGURATION_TERRAIN_UPDATE_INTERVAL_S) {
 			FromString<float>(terrain_update_interval, value, std::dec);
 		}
 
-		if (entry_name==SONICGLVL_CONFIGURATION_VISIBILITY_FLAGS) {
+		if (entry_name == SONICGLVL_CONFIGURATION_VISIBILITY_FLAGS) {
 			FromString<unsigned int>(visibility_flags, value, std::dec);
 		}
 

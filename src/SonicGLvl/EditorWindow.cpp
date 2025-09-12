@@ -24,6 +24,7 @@
 #define IMD_CONVERT_MATERIALS_UNLEASHED      40101
 #define IMD_CONVERT_MATERIALS_GENERATIONS    40102
 #define IMD_CONVERT_MATERIALS_LOSTWORLD      40103
+#define IMD_CONVERT_MATERIALS_UNLEASHED_SHADERS      40105
 
 int global_cursor_state=0;
 
@@ -273,6 +274,9 @@ LRESULT APIENTRY SubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 					break;
 				case IMD_CONVERT_MATERIALS_LOSTWORLD:
 					editor_application->convertMaterialsToLostWorld();
+					break;
+				case IMD_CONVERT_MATERIALS_UNLEASHED_SHADERS:
+					editor_application->convertMaterialsToUnleashedShaders();
 					break;
 			}
 			break;

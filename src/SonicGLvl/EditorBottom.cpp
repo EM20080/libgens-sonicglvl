@@ -24,7 +24,6 @@
 
 #define NEW_SET_OPTION "New..."
 #define DELETE_SET_OPTION "Delete..."
-#define ADD_XML_OBJECT_DATA_OPTION "Add XML Object Data..."
 
 void EditorApplication::updateBottomSelectionGUI() {
 	HWND hSelectionEditPosX = GetDlgItem(hBottomDlg, IDE_BOTTOM_SELECTION_POS_X);
@@ -62,8 +61,8 @@ void EditorApplication::updateBottomSelectionGUI() {
 	EnableWindow(GetDlgItem(hBottomDlg, IDS_BOTTOM_GHOST_SEEK), (BOOL)editor_application->getGhostNode());
 
 	if (objects_selected) {
-		Ogre::Vector3 axis_position=axis->getPosition();
-		Ogre::Quaternion axis_rotation=axis->getRotation();
+		Ogre::Vector3 axis_position = axis->getPosition();
+		Ogre::Quaternion axis_rotation = axis->getRotation();
 
 		/*
 		Ogre::Matrix3 mat;
@@ -145,138 +144,117 @@ bool EditorApplication::isUpdatePosRot()
 }
 
 INT_PTR CALLBACK BottomBarCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
-	switch(msg) {
-		case WM_INITDIALOG:
-			return true;
+	switch (msg) {
+	case WM_INITDIALOG:
+		return true;
 
-		case WM_ACTIVATE:
-			return false;
+	case WM_ACTIVATE:
+		return false;
 
-		case WM_DESTROY:
-			return true;
+	case WM_DESTROY:
+		return true;
 
-		case WM_CLOSE:
-			return false;
+	case WM_CLOSE:
+		return false;
 
-		case WM_NOTIFY:
-			return false;
+	case WM_NOTIFY:
+		return false;
 
-		case WM_HSCROLL:
-		{
-			if (GetDlgCtrlID((HWND)lParam) == IDS_BOTTOM_GHOST_SEEK) {
-				float value = (float)SendDlgItemMessage(hDlg, IDS_BOTTOM_GHOST_SEEK, TBM_GETPOS, 0, 0);
-				if (editor_application->getGhostNode())
-				{
-					editor_application->getGhostNode()->setPlay(true);
-					editor_application->getGhostNode()->setTime(value / 1000.0f);
-					editor_application->getGhostNode()->setPlay(false);
+	case WM_HSCROLL:
+	{
+		if (GetDlgCtrlID((HWND)lParam) == IDS_BOTTOM_GHOST_SEEK) {
+			float value = (float)SendDlgItemMessage(hDlg, IDS_BOTTOM_GHOST_SEEK, TBM_GETPOS, 0, 0);
+			if (editor_application->getGhostNode())
+			{
+				editor_application->getGhostNode()->setPlay(true);
+				editor_application->getGhostNode()->setTime(value / 1000.0f);
+				editor_application->getGhostNode()->setPlay(false);
+			}
+		}
+		break;
+	}
+
+	case WM_COMMAND:
+		if (LOWORD(wParam) == IDC_BOTTOM_CURRENT_OBJECT_SET_VISIBLE) {
+			bool current_set_visible = IsDlgButtonChecked(hDlg, IDC_BOTTOM_CURRENT_OBJECT_SET_VISIBLE);
+			editor_application->updateCurrentSetVisible(current_set_visible);
+		}
+		else if (HIWORD(wParam) == EN_CHANGE) {
+			if (!editor_application->getEditorAxis()->isHolding() && editor_application->isUpdatePosRot()) {
+				if ((LOWORD(wParam) == IDE_BOTTOM_SELECTION_POS_X) || (LOWORD(wParam) == IDE_BOTTOM_SELECTION_POS_Y) || (LOWORD(wParam) == IDE_BOTTOM_SELECTION_POS_Z)) {
+					float value_x = GetDlgItemFloat(hDlg, IDE_BOTTOM_SELECTION_POS_X);
+					float value_y = GetDlgItemFloat(hDlg, IDE_BOTTOM_SELECTION_POS_Y);
+					float value_z = GetDlgItemFloat(hDlg, IDE_BOTTOM_SELECTION_POS_Z);
+
+					editor_application->updateBottomSelectionPosition(value_x, value_y, value_z);
+				}
+
+				if ((LOWORD(wParam) == IDE_BOTTOM_SELECTION_ROT_X) || (LOWORD(wParam) == IDE_BOTTOM_SELECTION_ROT_Y) || (LOWORD(wParam) == IDE_BOTTOM_SELECTION_ROT_Z)) {
+					float value_x = GetDlgItemFloat(hDlg, IDE_BOTTOM_SELECTION_ROT_X);
+					float value_y = GetDlgItemFloat(hDlg, IDE_BOTTOM_SELECTION_ROT_Y);
+					float value_z = GetDlgItemFloat(hDlg, IDE_BOTTOM_SELECTION_ROT_Z);
+
+					editor_application->updateBottomSelectionRotation(value_x, value_y, value_z);
 				}
 			}
-			break;
+		}
+		else if (HIWORD(wParam) == CBN_SELCHANGE) {
+			char value_str[1024] = "";
+			int nIndex = SendDlgItemMessage(hDlg, LOWORD(wParam), (UINT)CB_GETCURSEL, (WPARAM)0, (LPARAM)0);
+			SendDlgItemMessage(hDlg, LOWORD(wParam), (UINT)CB_GETLBTEXT, (WPARAM)nIndex, (LPARAM)value_str);
+
+			if (LOWORD(wParam) == IDC_BOTTOM_CURRENT_OBJECT_SET) {
+				string change_set = ToString(value_str);
+				if (change_set == NEW_SET_OPTION) {
+					editor_application->newCurrentSet();
+				}
+				else if (change_set == DELETE_SET_OPTION) {
+					editor_application->deleteCurrentSet();
+				}
+				else {
+					editor_application->changeCurrentSet(change_set);
+				}
+			}
+		}
+		else if (HIWORD(wParam) == CBN_EDITCHANGE) {
+			char value_str[1024] = "";
+			GetDlgItemText(hDlg, LOWORD(wParam), value_str, 1024);
+
+			if (LOWORD(wParam) == IDC_BOTTOM_CURRENT_OBJECT_SET) {
+				int index = ComboBox_FindStringExact(GetDlgItem(hDlg, IDC_BOTTOM_CURRENT_OBJECT_SET), 0, editor_application->getCurrentSet()->getName().c_str());
+				if (index >= 0) {
+					SendDlgItemMessage(hDlg, IDC_BOTTOM_CURRENT_OBJECT_SET, (UINT)CB_DELETESTRING, (WPARAM)index, (LPARAM)0);
+					SendDlgItemMessage(hDlg, IDC_BOTTOM_CURRENT_OBJECT_SET, (UINT)CB_INSERTSTRING, (WPARAM)index, (LPARAM)value_str);
+					editor_application->renameCurrentSet(ToString(value_str));
+				}
+			}
+		}
+		else if (LOWORD(wParam) == IDB_BOTTOM_GHOST_PLAY) {
+			if (editor_application->getGhostNode()) {
+				editor_application->getGhostNode()->setPlay(true);
+			}
+		}
+		else if (LOWORD(wParam) == IDB_BOTTOM_GHOST_PAUSE) {
+			if (editor_application->getGhostNode()) {
+				editor_application->getGhostNode()->setPlay(false);
+			}
+		}
+		else if (LOWORD(wParam) == IDB_BOTTOM_GHOST_BACK) {
+			if (editor_application->getGhostNode()) {
+				editor_application->getGhostNode()->setPlay(true);
+				editor_application->getGhostNode()->addTime(-0.01f);
+				editor_application->getGhostNode()->setPlay(false);
+			}
+		}
+		else if (LOWORD(wParam) == IDB_BOTTOM_GHOST_FORWARD) {
+			if (editor_application->getGhostNode()) {
+				editor_application->getGhostNode()->setPlay(true);
+				editor_application->getGhostNode()->addTime(0.01f);
+				editor_application->getGhostNode()->setPlay(false);
+			}
 		}
 
-		case WM_COMMAND:
-			if (LOWORD(wParam) == IDC_BOTTOM_CURRENT_OBJECT_SET_VISIBLE) {
-				bool current_set_visible = IsDlgButtonChecked(hDlg, IDC_BOTTOM_CURRENT_OBJECT_SET_VISIBLE);
-				editor_application->updateCurrentSetVisible(current_set_visible);
-			}
-			else if (HIWORD(wParam) == EN_CHANGE) {
-				if (!editor_application->getEditorAxis()->isHolding() && editor_application->isUpdatePosRot()) {
-					if ((LOWORD(wParam) == IDE_BOTTOM_SELECTION_POS_X) || (LOWORD(wParam) == IDE_BOTTOM_SELECTION_POS_Y) || (LOWORD(wParam) == IDE_BOTTOM_SELECTION_POS_Z)) {
-						float value_x = GetDlgItemFloat(hDlg, IDE_BOTTOM_SELECTION_POS_X);
-						float value_y = GetDlgItemFloat(hDlg, IDE_BOTTOM_SELECTION_POS_Y);
-						float value_z = GetDlgItemFloat(hDlg, IDE_BOTTOM_SELECTION_POS_Z);
-
-						editor_application->updateBottomSelectionPosition(value_x, value_y, value_z);
-					}
-
-					if ((LOWORD(wParam) == IDE_BOTTOM_SELECTION_ROT_X) || (LOWORD(wParam) == IDE_BOTTOM_SELECTION_ROT_Y) || (LOWORD(wParam) == IDE_BOTTOM_SELECTION_ROT_Z)) {
-						float value_x = GetDlgItemFloat(hDlg, IDE_BOTTOM_SELECTION_ROT_X);
-						float value_y = GetDlgItemFloat(hDlg, IDE_BOTTOM_SELECTION_ROT_Y);
-						float value_z = GetDlgItemFloat(hDlg, IDE_BOTTOM_SELECTION_ROT_Z);
-
-						editor_application->updateBottomSelectionRotation(value_x, value_y, value_z);
-					}
-				}
-			}
-			else if(HIWORD(wParam) == CBN_SELCHANGE) { 
-				char value_str[1024] = "";
-				int nIndex=SendDlgItemMessage(hDlg, LOWORD(wParam), (UINT) CB_GETCURSEL, (WPARAM) 0, (LPARAM) 0);
-				SendDlgItemMessage(hDlg, LOWORD(wParam), (UINT)CB_GETLBTEXT, (WPARAM)nIndex, (LPARAM)value_str);
-
-				if (LOWORD(wParam) == IDC_BOTTOM_CURRENT_OBJECT_SET)  {
-					string change_set = ToString(value_str);
-					if (change_set == NEW_SET_OPTION) {
-						editor_application->newCurrentSet();
-					}
-					else if (change_set == DELETE_SET_OPTION) {
-						editor_application->deleteCurrentSet();
-					}
-					else if (change_set == ADD_XML_OBJECT_DATA_OPTION) {
-						// Prompt for XML file
-						OPENFILENAME ofn;
-						char szFile[MAX_PATH] = {0};
-						ZeroMemory(&ofn, sizeof(ofn));
-						ofn.lStructSize = sizeof(ofn);
-						ofn.lpstrFilter = "Object Set XML (*.xml)\0*.xml\0";
-						ofn.nFilterIndex = 1;
-						ofn.nMaxFile = MAX_PATH - 1;
-						ofn.lpstrTitle = "Import Object Set XML";
-						ofn.lpstrFile = szFile;
-						ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_LONGNAMES | OFN_EXPLORER | OFN_ENABLESIZING;
-						if (GetOpenFileName(&ofn)) {
-							szFile[MAX_PATH-1] = '\0';
-							std::string xmlPath = szFile;
-							std::string cacheFolder = editor_application->getCurrentLevel()->getLevel()->getFolder();
-							editor_application->addXmlObjectData(xmlPath, cacheFolder);
-							// Refresh sets GUI
-							editor_application->updateSetsGUI();
-						}
-					}
-					else {
-						editor_application->changeCurrentSet(change_set);
-					}
-				}
-			}
-			else if (HIWORD(wParam) == CBN_EDITCHANGE) {
-				char value_str[1024] = "";
-				GetDlgItemText(hDlg, LOWORD(wParam), value_str, 1024);
-
-				if (LOWORD(wParam) == IDC_BOTTOM_CURRENT_OBJECT_SET)  {
-					int index = ComboBox_FindStringExact(GetDlgItem(hDlg, IDC_BOTTOM_CURRENT_OBJECT_SET), 0, editor_application->getCurrentSet()->getName().c_str());
-					if (index >= 0) {
-						SendDlgItemMessage(hDlg, IDC_BOTTOM_CURRENT_OBJECT_SET, (UINT)CB_DELETESTRING, (WPARAM)index, (LPARAM)0);
-						SendDlgItemMessage(hDlg, IDC_BOTTOM_CURRENT_OBJECT_SET, (UINT)CB_INSERTSTRING, (WPARAM)index, (LPARAM)value_str);
-						editor_application->renameCurrentSet(ToString(value_str));
-					}
-				}
-			}
-			else if (LOWORD(wParam) == IDB_BOTTOM_GHOST_PLAY) {
-				if (editor_application->getGhostNode()) {
-					editor_application->getGhostNode()->setPlay(true);
-				}
-			}
-			else if (LOWORD(wParam) == IDB_BOTTOM_GHOST_PAUSE) {
-				if (editor_application->getGhostNode()) {
-					editor_application->getGhostNode()->setPlay(false);
-				}
-			}
-			else if (LOWORD(wParam) == IDB_BOTTOM_GHOST_BACK) {
-				if (editor_application->getGhostNode()) {
-					editor_application->getGhostNode()->setPlay(true);
-					editor_application->getGhostNode()->addTime(-0.01f);
-					editor_application->getGhostNode()->setPlay(false);
-				}
-			}
-			else if (LOWORD(wParam) == IDB_BOTTOM_GHOST_FORWARD) {
-				if (editor_application->getGhostNode()) {
-					editor_application->getGhostNode()->setPlay(true);
-					editor_application->getGhostNode()->addTime(0.01f);
-					editor_application->getGhostNode()->setPlay(false);
-				}
-			}
-
-			break;
+		break;
 	}
 
 	return false;
@@ -287,20 +265,19 @@ void EditorApplication::updateSetsGUI() {
 	SendDlgItemMessage(hBottomDlg, IDC_BOTTOM_CURRENT_OBJECT_SET, CB_RESETCONTENT, (WPARAM)0, (LPARAM)0);
 
 	int index = 0;
-	list<LibGens::ObjectSet *> sets = current_level->getLevel()->getSets();
-	for (list<LibGens::ObjectSet *>::iterator it = sets.begin(); it != sets.end(); it++) {
+	list<LibGens::ObjectSet*> sets = current_level->getLevel()->getSets();
+	for (list<LibGens::ObjectSet*>::iterator it = sets.begin(); it != sets.end(); it++) {
 		string set_name = (*it)->getName();
 		SendDlgItemMessage(hBottomDlg, IDC_BOTTOM_CURRENT_OBJECT_SET, (UINT)CB_ADDSTRING, (WPARAM)0, (LPARAM)set_name.c_str());
 		set_indices[*it] = index++;
 		set_visibility[*it] = true;
 	}
 
-	SendDlgItemMessage(hBottomDlg, IDC_BOTTOM_CURRENT_OBJECT_SET, (UINT)CB_ADDSTRING, (WPARAM)0, (LPARAM) NEW_SET_OPTION);
-	SendDlgItemMessage(hBottomDlg, IDC_BOTTOM_CURRENT_OBJECT_SET, (UINT)CB_ADDSTRING, (WPARAM)0, (LPARAM) DELETE_SET_OPTION);
-	SendDlgItemMessage(hBottomDlg, IDC_BOTTOM_CURRENT_OBJECT_SET, (UINT)CB_ADDSTRING, (WPARAM)0, (LPARAM) ADD_XML_OBJECT_DATA_OPTION);
+	SendDlgItemMessage(hBottomDlg, IDC_BOTTOM_CURRENT_OBJECT_SET, (UINT)CB_ADDSTRING, (WPARAM)0, (LPARAM)NEW_SET_OPTION);
+	SendDlgItemMessage(hBottomDlg, IDC_BOTTOM_CURRENT_OBJECT_SET, (UINT)CB_ADDSTRING, (WPARAM)0, (LPARAM)DELETE_SET_OPTION);
 }
 
 void EditorApplication::updateSelectedSetGUI() {
 	SendDlgItemMessage(hBottomDlg, IDC_BOTTOM_CURRENT_OBJECT_SET, CB_SETCURSEL, (WPARAM)set_indices[current_set], (LPARAM)0);
-	SendDlgItemMessage(hBottomDlg, IDC_BOTTOM_CURRENT_OBJECT_SET_VISIBLE, BM_SETCHECK, (WPARAM) set_visibility[current_set], 0);
+	SendDlgItemMessage(hBottomDlg, IDC_BOTTOM_CURRENT_OBJECT_SET_VISIBLE, BM_SETCHECK, (WPARAM)set_visibility[current_set], 0);
 }

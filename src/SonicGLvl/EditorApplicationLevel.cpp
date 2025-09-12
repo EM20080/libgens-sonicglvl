@@ -32,20 +32,20 @@ EditorLevelDatabase::EditorLevelDatabase(string filename) {
 	TiXmlElement* pElem;
 	TiXmlHandle hRoot(0);
 
-	pElem=hDoc.FirstChildElement().Element();
+	pElem = hDoc.FirstChildElement().Element();
 	if (!pElem) {
 		LibGens::Error::addMessage(LibGens::Error::EXCEPTION, SONICGLVL_DATABASE_ERROR_FILE_ROOT);
 		return;
 	}
 
-	pElem=pElem->FirstChildElement();
-	for(pElem; pElem; pElem=pElem->NextSiblingElement()) {
-		string entry_name="";
-		string level_name="";
-		string geometry_name="";
-		string layout_merge_name="";
-		string slot_name="";
-		string game_name="";
+	pElem = pElem->FirstChildElement();
+	for (pElem; pElem; pElem = pElem->NextSiblingElement()) {
+		string entry_name = "";
+		string level_name = "";
+		string geometry_name = "";
+		string layout_merge_name = "";
+		string slot_name = "";
+		string game_name = "";
 
 		entry_name = pElem->ValueStr();
 		pElem->QueryValueAttribute(SONICGLVL_DATABASE_NAME_ATTRIBUTE, &level_name);
@@ -59,8 +59,8 @@ EditorLevelDatabase::EditorLevelDatabase(string filename) {
 			game_mode = LIBGENS_LEVEL_GAME_UNLEASHED;
 		}
 
-		if ((entry_name==SONICGLVL_DATABASE_ENTRY) && level_name.size() && geometry_name.size()) {
-			EditorLevelEntry *entry=new EditorLevelEntry(level_name, geometry_name, layout_merge_name, slot_name, game_mode);
+		if ((entry_name == SONICGLVL_DATABASE_ENTRY) && level_name.size() && geometry_name.size()) {
+			EditorLevelEntry* entry = new EditorLevelEntry(level_name, geometry_name, layout_merge_name, slot_name, game_mode);
 			entries.push_back(entry);
 		}
 	}
@@ -68,35 +68,35 @@ EditorLevelDatabase::EditorLevelDatabase(string filename) {
 
 
 bool EditorLevelDatabase::exists(string name) {
-	for (size_t i=0; i<entries.size(); i++) {
+	for (size_t i = 0; i < entries.size(); i++) {
 		if (entries[i]->name == name) return true;
 	}
 	return false;
 }
 
 string EditorLevelDatabase::getGeometryPath(string name) {
-	for (size_t i=0; i<entries.size(); i++) {
+	for (size_t i = 0; i < entries.size(); i++) {
 		if (entries[i]->name == name) return entries[i]->geometry;
 	}
 	return "";
 }
 
 string EditorLevelDatabase::getMergePath(string name) {
-	for (size_t i=0; i<entries.size(); i++) {
+	for (size_t i = 0; i < entries.size(); i++) {
 		if (entries[i]->name == name) return entries[i]->layout_merge;
 	}
 	return "";
 }
 
 string EditorLevelDatabase::getSlot(string name) {
-	for (size_t i=0; i<entries.size(); i++) {
+	for (size_t i = 0; i < entries.size(); i++) {
 		if (entries[i]->name == name) return entries[i]->slot;
 	}
 	return "";
 }
 
 size_t EditorLevelDatabase::getGame(string name) {
-	for (size_t i=0; i<entries.size(); i++) {
+	for (size_t i = 0; i < entries.size(); i++) {
 		if (entries[i]->name == name) return entries[i]->game;
 	}
 	return LIBGENS_LEVEL_GAME_GENERATIONS;
@@ -105,13 +105,13 @@ size_t EditorLevelDatabase::getGame(string name) {
 
 
 void EditorApplication::openLostWorldLevel(string filename) {
-	string slot_name=LibGens::File::nameFromFilenameNoExtension(filename);
+	string slot_name = LibGens::File::nameFromFilenameNoExtension(filename);
 
 	string folder = filename + "/";
 
 	CreateDirectory((SONICGLVL_CACHE_PATH + slot_name).c_str(), NULL);
 
-	EditorLevel *lost_world_level = new EditorLevel(folder, slot_name, slot_name, "", LIBGENS_LEVEL_GAME_LOST_WORLD);
+	EditorLevel* lost_world_level = new EditorLevel(folder, slot_name, slot_name, "", LIBGENS_LEVEL_GAME_LOST_WORLD);
 	current_level = lost_world_level;
 
 	lost_world_level->unpackResources();
@@ -126,8 +126,8 @@ void EditorApplication::openLostWorldLevel(string filename) {
 	current_level->getTerrain()->addInstances(lost_world_level->getTerrain()->getInstancesToOrganize());
 	current_level->getTerrain()->getMaterialLibrary()->merge(lost_world_level->getMaterialLibrary(), true);
 	*/
-	
-	LibGens::Light *direct_light=lost_world_level->getDirectLight();
+
+	LibGens::Light* direct_light = lost_world_level->getDirectLight();
 	if (direct_light) {
 		createDirectionalLight(direct_light);
 	}
@@ -163,8 +163,8 @@ void EditorApplication::openLevel(string filename) {
 		return;
 	}
 
-	string slot_name=filename;
-	string folder="";
+	string slot_name = filename;
+	string folder = "";
 
 	size_t sep = slot_name.find_last_of("#");
 	if (sep != string::npos) {
@@ -174,13 +174,13 @@ void EditorApplication::openLevel(string filename) {
 
 	sep = slot_name.find_last_of(".ar.00");
 	if (sep != string::npos) {
-		slot_name = slot_name.substr(0, sep-5);
+		slot_name = slot_name.substr(0, sep - 5);
 	}
 
-	string data_name=slot_name;
-	string geometry_name=level_database->getGeometryPath(slot_name);
-	string slot_id_name=level_database->getSlot(slot_name);
-	size_t game_mode=level_database->getGame(slot_name);
+	string data_name = slot_name;
+	string geometry_name = level_database->getGeometryPath(slot_name);
+	string slot_id_name = level_database->getSlot(slot_name);
+	size_t game_mode = level_database->getGame(slot_name);
 
 	if (!geometry_name.size()) geometry_name = slot_name;
 
@@ -204,7 +204,7 @@ void EditorApplication::openLevel(string filename) {
 
 	updateObjectCategoriesGUI();
 
-	current_level_filename=filename;
+	current_level_filename = filename;
 
 	current_level = new EditorLevel(folder, slot_name, geometry_name, slot_id_name, game_mode);
 	current_level->unpackData();
@@ -225,12 +225,12 @@ void EditorApplication::openLevel(string filename) {
 	}
 
 	if (!current_set) {
-		list<LibGens::ObjectSet *> sets = current_level->getLevel()->getSets();
+		list<LibGens::ObjectSet*> sets = current_level->getLevel()->getSets();
 		if (!sets.empty()) {
 			current_set = sets.front();
 		}
 		else {
-			LibGens::ObjectSet *set = new LibGens::ObjectSet();
+			LibGens::ObjectSet* set = new LibGens::ObjectSet();
 			if (current_level->getGameMode() == LIBGENS_LEVEL_GAME_UNLEASHED) {
 				set->setName("Base");
 				set->setFilename(current_level->getLevel()->getFolder() + set->getName() + LIBGENS_OBJECT_SET_EXTENSION);
@@ -251,7 +251,7 @@ void EditorApplication::openLevel(string filename) {
 	if (camera_manager) {
 		camera_manager->setLevel(current_level->getLevel());
 	}
-	
+
 	if ((game_mode == LIBGENS_LEVEL_GAME_GENERATIONS) || (game_mode == LIBGENS_LEVEL_GAME_UNLEASHED)) {
 		current_level->loadCollision(havok_enviroment, scene_manager, havok_nodes_list);
 	}
@@ -265,24 +265,24 @@ void EditorApplication::openLevel(string filename) {
 	havok_enviroment->addFolder(current_level->getTerrain()->getResourcesFolder());
 
 	// Create the scene lights
-	LibGens::Light *direct_light=current_level->getDirectLight();
+	LibGens::Light* direct_light = current_level->getDirectLight();
 	if (direct_light) {
 		createDirectionalLight(direct_light);
 	}
 
-	LibGens::LightList *light_list=current_level->getLightList();
+	LibGens::LightList* light_list = current_level->getLightList();
 	if (light_list) {
-		vector<LibGens::Light *> omni_lights=light_list->getOmniLights(); 
+		vector<LibGens::Light*> omni_lights = light_list->getOmniLights();
 
-		for (size_t i=0; i<omni_lights.size(); i++) {
-			LibGens::Vector3 light_position=omni_lights[i]->getPosition();
-			LibGens::Vector3 light_color=omni_lights[i]->getColor();
+		for (size_t i = 0; i < omni_lights.size(); i++) {
+			LibGens::Vector3 light_position = omni_lights[i]->getPosition();
+			LibGens::Vector3 light_color = omni_lights[i]->getColor();
 
-			Ogre::Light *light = scene_manager->createLight(omni_lights[i]->getName());
+			Ogre::Light* light = scene_manager->createLight(omni_lights[i]->getName());
 			light->setDiffuseColour(Ogre::ColourValue(light_color.x, light_color.y, light_color.z));
 			light->setType(Ogre::Light::LT_POINT);
 			light->setPosition(Ogre::Vector3(light_position.x, light_position.y, light_position.z));
-			light->setAttenuation(omni_lights[i]->getOuterRange()*2, 0, omni_lights[i]->getInnerRange(), omni_lights[i]->getOuterRange());
+			light->setAttenuation(omni_lights[i]->getOuterRange() * 2, 0, omni_lights[i]->getInnerRange(), omni_lights[i]->getOuterRange());
 		}
 	}
 
@@ -312,7 +312,7 @@ void EditorApplication::newCurrentSet() {
 		MessageBox(NULL, "Rename the object set called \"rename_me\" first before creating a new object set.", "SonicGLvl", MB_OK);
 	}
 	else {
-		LibGens::ObjectSet *set = new LibGens::ObjectSet();
+		LibGens::ObjectSet* set = new LibGens::ObjectSet();
 		set->setName("rename_me");
 		if (current_level->getGameMode() == LIBGENS_LEVEL_GAME_UNLEASHED) {
 			set->setFilename(current_level->getLevel()->getFolder() + set->getName() + LIBGENS_OBJECT_SET_EXTENSION);
@@ -343,7 +343,7 @@ void EditorApplication::deleteCurrentSet() {
 }
 
 void EditorApplication::changeCurrentSet(string change_set) {
-	LibGens::ObjectSet *set = current_level->getLevel()->getSet(change_set);
+	LibGens::ObjectSet* set = current_level->getLevel()->getSet(change_set);
 	if (set) {
 		current_set = set;
 		updateSelectedSetGUI();
@@ -378,9 +378,9 @@ void EditorApplication::updateCurrentSetVisible(bool v) {
 	}
 }
 
-void EditorApplication::createDirectionalLight(LibGens::Light *direct_light) {
-	LibGens::Vector3 light_direction=direct_light->getPosition();
-	LibGens::Vector3 light_color=direct_light->getColor();
+void EditorApplication::createDirectionalLight(LibGens::Light* direct_light) {
+	LibGens::Vector3 light_direction = direct_light->getPosition();
+	LibGens::Vector3 light_color = direct_light->getColor();
 
 	global_directional_light = scene_manager->createLight(direct_light->getName());
 	global_directional_light->setSpecularColour(Ogre::ColourValue::White);
@@ -395,7 +395,7 @@ void EditorApplication::createDirectionalLight(LibGens::Light *direct_light) {
 		global_directional_light->setDirection(Ogre::Vector3(light_direction.x, light_direction.y, light_direction.z));
 	}
 
-	Ogre::Light *light = axis_scene_manager->createLight(direct_light->getName()+"_viewport");
+	Ogre::Light* light = axis_scene_manager->createLight(direct_light->getName() + "_viewport");
 	light->setSpecularColour(Ogre::ColourValue::White);
 	light->setDiffuseColour(Ogre::ColourValue(light_color.x, light_color.y, light_color.z));
 	light->setType(Ogre::Light::LT_DIRECTIONAL);
@@ -408,26 +408,26 @@ void EditorApplication::createSkybox(string skybox_name) {
 		return;
 	}
 
-	LibGens::Model *skybox_model=current_level->getModelLibrary()->getModel(skybox_name);
+	LibGens::Model* skybox_model = current_level->getModelLibrary()->getModel(skybox_name);
 	if (skybox_model) {
-		Ogre::SceneNode *scene_node = scene_manager->getRootSceneNode()->createChildSceneNode();
+		Ogre::SceneNode* scene_node = scene_manager->getRootSceneNode()->createChildSceneNode();
 		buildModel(scene_node, skybox_model, skybox_model->getName(), "", scene_manager, current_level->getMaterialLibrary(), 0, GENERAL_MESH_GROUP, false, SONICGLVL_SHADER_LIBRARY);
 
 
-		unsigned short attached_objects=scene_node->numAttachedObjects();
-		for (unsigned short i=0; i<attached_objects; i++) {
-			Ogre::Entity *entity=static_cast<Ogre::Entity *>(scene_node->getAttachedObject(i));
+		unsigned short attached_objects = scene_node->numAttachedObjects();
+		for (unsigned short i = 0; i < attached_objects; i++) {
+			Ogre::Entity* entity = static_cast<Ogre::Entity*>(scene_node->getAttachedObject(i));
 			entity->setRenderQueueGroup(Ogre::RENDER_QUEUE_SKIES_EARLY);
-			unsigned int attached_entities=entity->getNumSubEntities();
+			unsigned int attached_entities = entity->getNumSubEntities();
 
 			Ogre::AxisAlignedBox aabb;
 			aabb.setInfinite();
 			entity->getMesh()->_setBounds(aabb, false);
 
-			for (unsigned int j=0; j<attached_entities; j++) {
-				Ogre::SubEntity *sub_entity=entity->getSubEntity(j);
-				Ogre::MaterialPtr material=sub_entity->getMaterial();
-				Ogre::Pass *pass=material->getTechnique(0)->getPass(0);
+			for (unsigned int j = 0; j < attached_entities; j++) {
+				Ogre::SubEntity* sub_entity = entity->getSubEntity(j);
+				Ogre::MaterialPtr material = sub_entity->getMaterial();
+				Ogre::Pass* pass = material->getTechnique(0)->getPass(0);
 				pass->setDepthWriteEnabled(false);
 			}
 		}
@@ -477,7 +477,7 @@ void EditorApplication::cleanLevelTerrain() {
 	current_level->cleanTerrainResources();
 
 	clearSelection();
-	for (list<TerrainNode *>::iterator it=terrain_nodes_list.begin(); it!=terrain_nodes_list.end(); it++) {
+	for (list<TerrainNode*>::iterator it = terrain_nodes_list.begin(); it != terrain_nodes_list.end(); it++) {
 		delete (*it);
 	}
 	terrain_nodes_list.clear();
@@ -494,13 +494,13 @@ void EditorApplication::importLevelTerrainFBX(string filename) {
 	if (terrain_streamer) return;
 
 	// Import and add to Terrain Data
-	LibGens::FBX *fbx=fbx_manager->importFBX(filename);
+	LibGens::FBX* fbx = fbx_manager->importFBX(filename);
 	current_level->importTerrainFBX(fbx);
 
 	// Create scene nodes from FBX
-	list<LibGens::TerrainInstance *> terrain_instances=fbx->getInstances();
-	for (list<LibGens::TerrainInstance *>::iterator it=terrain_instances.begin(); it!=terrain_instances.end(); it++) {
-		TerrainNode *terrain_node=new TerrainNode((*it), scene_manager, current_level->getTerrain()->getMaterialLibrary());
+	list<LibGens::TerrainInstance*> terrain_instances = fbx->getInstances();
+	for (list<LibGens::TerrainInstance*>::iterator it = terrain_instances.begin(); it != terrain_instances.end(); it++) {
+		TerrainNode* terrain_node = new TerrainNode((*it), scene_manager, current_level->getTerrain()->getMaterialLibrary());
 		terrain_nodes_list.push_back(terrain_node);
 	}
 }
