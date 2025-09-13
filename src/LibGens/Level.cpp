@@ -459,7 +459,7 @@ namespace LibGens {
 			return;
 		}
 
-		// Update the current spawn point with an active Sonic Spawn object if available
+		bool hasActiveSonicSpawn = false;
 		list<Object *> spawn_objects;
 		getObjectsByName(LIBGENS_SPAWN_POINT_OBJECT_NAME, spawn_objects);
 
@@ -470,83 +470,149 @@ namespace LibGens {
 				ObjectElementBool *element_bool = static_cast<LibGens::ObjectElementBool *>(element);
 
 				if (element_bool->value) {
-					ObjectElementString *element_mode = static_cast<LibGens::ObjectElementString *>((*it)->getElement(LIBGENS_LEVEL_XML_MODE));
-					ObjectElementString *element_view = static_cast<LibGens::ObjectElementString *>((*it)->getElement(LIBGENS_LEVEL_XML_CAMERA_VIEW));
-					ObjectElementFloat  *element_speed = static_cast<LibGens::ObjectElementFloat *>((*it)->getElement(LIBGENS_LEVEL_XML_SPEED));
-					ObjectElementFloat  *element_time = static_cast<LibGens::ObjectElementFloat *>((*it)->getElement(LIBGENS_LEVEL_XML_TIME));
-
-					spawn_yaw         = (*it)->getRotation().getYawDegrees();
-					spawn_position    = (*it)->getPosition();
-					spawn_mode        = (element_mode  ? element_mode->value  : "Stand");
-					spawn_speed       = (element_speed ? element_speed->value : 0.0f);
-					spawn_time        = (element_time  ? element_time->value  : 0.0f);
-					spawn_camera_view = (element_view ? element_view->value : "Forward");
+					hasActiveSonicSpawn = true;
+					spawn_yaw = (*it)->getRotation().getYawDegrees();
+					spawn_position = (*it)->getPosition();
 					break;
 				}
 			}
 		}
 
-		// Search and delete the first appearance of the Sonic Spawn Point Segment
-		pElem_i=pElem->FirstChildElement();
-		for(pElem_i; pElem_i; pElem_i=pElem_i->NextSiblingElement()) {
-			if (pElem_i->ValueStr() == spawn_type) {
-				pElem->RemoveChild(pElem_i);
-				break;
+		bool isEggmanLand = (folder.find("Act_EggmanLand") != string::npos);
+		bool isTownLevel = (
+			folder.find("Town_Mykonos") != string::npos ||
+			folder.find("Town_Africa") != string::npos ||
+			folder.find("Town_EuropeanCity") != string::npos ||
+			folder.find("Town_China") != string::npos ||
+			folder.find("Town_Snow") != string::npos ||
+			folder.find("Town_PetraCapital") != string::npos ||
+			folder.find("Town_NYCity") != string::npos ||
+			folder.find("Town_SouthEastAsia") != string::npos ||
+			folder.find("Town_Mykonos_Night") != string::npos ||
+			folder.find("Town_Africa_Night") != string::npos ||
+			folder.find("Town_EuropeanCity_Night") != string::npos ||
+			folder.find("Town_China_Night") != string::npos ||
+			folder.find("Town_Snow_Night") != string::npos ||
+			folder.find("Town_PetraCapital_Night") != string::npos ||
+			folder.find("Town_NYCity_Night") != string::npos ||
+			folder.find("Town_SouthEastAsia_Night") != string::npos ||
+			folder.find("Town_EggManBase") != string::npos ||
+			folder.find("Town_MykonosETF") != string::npos ||
+			folder.find("Town_AfricaETF") != string::npos ||
+			folder.find("Town_EuropeanCityETF") != string::npos ||
+			folder.find("Town_ChinaETF") != string::npos ||
+			folder.find("Town_SnowETF") != string::npos ||
+			folder.find("Town_PetraCapitalETF") != string::npos ||
+			folder.find("Town_NYCityETF") != string::npos ||
+			folder.find("Town_SouthEastAsiaETF") != string::npos ||
+			folder.find("Town_MykonosETF_Night") != string::npos ||
+			folder.find("Town_AfricaETF_Night") != string::npos || 
+			folder.find("Town_EuropeanCityETF_Night") != string::npos ||
+			folder.find("Town_ChinaETF_Night") != string::npos ||
+			folder.find("Town_SnowETF_Night") != string::npos ||
+			folder.find("Town_PetraCapitalETF_Night") != string::npos ||
+			folder.find("Town_NYCityETF_Night") != string::npos ||
+			folder.find("Town_SouthEastAsiaETF_Night") != string::npos
+		);
+
+		if (isEggmanLand) {
+			if (hasActiveSonicSpawn) {
+				pElem_i = pElem->FirstChildElement();
+				while(pElem_i) {
+					if (pElem_i->ValueStr() == "SwitchPlayer") {
+						TiXmlElement* posElem = pElem_i->FirstChildElement(LIBGENS_OBJECT_ELEMENT_POSITION);
+						if(posElem) {
+							posElem->Clear();
+							spawn_position.writeXML(posElem);
+						}
+
+						TiXmlElement* yawElem = pElem_i->FirstChildElement(LIBGENS_LEVEL_XML_YAW);
+						if(yawElem) {
+							yawElem->Clear();
+							TiXmlText* yawValue = new TiXmlText(ToString(spawn_yaw));
+							yawElem->LinkEndChild(yawValue);
+						}
+					}
+					pElem_i = pElem_i->NextSiblingElement();
+				}
+			}
+		} else if (isTownLevel) {
+			pElem_i = pElem->FirstChildElement();
+			while(pElem_i) {
+				if (pElem_i->ValueStr() == spawn_type) {
+					TiXmlElement* posElem = pElem_i->FirstChildElement(LIBGENS_OBJECT_ELEMENT_POSITION);
+					if(posElem) {
+						posElem->Clear();
+						spawn_position.writeXML(posElem);
+					}
+
+					TiXmlElement* yawElem = pElem_i->FirstChildElement(LIBGENS_LEVEL_XML_YAW);
+					if(yawElem) {
+						yawElem->Clear();
+						TiXmlText* yawValue = new TiXmlText(ToString(spawn_yaw));
+						yawElem->LinkEndChild(yawValue);
+					}
+				}
+				pElem_i = pElem_i->NextSiblingElement();
+			}
+		} else {
+			pElem_i = pElem->FirstChildElement();
+			for(pElem_i; pElem_i; pElem_i=pElem_i->NextSiblingElement()) {
+				if (pElem_i->ValueStr() == spawn_type) {
+					pElem->RemoveChild(pElem_i);
+					break;
+				}
+			}
+
+			TiXmlElement newSpawnNode(spawn_type);
+			pElem_i = pElem->InsertBeforeChild(pElem->FirstChildElement(), newSpawnNode)->ToElement();
+
+			TiXmlElement* positionRoot = new TiXmlElement(LIBGENS_OBJECT_ELEMENT_POSITION);
+			spawn_position.writeXML(positionRoot);
+			pElem_i->LinkEndChild(positionRoot);
+
+			TiXmlElement* yawRoot = new TiXmlElement(LIBGENS_LEVEL_XML_YAW);
+			TiXmlText* yawValue = new TiXmlText(ToString(spawn_yaw));
+			yawRoot->LinkEndChild(yawValue);
+			pElem_i->LinkEndChild(yawRoot);
+
+			if (spawn_type == LIBGENS_LEVEL_XML_SONIC) {
+				TiXmlElement* deadHeightRoot = new TiXmlElement(LIBGENS_LEVEL_XML_DEAD_HEIGHT);
+				TiXmlText* deadHeightValue = new TiXmlText(ToString(spawn_dead_height));
+				deadHeightRoot->LinkEndChild(deadHeightValue);
+				pElem_i->LinkEndChild(deadHeightRoot);
+
+				if (game_mode == LIBGENS_LEVEL_GAME_UNLEASHED) {
+					TiXmlElement* isSideViewRoot = new TiXmlElement(LIBGENS_LEVEL_XML_IS_SIDE_VIEW);
+					TiXmlText* isSideViewValue = new TiXmlText(spawn_camera_view == LIBGENS_LEVEL_CAMERA_VIEW_SIDE ? "true" : "false");
+					isSideViewRoot->LinkEndChild(isSideViewValue);
+					pElem_i->LinkEndChild(isSideViewRoot);
+				} else {
+					TiXmlElement* cameraViewRoot = new TiXmlElement(LIBGENS_LEVEL_XML_CAMERA_VIEW);
+					TiXmlText* cameraViewValue = new TiXmlText(spawn_camera_view);
+					cameraViewRoot->LinkEndChild(cameraViewValue);
+					pElem_i->LinkEndChild(cameraViewRoot);
+				}
+
+				TiXmlElement* startRoot = new TiXmlElement(LIBGENS_LEVEL_XML_START);
+				TiXmlElement* modeRoot = new TiXmlElement(LIBGENS_LEVEL_XML_MODE);
+				TiXmlText* modeValue = new TiXmlText(spawn_mode);
+				modeRoot->LinkEndChild(modeValue);
+				startRoot->LinkEndChild(modeRoot);
+
+				TiXmlElement* speedRoot = new TiXmlElement(LIBGENS_LEVEL_XML_SPEED);
+				TiXmlText* speedValue = new TiXmlText(ToString(spawn_speed));
+				speedRoot->LinkEndChild(speedValue);
+				startRoot->LinkEndChild(speedRoot);
+
+				TiXmlElement* timeRoot = new TiXmlElement(LIBGENS_LEVEL_XML_TIME);
+				TiXmlText* timeValue = new TiXmlText(ToString(spawn_time));
+				timeRoot->LinkEndChild(timeValue);
+				startRoot->LinkEndChild(timeRoot);
+
+				pElem_i->LinkEndChild(startRoot);
 			}
 		}
-
-		// Re-create the Sonic Spawn Point Segment and insert it at the start
-
-		TiXmlElement newSpawnNode(spawn_type);
-		pElem_i = pElem->InsertBeforeChild(pElem->FirstChildElement(), newSpawnNode)->ToElement();
-
-		TiXmlElement* positionRoot=new TiXmlElement(LIBGENS_OBJECT_ELEMENT_POSITION);
-		spawn_position.writeXML(positionRoot);
-		pElem_i->LinkEndChild(positionRoot);
-
-		TiXmlElement* yawRoot=new TiXmlElement(LIBGENS_LEVEL_XML_YAW);
-		TiXmlText* yawValue=new TiXmlText(ToString(spawn_yaw));
-		yawRoot->LinkEndChild(yawValue);
-		pElem_i->LinkEndChild(yawRoot);
-
-		if (spawn_type == LIBGENS_LEVEL_XML_SONIC) {
-			TiXmlElement* deadHeightRoot = new TiXmlElement(LIBGENS_LEVEL_XML_DEAD_HEIGHT);
-			TiXmlText* deadHeightValue = new TiXmlText(ToString(spawn_dead_height));
-			deadHeightRoot->LinkEndChild(deadHeightValue);
-			pElem_i->LinkEndChild(deadHeightRoot);
-
-			if (game_mode == LIBGENS_LEVEL_GAME_UNLEASHED) {
-				TiXmlElement* isSideViewRoot = new TiXmlElement(LIBGENS_LEVEL_XML_IS_SIDE_VIEW);
-				TiXmlText* isSideViewValue = new TiXmlText(spawn_camera_view == LIBGENS_LEVEL_CAMERA_VIEW_SIDE ? "true" : "false");
-				isSideViewRoot->LinkEndChild(isSideViewValue);
-				pElem_i->LinkEndChild(isSideViewRoot);
-			}
-			else {
-				TiXmlElement* cameraViewRoot = new TiXmlElement(LIBGENS_LEVEL_XML_CAMERA_VIEW);
-				TiXmlText* cameraViewValue = new TiXmlText(spawn_camera_view);
-				cameraViewRoot->LinkEndChild(cameraViewValue);
-				pElem_i->LinkEndChild(cameraViewRoot);
-			}
-		}
-
-		TiXmlElement* startRoot=new TiXmlElement(LIBGENS_LEVEL_XML_START);
-		if (spawn_type == LIBGENS_LEVEL_XML_SONIC) {
-			TiXmlElement* modeRoot=new TiXmlElement(LIBGENS_LEVEL_XML_MODE);
-			TiXmlText* modeValue=new TiXmlText(spawn_mode);
-			modeRoot->LinkEndChild(modeValue);
-			startRoot->LinkEndChild(modeRoot);
-
-			TiXmlElement* speedRoot=new TiXmlElement(LIBGENS_LEVEL_XML_SPEED);
-			TiXmlText* speedValue=new TiXmlText(ToString(spawn_speed));
-			speedRoot->LinkEndChild(speedValue);
-			startRoot->LinkEndChild(speedRoot);
-
-			TiXmlElement* timeRoot=new TiXmlElement(LIBGENS_LEVEL_XML_TIME);
-			TiXmlText* timeValue=new TiXmlText(ToString(spawn_time));
-			timeRoot->LinkEndChild(timeValue);
-			startRoot->LinkEndChild(timeRoot);
-		}
-		pElem_i->LinkEndChild(startRoot);
 
 		// Save the changes
 		if (!doc.SaveFile(filename)) {
