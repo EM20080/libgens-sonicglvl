@@ -463,7 +463,7 @@ class EditorApplication : public BaseApplication {
 		void saveMaterialEditorModelGUI();
 		void saveMaterialEditorMaterial();
 		void saveAllMaterialEditorMaterials();
-		void convertMaterialsToV1();
+		void convertMaterialsToV1(); // Temp
 		void convertMaterialsToUnleashed();
 		void convertMaterialsToGenerations();
 		void convertMaterialsToLostWorld();

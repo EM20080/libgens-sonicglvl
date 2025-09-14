@@ -1790,8 +1790,17 @@ void EditorApplication::convertMaterialsToUnleashedShaders() {
 			if (shader == "Cloth_dsnt[b]") shader = "Cloth_dsnt[b]";
 			if (shader == "Cloud_nfe1") shader = "Common_d";
 			if (shader == "Common_d") shader = "Common_d[v]";
+			if (shader == "Common2_dpn") shader = "Common_dpn"; // FORCES shader
+			if (shader == "Common2_dp") shader = "Common_dp"; // FORCES shader
+			if (shader == "MCommon_dpn") shader = "Common_dpn"; // FORCES shader
+			if (shader == "Blend2_dpndpn") shader = "Blend_dpndpn"; // FORCES shader
+			if (shader == "IgnoreLight_E") shader = "IgnoreLight_d"; // FORCES shader // This will make emission ignorelights turn into a diffuse, you will have to manually edit the texture slot to be diffuse instead of "emissive"
 			if (shader == "Common_da") shader = "Common_d[v]";
-			if (shader == "Common_de") shader = "Common_de";
+			if (shader == "CyberSpaceNoise_dpn") shader = "Common_dpn"; // Common Shader used in frontiers
+			if (shader == "Emission_dpe") shader = "Luminescence_dpE"; // Common Shader used in frontiers
+			if (shader == "Vegitation") shader = "Common_dpn"; // Common Shader used in frontiers foliage
+			if (shader == "Common_dpna") shader = "Common_dpn"; // SXSG Shader
+		    if (shader == "Common_de") shader = "Common_de";
 			if (shader == "Common_de1") shader = "Common_de";
 			if (shader == "Common_de2") shader = "Common_de";
 			if (shader == "Common_de[bw]") shader = "Common_de[bw]";
@@ -1985,8 +1994,8 @@ void EditorApplication::convertMaterialsToUnleashedShaders() {
 			if (shader == "LuminescenceV_dn") shader = "Luminescence_d";
 			if (shader == "LuminescenceV_dp") shader = "Luminescence_dpE";
 			if (shader == "LuminescenceV_dpdpv") shader = "Luminescence_dpE";
-			if (shader == "LuminescenceV_dpe1") shader = "Luminescence_d";
-			if (shader == "LuminescenceV_dpe2") shader = "Luminescence_d";
+			if (shader == "LuminescenceV_dpe1") shader = "Luminescence_dpE";
+			if (shader == "LuminescenceV_dpe2") shader = "Luminescence_dpE";
 			if (shader == "LuminescenceV_dpn") shader = "Luminescence_dpnE";
 			if (shader == "LuminescenceV_dpndp") shader = "Luminescence_d";
 			if (shader == "LuminescenceV_dpnv") shader = "Luminescence_d";

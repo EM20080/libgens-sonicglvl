@@ -18,12 +18,19 @@
 //=========================================================================
 
 #include "EditorConfiguration.h"
+#include "EditorNode.h"
 
 EditorConfiguration::EditorConfiguration() {
 	object_production_path = "";
 	game_path = "";
+	terrain_view_distance = 1000.0f;
+	terrain_camera_offset = 1000.0f;
+	gi_level_1_quality_offset = 1.0f;
+	gi_level_2_quality_offset = 1.0f;
+	terrain_update_interval = 1.0f;
+	visibility_flags = EDITOR_NODE_OBJECT | EDITOR_NODE_OBJECT_MSP |
+		EDITOR_NODE_TERRAIN | EDITOR_NODE_TERRAIN_AUTODRAW;
 }
-
 void EditorConfiguration::load(string filename) {
 	TiXmlDocument doc(filename);
 	if (!doc.LoadFile()) {
