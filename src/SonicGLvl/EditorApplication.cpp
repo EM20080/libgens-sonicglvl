@@ -23,15 +23,12 @@
 #include "ObjectSet.h"
 #include "ObjectLibrary.h"
 #include "MessageTypes.h"
-#include <shlobj.h>
 #include <commdlg.h>
-#include <shlwapi.h>
 #include <filesystem>
-using namespace std;
-
 #include "Texture.h"
 #include "Material.h"
 #include "Level.h"
+using namespace std;
 
 Ogre::Rectangle2D* mMiniScreen = NULL;
 

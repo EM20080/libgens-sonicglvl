@@ -15,7 +15,7 @@ void EditorApplication::openMultiSetParamDlg()
 
 		clearMultiSetParamDlg();
 	}
-	
+
 	SetFocus(hMultiSetParamDlg);
 }
 
@@ -239,7 +239,7 @@ INT_PTR CALLBACK MultiSetParamCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARA
 			break;
 		}
 		break;
-		
+
 	case WM_NOTIFY:
 		if (LOWORD(wParam) == IDS_MULTISETPARAM_COUNT)
 		{
