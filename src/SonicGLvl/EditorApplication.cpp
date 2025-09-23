@@ -23,14 +23,8 @@
 #include "ObjectSet.h"
 #include "ObjectLibrary.h"
 #include "MessageTypes.h"
-#include <commdlg.h>
-#include <filesystem>
-#include "Texture.h"
-#include "Material.h"
-#include "Level.h"
-using namespace std;
 
-Ogre::Rectangle2D* mMiniScreen = NULL;
+Ogre::Rectangle2D* mMiniScreen=NULL;
 
 INT_PTR CALLBACK LeftBarCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam);
 INT_PTR CALLBACK BottomBarCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -68,10 +62,10 @@ void EditorApplication::selectNode(EditorNode* node)
 }
 
 void EditorApplication::updateSelection() {
-	Ogre::Vector3 center = Ogre::Vector3::ZERO;
-	Ogre::Quaternion rotation = Ogre::Quaternion::IDENTITY;
+	Ogre::Vector3 center=Ogre::Vector3::ZERO;
+	Ogre::Quaternion rotation=Ogre::Quaternion::IDENTITY;
 
-	for (list<EditorNode*>::iterator it = selected_nodes.begin(); it != selected_nodes.end(); it++) {
+	for (list<EditorNode *>::iterator it=selected_nodes.begin(); it!=selected_nodes.end(); it++) {
 		center += (*it)->getPosition();
 	}
 	center /= selected_nodes.size();
@@ -100,25 +94,25 @@ void EditorApplication::deleteSelection() {
 	bool msp_deleted = false;
 
 	if (editor_mode == EDITOR_NODE_QUERY_OBJECT) {
-		HistoryActionWrapper* wrapper = new HistoryActionWrapper();
+		HistoryActionWrapper *wrapper = new HistoryActionWrapper();
 
-		for (list<EditorNode*>::iterator it = selected_nodes.begin(); it != selected_nodes.end(); it++) {
+		for (list<EditorNode *>::iterator it=selected_nodes.begin(); it!=selected_nodes.end(); it++) {
 			// Cast to appropiate types depending on the type of editor node
 			if ((*it)->getType() == EDITOR_NODE_OBJECT) {
-				ObjectNode* object_node = static_cast<ObjectNode*>(*it);
+				ObjectNode *object_node=static_cast<ObjectNode *>(*it);
 
-				LibGens::Object* object = object_node->getObject();
+				LibGens::Object *object=object_node->getObject();
 				if (object) {
-					LibGens::ObjectSet* object_set = object->getParentSet();
+					LibGens::ObjectSet *object_set=object->getParentSet();
 					if (object_set) {
 						object_set->eraseObject(object);
 					}
 
 					object_node_manager->hideObjectNode(object, true);
-					HistoryActionDeleteObjectNode* action = new HistoryActionDeleteObjectNode(object, object_node_manager);
+					HistoryActionDeleteObjectNode *action = new HistoryActionDeleteObjectNode(object, object_node_manager);
 					wrapper->push(action);
 
-					HistoryActionSelectNode* action_select = new HistoryActionSelectNode((*it), true, false, &selected_nodes);
+					HistoryActionSelectNode *action_select = new HistoryActionSelectNode((*it), true, false, &selected_nodes);
 					(*it)->setSelect(false);
 					wrapper->push(action_select);
 				}
@@ -143,13 +137,13 @@ void EditorApplication::clearSelection() {
 	if (!selected_nodes.size()) return;
 
 	bool stuff_deselected = false;
-	HistoryActionWrapper* wrapper = new HistoryActionWrapper();
+	HistoryActionWrapper *wrapper = new HistoryActionWrapper();
 
-	for (list<EditorNode*>::iterator it = selected_nodes.begin(); it != selected_nodes.end(); it++) {
+	for (list<EditorNode *>::iterator it=selected_nodes.begin(); it!=selected_nodes.end(); it++) {
 		if ((*it)->isSelected()) {
 			stuff_deselected = true;
 
-			HistoryActionSelectNode* action_select = new HistoryActionSelectNode((*it), true, false, &selected_nodes);
+			HistoryActionSelectNode *action_select = new HistoryActionSelectNode((*it), true, false, &selected_nodes);
 			(*it)->setSelect(false);
 			wrapper->push(action_select);
 		}
@@ -169,10 +163,10 @@ void EditorApplication::clearSelection() {
 
 void EditorApplication::showSelectionNames() {
 	string message = "";
-	for (list<EditorNode*>::iterator it = selected_nodes.begin(); it != selected_nodes.end(); it++) {
+	for (list<EditorNode *>::iterator it=selected_nodes.begin(); it!=selected_nodes.end(); it++) {
 		if ((*it)->isSelected()) {
 			if ((*it)->getType() == EDITOR_NODE_TERRAIN) {
-				TerrainNode* terrain_node = (TerrainNode*)(*it);
+				TerrainNode *terrain_node = (TerrainNode *) (*it);
 				message += terrain_node->getTerrainInstance()->getName() + "\n";
 			}
 		}
@@ -183,14 +177,14 @@ void EditorApplication::showSelectionNames() {
 
 void EditorApplication::selectAll() {
 	bool stuff_selected = false;
-	HistoryActionWrapper* wrapper = new HistoryActionWrapper();
+	HistoryActionWrapper *wrapper = new HistoryActionWrapper();
 
 	if (editor_mode == EDITOR_NODE_QUERY_OBJECT) {
-		list<ObjectNode*> object_nodes = object_node_manager->getObjectNodes();
-		for (list<ObjectNode*>::iterator it = object_nodes.begin(); it != object_nodes.end(); it++) {
+		list<ObjectNode *> object_nodes = object_node_manager->getObjectNodes();
+		for (list<ObjectNode *>::iterator it=object_nodes.begin(); it!=object_nodes.end(); it++) {
 			if (!(*it)->isSelected() && !(*it)->isForceHidden()) {
 				stuff_selected = true;
-				HistoryActionSelectNode* action_select = new HistoryActionSelectNode((*it), false, true, &selected_nodes);
+				HistoryActionSelectNode *action_select = new HistoryActionSelectNode((*it), false, true, &selected_nodes);
 				(*it)->setSelect(true);
 				wrapper->push(action_select);
 				selected_nodes.push_back(*it);
@@ -225,39 +219,39 @@ list<EditorNode*> EditorApplication::getSelectedNodes()
 void EditorApplication::cloneSelection() {
 	if (!selected_nodes.size()) return;
 
-	list<EditorNode*> nodes_to_clone = selected_nodes;
+	list<EditorNode *> nodes_to_clone = selected_nodes;
 	clearSelection();
-
-	HistoryActionWrapper* wrapper = new HistoryActionWrapper();
-	for (list<EditorNode*>::iterator it = nodes_to_clone.begin(); it != nodes_to_clone.end(); it++) {
+	
+	HistoryActionWrapper *wrapper = new HistoryActionWrapper();
+	for (list<EditorNode *>::iterator it=nodes_to_clone.begin(); it!=nodes_to_clone.end(); it++) {
 		// Cast to appropiate types depending on the type of editor node
 		if ((*it)->getType() == EDITOR_NODE_OBJECT) {
-			ObjectNode* object_node = static_cast<ObjectNode*>(*it);
+			ObjectNode *object_node=static_cast<ObjectNode *>(*it);
 
-			LibGens::Object* object = object_node->getObject();
+			LibGens::Object *object=object_node->getObject();
 			if (object) {
-				LibGens::Object* new_object = new LibGens::Object(object);
+				LibGens::Object *new_object = new LibGens::Object(object);
 
 				if (current_level) {
 					if (current_level->getLevel()) {
 						new_object->setID(current_level->getLevel()->newObjectID());
 					}
 				}
-
-				LibGens::ObjectSet* parent_set = object->getParentSet();
+			
+				LibGens::ObjectSet *parent_set = object->getParentSet();
 				if (parent_set) {
 					parent_set->addObject(new_object);
 				}
 
 				// Create
-				ObjectNode* new_object_node = object_node_manager->createObjectNode(new_object);
+				ObjectNode *new_object_node = object_node_manager->createObjectNode(new_object);
 
 				// Push to History
-				HistoryActionCreateObjectNode* action = new HistoryActionCreateObjectNode(new_object, object_node_manager);
+				HistoryActionCreateObjectNode *action = new HistoryActionCreateObjectNode(new_object, object_node_manager);
 				wrapper->push(action);
 
 				// Add to current selection
-				HistoryActionSelectNode* action_select = new HistoryActionSelectNode(new_object_node, false, true, &selected_nodes);
+				HistoryActionSelectNode *action_select = new HistoryActionSelectNode(new_object_node, false, true, &selected_nodes);
 				new_object_node->setSelect(true);
 				selected_nodes.push_back(new_object_node);
 				wrapper->push(action_select);
@@ -309,7 +303,7 @@ void EditorApplication::temporaryCloneSelection() {
 }
 
 void EditorApplication::translateSelection(Ogre::Vector3 v) {
-	for (list<EditorNode*>::iterator it = selected_nodes.begin(); it != selected_nodes.end(); it++) {
+	for (list<EditorNode *>::iterator it=selected_nodes.begin(); it!=selected_nodes.end(); it++) {
 		(*it)->translate(v);
 	}
 }
@@ -326,7 +320,7 @@ void EditorApplication::rotateSelection(Ogre::Quaternion q) {
 		Ogre::Matrix4 matrix;
 		matrix.makeTransform(axis->getPosition(), Ogre::Vector3::UNIT_SCALE, q);
 
-		for (list<EditorNode*>::iterator it = selected_nodes.begin(); it != selected_nodes.end(); it++) {
+		for (list<EditorNode *>::iterator it=selected_nodes.begin(); it!=selected_nodes.end(); it++) {
 			Ogre::Vector3 new_pos = matrix * ((*it)->getPosition() - axis->getPosition());
 			(*it)->setPosition(new_pos);
 			//(*it)->rotate(q);
@@ -337,14 +331,14 @@ void EditorApplication::rotateSelection(Ogre::Quaternion q) {
 
 void EditorApplication::setSelectionRotation(Ogre::Quaternion q) {
 	if (selected_nodes.size() == 1) {
-		EditorNode* node = *selected_nodes.begin();
+		EditorNode *node = *selected_nodes.begin();
 		node->setRotation(q);
 	}
 }
 
 
 void EditorApplication::rememberSelection(bool mode) {
-	for (list<EditorNode*>::iterator it = selected_nodes.begin(); it != selected_nodes.end(); it++) {
+	for (list<EditorNode *>::iterator it=selected_nodes.begin(); it!=selected_nodes.end(); it++) {
 		if (!mode) (*it)->rememberPosition();
 		else {
 			if (selected_nodes.size() > 1) (*it)->rememberPosition();
@@ -354,12 +348,12 @@ void EditorApplication::rememberSelection(bool mode) {
 }
 
 void EditorApplication::makeHistorySelection(bool mode) {
-	HistoryActionWrapper* wrapper = new HistoryActionWrapper();
+	HistoryActionWrapper *wrapper = new HistoryActionWrapper();
 	int index = 0;
 	bool is_list = current_properties_types[current_property_index] == LibGens::OBJECT_ELEMENT_VECTOR_LIST;
-	for (list<EditorNode*>::iterator it = selected_nodes.begin(); it != selected_nodes.end(); it++) {
+	for (list<EditorNode *>::iterator it=selected_nodes.begin(); it!=selected_nodes.end(); it++) {
 		if (!mode) {
-			HistoryActionMoveNode* action = new HistoryActionMoveNode((*it), (*it)->getLastPosition(), (*it)->getPosition());
+			HistoryActionMoveNode *action = new HistoryActionMoveNode((*it), (*it)->getLastPosition(), (*it)->getPosition());
 			wrapper->push(action);
 			if (editor_mode == EDITOR_NODE_QUERY_VECTOR) {
 				VectorNode* vector_node = static_cast<VectorNode*>(*it);
@@ -380,16 +374,16 @@ void EditorApplication::makeHistorySelection(bool mode) {
 			// Push only a rotation history if it's only one node. 
 			// If it's more, push a Rotation/Move wrapper
 			if (selected_nodes.size() == 1) {
-				HistoryActionRotateNode* action = new HistoryActionRotateNode((*it), (*it)->getLastRotation(), (*it)->getRotation());
+				HistoryActionRotateNode *action = new HistoryActionRotateNode((*it), (*it)->getLastRotation(), (*it)->getRotation());
 				wrapper->push(action);
 			}
 			else {
-				HistoryActionWrapper* sub_wrapper = new HistoryActionWrapper();
+				HistoryActionWrapper *sub_wrapper = new HistoryActionWrapper();
 
-				HistoryActionMoveNode* action_mov = new HistoryActionMoveNode((*it), (*it)->getLastPosition(), (*it)->getPosition());
+				HistoryActionMoveNode *action_mov   = new HistoryActionMoveNode((*it), (*it)->getLastPosition(), (*it)->getPosition());
 				sub_wrapper->push(action_mov);
 
-				HistoryActionRotateNode* action_rot = new HistoryActionRotateNode((*it), (*it)->getLastRotation(), (*it)->getRotation());
+				HistoryActionRotateNode *action_rot = new HistoryActionRotateNode((*it), (*it)->getLastRotation(), (*it)->getRotation());
 				sub_wrapper->push(action_rot);
 
 				wrapper->push(sub_wrapper);
@@ -475,7 +469,7 @@ void EditorApplication::redoHistory() {
 }
 
 
-void EditorApplication::pushHistory(HistoryAction* action) {
+void EditorApplication::pushHistory(HistoryAction *action) {
 	if (editor_mode == EDITOR_NODE_QUERY_VECTOR)
 	{
 		property_vector_history->push(action);
@@ -489,8 +483,8 @@ void EditorApplication::toggleWorldTransform() {
 	world_transform = !world_transform;
 
 	// Update WinAPI Menu Check
-	const int viewMenuPos = 2;
-	HMENU hViewSubMenu = GetSubMenu(hMenu, viewMenuPos);
+	const int viewMenuPos=2;
+	HMENU hViewSubMenu=GetSubMenu(hMenu, viewMenuPos);
 
 	if (hViewSubMenu) {
 		CheckMenuItem(hViewSubMenu, IMD_WORLD_TRANSFORM, (world_transform ? MF_CHECKED : MF_UNCHECKED));
@@ -507,8 +501,8 @@ void EditorApplication::togglePlacementSnap() {
 	}
 
 	// Update WinAPI Menu Check
-	const int viewMenuPos = 2;
-	HMENU hViewSubMenu = GetSubMenu(hMenu, viewMenuPos);
+	const int viewMenuPos=2;
+	HMENU hViewSubMenu=GetSubMenu(hMenu, viewMenuPos);
 
 	if (hViewSubMenu) {
 		CheckMenuItem(hViewSubMenu, IMD_PLACEMENT_SNAP, ((placement_grid_snap > 0.0f) ? MF_CHECKED : MF_UNCHECKED));
@@ -545,13 +539,13 @@ void EditorApplication::snapToClosestPath() {
 	vector<float> closest_distances(selected_nodes.size(), FLT_MAX);
 	vector<LibGens::Vector3> closest_positions(selected_nodes.size());
 
-	for (LibGens::Path* path : current_level->getLevel()->getPaths()) {
+	for (LibGens::Path *path : current_level->getLevel()->getPaths()) {
 		LibGens::PathNodeList path_node_list = path->getNodes();
 
 		for (auto& pair : path_node_list) {
 			size_t editor_node_index = 0;
 
-			for (EditorNode* editor_node : selected_nodes) {
+			for (EditorNode *editor_node : selected_nodes) {
 				if ((editor_node->getType() == EDITOR_NODE_OBJECT) || (editor_node->getType() == EDITOR_NODE_OBJECT_MSP)) {
 					Ogre::Vector3 position = editor_node->getPosition();
 					float closest_distance = FLT_MAX;
@@ -568,10 +562,10 @@ void EditorApplication::snapToClosestPath() {
 		}
 	}
 
-	HistoryActionWrapper* wrapper = new HistoryActionWrapper();
+	HistoryActionWrapper *wrapper = new HistoryActionWrapper();
 	size_t editor_node_index = 0;
 
-	for (EditorNode* editor_node : selected_nodes) {
+	for (EditorNode *editor_node : selected_nodes) {
 		if (closest_distances[editor_node_index] != FLT_MAX) {
 			LibGens::Vector3 closest_position = closest_positions[editor_node_index];
 
@@ -580,7 +574,7 @@ void EditorApplication::snapToClosestPath() {
 
 			editor_node->setPosition(new_position);
 
-			HistoryActionMoveNode* action_move = new HistoryActionMoveNode(editor_node, previous_position, new_position);
+			HistoryActionMoveNode *action_move = new HistoryActionMoveNode(editor_node, previous_position, new_position);
 			wrapper->push(action_move);
 		}
 
@@ -594,25 +588,25 @@ void EditorApplication::snapToClosestPath() {
 void EditorApplication::createScene(void) {
 	// Initialize LibGens Managers
 	havok_enviroment = new LibGens::HavokEnviroment(100 * 1024 * 1024);
-	fbx_manager = new LibGens::FBXManager();
+	fbx_manager      = new LibGens::FBXManager();
 
 	// Initialize Editor Managers
-	havok_property_database = new LibGens::HavokPropertyDatabase(SONICGLVL_HAVOK_PROPERTY_DATABASE_PATH);
-	history = new History();
-	property_vector_history = new History();
-	look_at_vector_history = new History();
-	level_database = new EditorLevelDatabase(SONICGLVL_LEVEL_DATABASE_PATH);
-	material_library = new LibGens::MaterialLibrary(SONICGLVL_RESOURCES_PATH);
-	model_library = new LibGens::ModelLibrary(SONICGLVL_RESOURCES_PATH);
+	havok_property_database    = new LibGens::HavokPropertyDatabase(SONICGLVL_HAVOK_PROPERTY_DATABASE_PATH);
+	history                    = new History();
+	property_vector_history    = new History();
+	look_at_vector_history     = new History();
+	level_database             = new EditorLevelDatabase(SONICGLVL_LEVEL_DATABASE_PATH);
+	material_library           = new LibGens::MaterialLibrary(SONICGLVL_RESOURCES_PATH);
+	model_library              = new LibGens::ModelLibrary(SONICGLVL_RESOURCES_PATH);
 	generations_shader_library = new LibGens::ShaderLibrary(SONICGLVL_SHADERS_PATH);
-	unleashed_shader_library = new LibGens::ShaderLibrary(SONICGLVL_SHADERS_PATH);
-	uv_animation_library = new LibGens::UVAnimationLibrary(SONICGLVL_RESOURCES_PATH);
-	generations_library = new LibGens::ObjectLibrary(SONICGLVL_LIBRARY_PATH);
-	unleashed_library = new LibGens::ObjectLibrary(SONICGLVL_LIBRARY_PATH);
-	library = generations_library;
-	animations_list = new EditorAnimationsList();
+	unleashed_shader_library   = new LibGens::ShaderLibrary(SONICGLVL_SHADERS_PATH);
+	uv_animation_library       = new LibGens::UVAnimationLibrary(SONICGLVL_RESOURCES_PATH);
+	generations_library        = new LibGens::ObjectLibrary(SONICGLVL_LIBRARY_PATH);
+	unleashed_library          = new LibGens::ObjectLibrary(SONICGLVL_LIBRARY_PATH);
+	library                    = generations_library;
+	animations_list            = new EditorAnimationsList();
 
-	bool loaded_generations_shader_library =
+	bool loaded_generations_shader_library = 
 		generations_shader_library->loadShaderArchive("shader_r.ar.00") &&
 		generations_shader_library->loadShaderArchive("shader_r_add.ar.00");
 
@@ -621,7 +615,7 @@ void EditorApplication::createScene(void) {
 		generations_shader_library = NULL;
 	}
 
-	bool loaded_unleashed_shader_library =
+	bool loaded_unleashed_shader_library = 
 		unleashed_shader_library->loadShaderArchive("shader.ar") &&
 		unleashed_shader_library->loadShaderArchive("shader_d3d9.ar");
 
@@ -633,7 +627,7 @@ void EditorApplication::createScene(void) {
 	generations_library->loadDatabase(SONICGLVL_GENERATIONS_OBJECTS_DATABASE_PATH);
 	unleashed_library->loadDatabase(SONICGLVL_UNLEASHED_OBJECTS_DATABASE_PATH);
 
-	configuration = new EditorConfiguration();
+	configuration    = new EditorConfiguration();
 	configuration->load(SONICGLVL_CONFIGURATION_FILE);
 
 	object_production = new LibGens::ObjectProduction();
@@ -645,10 +639,10 @@ void EditorApplication::createScene(void) {
 	hMenu = LoadMenu(NULL, MAKEINTRESOURCE(IDR_TOOLMENU));
 	SetMenu(hwnd, hMenu);
 
-	hLeftDlg = CreateDialog(NULL, MAKEINTRESOURCE(IDD_LEFT_DIALOG), hwnd, LeftBarCallback);
+	hLeftDlg=CreateDialog(NULL, MAKEINTRESOURCE(IDD_LEFT_DIALOG), hwnd, LeftBarCallback);
 	SetParent(hLeftDlg, hwnd);
 
-	hBottomDlg = CreateDialog(NULL, MAKEINTRESOURCE(IDD_BOTTOM_DIALOG), hwnd, BottomBarCallback);
+	hBottomDlg=CreateDialog(NULL, MAKEINTRESOURCE(IDD_BOTTOM_DIALOG), hwnd, BottomBarCallback);
 	SetParent(hBottomDlg, hwnd);
 
 	hEditPropertyDlg = NULL;
@@ -657,29 +651,29 @@ void EditorApplication::createScene(void) {
 	hMultiSetParamDlg = NULL;
 	hFindObjectDlg = NULL;
 	hLookAtPointDlg = NULL;
-
+	
 	updateVisibilityGUI();
 	updateObjectCategoriesGUI();
 	updateObjectsPaletteGUI();
 	createObjectsPropertiesGUI();
 
-	current_category_index = 0;
-	palette_cloning_mode = false;
+	current_category_index     = 0;
+	palette_cloning_mode       = false;
 	ignore_mouse_clicks_frames = 0;
-	last_palette_selection = NULL;
-	current_palette_selection = NULL;
-	current_set = NULL;
+	last_palette_selection     = NULL;
+	current_palette_selection  = NULL;
+	current_set                = NULL;
 	current_single_property_object = NULL;
 	history_edit_property_wrapper = NULL;
 	cloning_mode = SONICGLVL_MULTISETPARAM_MODE_CLONE;
 	is_pick_target = false;
 	is_pick_target_position = false;
-	is_update_look_at_vector =
+	is_update_look_at_vector = 
 
-		// Set up Scene Managers
-		scene_manager = root->createSceneManager("OctreeSceneManager");
+	// Set up Scene Managers
+	scene_manager = root->createSceneManager("OctreeSceneManager");
 	axis_scene_manager = root->createSceneManager(Ogre::ST_GENERIC);
-
+	
 	// Set up Node Managers
 	object_node_manager = new ObjectNodeManager(scene_manager, model_library, material_library, object_production);
 
@@ -712,12 +706,12 @@ void EditorApplication::createScene(void) {
 
 	global_illumination_listener = new GlobalIlluminationListener();
 	//global_illumination_listener->setPassToIgnore(depth_listener->getDepthPass());
-	scene_manager->addRenderObjectListener(global_illumination_listener);
+	scene_manager->addRenderObjectListener(global_illumination_listener); 
 
 	current_node = NULL;
 	editor_mode = EDITOR_NODE_QUERY_OBJECT;
 	world_transform = false;
-
+	
 	terrain_streamer = NULL;
 	terrain_update_counter = 0;
 	current_level = NULL;
@@ -737,20 +731,19 @@ void EditorApplication::createScene(void) {
 void EditorApplication::windowResized(Ogre::RenderWindow* rw) {
 	BaseApplication::windowResized(rw);
 
-	int left_window_height = screen_height - SONICGLVL_GUI_BOTTOM_HEIGHT + 1;
+	int left_window_height=screen_height-SONICGLVL_GUI_BOTTOM_HEIGHT+1;
 
 	// Move Windows
-	if (hLeftDlg)   MoveWindow(hLeftDlg, 0, 0, SONICGLVL_GUI_LEFT_WIDTH, left_window_height, true);
-	if (hBottomDlg) MoveWindow(hBottomDlg, 0, screen_height - SONICGLVL_GUI_BOTTOM_HEIGHT, screen_width + 1, SONICGLVL_GUI_BOTTOM_HEIGHT + 1, true);
+	if (hLeftDlg)   MoveWindow(hLeftDlg,   0, 0, SONICGLVL_GUI_LEFT_WIDTH, left_window_height, true);
+	if (hBottomDlg) MoveWindow(hBottomDlg, 0, screen_height-SONICGLVL_GUI_BOTTOM_HEIGHT, screen_width+1, SONICGLVL_GUI_BOTTOM_HEIGHT+1, true);
 
 	// Move Left Bar Elements
 	RECT temp_rect;
-
+	
 	HWND hHelpGroup = GetDlgItem(hLeftDlg, IDG_HELP_GROUP);
-	HWND hHelpText = GetDlgItem(hLeftDlg, IDT_HELP_DESCRIPTION);
+	HWND hHelpText  = GetDlgItem(hLeftDlg, IDT_HELP_DESCRIPTION);
 	// Help Group
-	int help_y_coordinate = left_window_height - 90;
-	temp_rect.left = 2;
+	int help_y_coordinate=left_window_height - 90;
 	temp_rect.left = 2;
 	temp_rect.top = 0;
 	temp_rect.right = 181 + temp_rect.left;
@@ -773,9 +766,9 @@ void EditorApplication::windowResized(Ogre::RenderWindow* rw) {
 	InvalidateRect(hLeftDlg, &temp_rect, true);
 
 
-	HWND hPaletteGroup = GetDlgItem(hLeftDlg, IDG_PALETTE_GROUP);
-	HWND hPaletteList = GetDlgItem(hLeftDlg, IDL_PALETTE_LIST);
-	int left_window_palette_properties_height = (left_window_height - 90 - 90) / 2;
+	HWND hPaletteGroup      = GetDlgItem(hLeftDlg, IDG_PALETTE_GROUP);
+	HWND hPaletteList       = GetDlgItem(hLeftDlg, IDL_PALETTE_LIST);
+	int left_window_palette_properties_height=(left_window_height - 90 - 90) / 2;
 	// Palette Group
 	temp_rect.left = 2;
 	temp_rect.top = 55;
@@ -797,9 +790,9 @@ void EditorApplication::windowResized(Ogre::RenderWindow* rw) {
 	InvalidateRect(hLeftDlg, &temp_rect, true);
 
 	HWND hPropertiesGroup = GetDlgItem(hLeftDlg, IDG_PROPERTIES_GROUP);
-	HWND hPropertiesList = GetDlgItem(hLeftDlg, IDL_PROPERTIES_LIST);
+	HWND hPropertiesList  = GetDlgItem(hLeftDlg, IDL_PROPERTIES_LIST);
 
-	int properties_y_coordinate = 93 + left_window_palette_properties_height;
+	int properties_y_coordinate= 93 + left_window_palette_properties_height;
 	// Properties Group
 	temp_rect.left = 2;
 	temp_rect.top = 0;
@@ -825,10 +818,10 @@ void EditorApplication::windowResized(Ogre::RenderWindow* rw) {
 	InvalidateRect(hLeftDlg, &temp_rect, true);
 
 	// Resize Viewport
-	float left = (float)SONICGLVL_GUI_LEFT_WIDTH / (float)screen_width;
-	float top = 0.0f;
-	float width = (float)(screen_width - SONICGLVL_GUI_LEFT_WIDTH) / (float)screen_width;
-	float height = (float)(screen_height - SONICGLVL_GUI_BOTTOM_HEIGHT) / (float)screen_height;
+	float left  = (float)SONICGLVL_GUI_LEFT_WIDTH / (float)screen_width;
+	float top   = 0.0f;
+	float width = (float)(screen_width  - SONICGLVL_GUI_LEFT_WIDTH) / (float)screen_width;
+	float height= (float)(screen_height - SONICGLVL_GUI_BOTTOM_HEIGHT) / (float)screen_height;
 	/*
 	float left   = 0.0f;
 	float top    = 0.0f;
@@ -840,30 +833,30 @@ void EditorApplication::windowResized(Ogre::RenderWindow* rw) {
 }
 
 
-bool EditorApplication::keyPressed(const OIS::KeyEvent& arg) {
+bool EditorApplication::keyPressed(const OIS::KeyEvent &arg) {
 	if (axis->isHolding()) return true;
 	viewport->keyPressed(arg);
 
 	bool regular_mode = isRegularMode();
 
-	if (arg.key == OIS::KC_NUMPAD4) {
+	if(arg.key == OIS::KC_NUMPAD4) {
 		farPlaneChange = -1.0f;
 	}
 
-	if (arg.key == OIS::KC_NUMPAD6) {
+	if(arg.key == OIS::KC_NUMPAD6) {
 		farPlaneChange = 1.0f;
 	}
 
-	if (arg.key == OIS::KC_NUMPAD8) {
+	if(arg.key == OIS::KC_NUMPAD8) {
 		farPlaneChange = 10.0f;
 	}
 
-	if (arg.key == OIS::KC_NUMPAD2) {
+	if(arg.key == OIS::KC_NUMPAD2) {
 		farPlaneChange = -10.0f;
 	}
 
 	// Quit Special Placement Modes
-	if (arg.key == OIS::KC_ESCAPE) {
+	if(arg.key == OIS::KC_ESCAPE) {
 		if (isPalettePreviewActive()) {
 			clearObjectsPalettePreviewGUI();
 		}
@@ -889,76 +882,76 @@ bool EditorApplication::keyPressed(const OIS::KeyEvent& arg) {
 
 	// Regular Mode Shorcuts
 	if (regular_mode && inFocus() && !viewport->isMoving()) {
-		if (arg.key == OIS::KC_DELETE) {
+		if(arg.key == OIS::KC_DELETE) {
 			deleteSelection();
 			updateSelection();
 		}
 
 		if (keyboard->isModifierDown(OIS::Keyboard::Ctrl)) {
-			if (arg.key == OIS::KC_C) {
+			if(arg.key == OIS::KC_C) {
 				copySelection();
 			}
 
-			if (arg.key == OIS::KC_V) {
+			if(arg.key == OIS::KC_V) {
 				clearSelection();
 				pasteSelection();
 			}
 
-			if (arg.key == OIS::KC_P) {
+			if(arg.key == OIS::KC_P) {
 				if (ghost_node) ghost_node->setPlay(true);
 			}
 
-			if (arg.key == OIS::KC_R) {
+			if(arg.key == OIS::KC_R) {
 				if (ghost_node) {
 					ghost_node->setPlay(false);
 					ghost_node->setTime(0);
 				}
 			}
 
-			if (arg.key == OIS::KC_F) {
+			if(arg.key == OIS::KC_F) {
 				if (!hFindObjectDlg)
 					openFindGUI();
 			}
 
-			if (arg.key == OIS::KC_D) {
+			if(arg.key == OIS::KC_D) {
 				clearSelection();
 				updateSelection();
 			}
 
-			if (arg.key == OIS::KC_Z) {
+			if(arg.key == OIS::KC_Z) {
 				undoHistory();
 				updateSelection();
 			}
 
-			if (arg.key == OIS::KC_Y) {
+			if(arg.key == OIS::KC_Y) {
 				redoHistory();
 				updateSelection();
 			}
 
-			if (arg.key == OIS::KC_E) {
+			if(arg.key == OIS::KC_E) {
 				toggleWorldTransform();
 				updateSelection();
 			}
 
-			if (arg.key == OIS::KC_I) {
+			if(arg.key == OIS::KC_I) {
 				//SHOW_MSG(ToString(farPlane).c_str());
 			}
 
-			if (arg.key == OIS::KC_A) {
+			if(arg.key == OIS::KC_A) {
 				//saveXNAnimation();
 				selectAll();
 			}
 
-			if (arg.key == OIS::KC_T) {
+			if(arg.key == OIS::KC_T) {
 				clearSelection();
 				editor_mode = (editor_mode == EDITOR_NODE_QUERY_TERRAIN ? EDITOR_NODE_QUERY_OBJECT : EDITOR_NODE_QUERY_TERRAIN);
 			}
 
-			if (arg.key == OIS::KC_I) {
+			if(arg.key == OIS::KC_I) {
 				showSelectionNames();
 			}
 
-			if (arg.key == OIS::KC_G) {
+			if(arg.key == OIS::KC_G) {
 				setupGhost();
 				clearSelection();
 				editor_mode = (editor_mode == EDITOR_NODE_QUERY_GHOST ? EDITOR_NODE_QUERY_OBJECT : EDITOR_NODE_QUERY_GHOST);
@@ -989,7 +982,7 @@ bool EditorApplication::keyPressed(const OIS::KeyEvent& arg) {
 				}
 			}
 
-			if (arg.key == OIS::KC_G)
+			if (arg.key == OIS::KC_G) 
 			{
 				if (editor_mode == EDITOR_NODE_QUERY_GHOST)
 				{
@@ -1010,53 +1003,64 @@ bool EditorApplication::keyPressed(const OIS::KeyEvent& arg) {
 
 	// Global Mode Shortcuts
 	if (keyboard->isModifierDown(OIS::Keyboard::Ctrl)) {
-		if (arg.key == OIS::KC_1) {
+		if(arg.key == OIS::KC_1) {
 			editor_application->toggleNodeVisibility(EDITOR_NODE_OBJECT);
 			editor_application->toggleNodeVisibility(EDITOR_NODE_OBJECT_MSP);
 		}
 
-		if (arg.key == OIS::KC_2) {
+		if(arg.key == OIS::KC_2) {
 			editor_application->toggleNodeVisibility(EDITOR_NODE_TERRAIN);
 		}
 
-		if (arg.key == OIS::KC_3) {
+		if(arg.key == OIS::KC_3) {
 			editor_application->toggleNodeVisibility(EDITOR_NODE_TERRAIN_AUTODRAW);
 		}
 
-		if (arg.key == OIS::KC_4) { editor_application->toggleNodeVisibility(EDITOR_NODE_HAVOK); }
-		if (arg.key == OIS::KC_5) { editor_application->toggleNodeVisibility(EDITOR_NODE_PATH); }
-		if (arg.key == OIS::KC_6) { editor_application->toggleNodeVisibility(EDITOR_NODE_GHOST); }
-		if (arg.key == 0x4F) // 'O'
+		if(arg.key == OIS::KC_4) {
+			editor_application->toggleNodeVisibility(EDITOR_NODE_HAVOK);
+		}
+
+		if(arg.key == OIS::KC_5) {
+			editor_application->toggleNodeVisibility(EDITOR_NODE_PATH);
+		}
+
+		if(arg.key == OIS::KC_6) {
+			editor_application->toggleNodeVisibility(EDITOR_NODE_GHOST);
+		}
+		if (arg.key == OIS::KC_O)
 		{
 			editor_application->openLevelGUI();
 		}
 	}
+
+    return true;
 }
 
-bool EditorApplication::keyReleased(const OIS::KeyEvent& arg) {
+
+bool EditorApplication::keyReleased(const OIS::KeyEvent &arg) {
 	viewport->keyReleased(arg);
 
-	if (arg.key == OIS::KC_NUMPAD4) {
+	if(arg.key == OIS::KC_NUMPAD4) {
 		farPlaneChange = 0;
 	}
 
-	if (arg.key == OIS::KC_NUMPAD6) {
+	if(arg.key == OIS::KC_NUMPAD6) {
 		farPlaneChange = 0;
 	}
 
-	if (arg.key == OIS::KC_NUMPAD8) {
+	if(arg.key == OIS::KC_NUMPAD8) {
 		farPlaneChange = 0;
 	}
 
-	if (arg.key == OIS::KC_NUMPAD2) {
+	if(arg.key == OIS::KC_NUMPAD2) {
 		farPlaneChange = 0;
 	}
 
-	return true;
+    return true;
 }
 
 
-bool EditorApplication::mouseMoved(const OIS::MouseEvent& arg) {
+bool EditorApplication::mouseMoved(const OIS::MouseEvent &arg) {
 	viewport->setQueryFlags(editor_mode);
 
 	if (!axis->isHolding()) {
@@ -1072,13 +1076,13 @@ bool EditorApplication::mouseMoved(const OIS::MouseEvent& arg) {
 		}
 	}
 	else if (!isPalettePreviewActive()) {
-		Ogre::Entity* entity = viewport->getCurrentEntity();
+		Ogre::Entity *entity=viewport->getCurrentEntity();
 		if (entity) {
-			Ogre::SceneNode* node = entity->getParentSceneNode();
+			Ogre::SceneNode *node=entity->getParentSceneNode();
 			if (node) {
-				Ogre::Any ptr_container = node->getUserObjectBindings().getUserAny(EDITOR_NODE_BINDING);
+				Ogre::Any ptr_container=node->getUserObjectBindings().getUserAny(EDITOR_NODE_BINDING);
 				if (!ptr_container.isEmpty()) {
-					EditorNode* editor_node = Ogre::any_cast<EditorNode*>(ptr_container);
+					EditorNode *editor_node=Ogre::any_cast<EditorNode *>(ptr_container);
 					if (current_node && (editor_node != current_node)) current_node->setHighlight(false);
 					current_node = editor_node;
 				}
@@ -1094,7 +1098,7 @@ bool EditorApplication::mouseMoved(const OIS::MouseEvent& arg) {
 		}
 
 		if (current_node) current_node->setHighlight(true);
-
+	
 		if (axis->mouseMoved(viewport, arg)) {
 			if (!axis->getMode())
 				translateSelection(axis->getTranslate());
@@ -1125,10 +1129,10 @@ bool EditorApplication::mouseMoved(const OIS::MouseEvent& arg) {
 		}
 	}
 
-	return true;
+    return true;
 }
 
-bool EditorApplication::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id) {
+bool EditorApplication::mousePressed(const OIS::MouseEvent &arg, OIS::MouseButtonID id) {
 	// Only register mouse clicks if it's inside the viewport
 	if (viewport->isMouseInLocalScreen(arg)) {
 		focus();
@@ -1177,7 +1181,7 @@ bool EditorApplication::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButto
 					{
 						if (current_node->getType() == EDITOR_NODE_OBJECT)
 						{
-
+							
 							ObjectNode* object_node = static_cast<ObjectNode*>(current_node);
 							size_t id = object_node->getObject()->getID();
 
@@ -1247,11 +1251,11 @@ bool EditorApplication::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButto
 
 		viewport->mousePressed(arg, id);
 	}
-	return true;
+    return true;
 }
 
 
-bool EditorApplication::mouseReleased(const OIS::MouseEvent& arg, OIS::MouseButtonID id) {
+bool EditorApplication::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id) {
 	bool last_holding = axis->mouseReleased(arg, id);
 
 	if (id == OIS::MB_Left) {
@@ -1289,11 +1293,11 @@ bool EditorApplication::mouseReleased(const OIS::MouseEvent& arg, OIS::MouseButt
 	}
 
 	viewport->mouseReleased(arg, id);
-	return true;
+    return true;
 }
 
 bool EditorApplication::frameRenderingQueued(const Ogre::FrameEvent& evt) {
-	BaseApplication::frameRenderingQueued(evt);
+    BaseApplication::frameRenderingQueued(evt);
 
 	Ogre::Real timeSinceLastFrame = evt.timeSinceLastFrame;
 
@@ -1336,10 +1340,10 @@ bool EditorApplication::frameRenderingQueued(const Ogre::FrameEvent& evt) {
 	// Update Animations
 	object_node_manager->addTime(timeSinceLastFrame);
 	animations_list->addTime(timeSinceLastFrame);
-	return true;
+    return true;
 }
 
-void EditorApplication::loadGhostRecording()
+void EditorApplication::loadGhostRecording() 
 {
 	char filename[MAX_PATH];
 	ZeroMemory(filename, sizeof(filename));
@@ -1348,7 +1352,7 @@ void EditorApplication::loadGhostRecording()
 	ofn.lStructSize = sizeof(ofn);
 	ofn.lpstrFilter = "Ghost Recording(.gst.bin)\0*.gst.bin\0";
 	ofn.nFilterIndex = 1;
-	ofn.nMaxFile = MAX_PATH - 1;
+	ofn.nMaxFile = 1024;
 	ofn.lpstrTitle = "Open Ghost Recording";
 	ofn.lpstrFile = filename;
 	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_LONGNAMES | OFN_EXPLORER | OFN_ENABLESIZING;
@@ -1356,8 +1360,7 @@ void EditorApplication::loadGhostRecording()
 	if (!GetOpenFileName(&ofn))
 		return;
 
-	filename[MAX_PATH - 1] = '\0'; // Ensure zero-termination
-	if (chdir(exe_path.c_str()) != 0) return;
+	chdir(exe_path.c_str());
 	LibGens::Ghost* gst = new LibGens::Ghost(std::string(filename));
 	setGhost(gst);
 }
@@ -1374,7 +1377,7 @@ void EditorApplication::saveGhostRecording()
 	ofn.lStructSize = sizeof(ofn);
 	ofn.lpstrFilter = "Ghost Recording(.gst.bin)\0*.gst.bin\0";
 	ofn.nFilterIndex = 1;
-	ofn.nMaxFile = MAX_PATH - 1;
+	ofn.nMaxFile = 1024;
 	ofn.lpstrTitle = "Save Ghost Recording";
 	ofn.lpstrFile = filename;
 	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_LONGNAMES | OFN_EXPLORER | OFN_ENABLESIZING;
@@ -1382,8 +1385,7 @@ void EditorApplication::saveGhostRecording()
 	if (!GetSaveFileName(&ofn))
 		return;
 
-	filename[MAX_PATH - 1] = '\0'; // Ensure zero-termination
-	if (chdir(exe_path.c_str()) != 0) return;
+	chdir(exe_path.c_str());
 	ghost_data->save(std::string(filename));
 }
 
@@ -1399,7 +1401,7 @@ void EditorApplication::saveGhostRecordingFbx()
 	ofn.lStructSize = sizeof(ofn);
 	ofn.lpstrFilter = "FBX File(.fbx)\0*.fbx\0";
 	ofn.nFilterIndex = 1;
-	ofn.nMaxFile = MAX_PATH - 1;
+	ofn.nMaxFile = 1024;
 	ofn.lpstrTitle = "Export Ghost Recording";
 	ofn.lpstrFile = filename;
 	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_LONGNAMES | OFN_EXPLORER | OFN_ENABLESIZING;
@@ -1407,8 +1409,7 @@ void EditorApplication::saveGhostRecordingFbx()
 	if (!GetSaveFileName(&ofn))
 		return;
 
-	filename[MAX_PATH - 1] = '\0'; // Ensure zero-termination
-	if (chdir(exe_path.c_str()) != 0) return;
+	chdir(exe_path.c_str());
 	LibGens::FBX* lFbx = ghost_data->buildFbx(fbx_manager, model_library->getModel("chr_Sonic_HD"), material_library);
 	fbx_manager->exportFBX(lFbx, filename);
 
@@ -1426,15 +1427,14 @@ void EditorApplication::launchGame()
 		ofn.lStructSize = sizeof(ofn);
 		ofn.lpstrFilter = "Windows Executable(.exe)\0*.exe\0";
 		ofn.nFilterIndex = 1;
-		ofn.nMaxFile = MAX_PATH - 1;
+		ofn.nMaxFile = 1024;
 		ofn.lpstrTitle = "Select Sonic Generations";
 		ofn.lpstrFile = filename;
 		ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_LONGNAMES | OFN_EXPLORER | OFN_ENABLESIZING;
 
 		if (GetOpenFileName(&ofn))
 		{
-			filename[MAX_PATH - 1] = '\0'; // Ensure zero-termination
-			if (chdir(exe_path.c_str()) != 0) return;
+			chdir(exe_path.c_str());
 			configuration->game_path = std::string(ofn.lpstrFile);
 		}
 	}
@@ -1483,7 +1483,7 @@ void ColorListener::preRenderTargetUpdate(const Ogre::RenderTargetEvent& evt)
 	scene_manager->addSpecialCaseRenderQueue(Ogre::RENDER_QUEUE_WORLD_GEOMETRY_2);
 	scene_manager->addSpecialCaseRenderQueue(Ogre::RENDER_QUEUE_MAX);
 }
-
+ 
 void ColorListener::postRenderTargetUpdate(const Ogre::RenderTargetEvent& evt)
 {
 	scene_manager->clearSpecialCaseRenderQueues();
@@ -1492,19 +1492,19 @@ void ColorListener::postRenderTargetUpdate(const Ogre::RenderTargetEvent& evt)
 void DepthListener::preRenderTargetUpdate(const Ogre::RenderTargetEvent& evt)
 {
 	queue = scene_manager->getRenderQueue();
-	queue->setRenderableListener(this);
+    queue->setRenderableListener(this); 
 
 	scene_manager->setSpecialCaseRenderQueueMode(Ogre::SceneManager::SCRQM_EXCLUDE);
 	scene_manager->addSpecialCaseRenderQueue(Ogre::RENDER_QUEUE_WORLD_GEOMETRY_2);
 	scene_manager->addSpecialCaseRenderQueue(Ogre::RENDER_QUEUE_MAX);
 }
-
+ 
 void DepthListener::postRenderTargetUpdate(const Ogre::RenderTargetEvent& evt)
 {
 	scene_manager->clearSpecialCaseRenderQueues();
 
 	queue = scene_manager->getRenderQueue();
-	queue->setRenderableListener(0);
+	queue->setRenderableListener(0); 
 }
 
 bool DepthListener::renderableQueued(Ogre::Renderable* rend, Ogre::uint8 groupID, Ogre::ushort priority, Ogre::Technique** ppTech, Ogre::RenderQueue* pQueue)
@@ -1538,12 +1538,12 @@ TrajectoryMode EditorApplication::getTrajectoryMode(EditorNode* node)
 
 	TrajectoryMode mode = NONE;
 
-	if ((object_name == "Spring") || (object_name == "AirSpring") || (object_name == "SpringFake") ||
+	if ((object_name ==  "Spring") || (object_name == "AirSpring") || (object_name == "SpringFake") ||
 		(object_name == "SpringClassic") || (object_name == "SpringClassicYellow"))
 		mode = SPRING;
 	else if (object_name == "WideSpring")
 		mode = WIDE_SPRING;
-	else if (object_name == "JumpPole")
+	else if (object_name ==  "JumpPole")
 		mode = JUMP_POLE;
 	else if ((object_name == "JumpBoard") || (object_name == "JumpBoard3D") || (object_name == "AdlibTrickJump"))
 		mode = JUMP_PANEL;
@@ -1559,7 +1559,7 @@ void EditorApplication::addTrajectory(TrajectoryMode mode)
 		return;
 
 	trajectory_preview_nodes.push_back(new TrajectoryNode(scene_manager, mode));
-
+	
 	// JumpBoards need two nodes. One for normal, and the other for boost
 	if (mode == JUMP_PANEL)
 		trajectory_preview_nodes.push_back(new TrajectoryNode(scene_manager, mode));
