@@ -26,7 +26,8 @@
 INT_PTR CALLBACK MaterialEditorCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam);
 INT_PTR CALLBACK MaterialEditorPreviewCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam);
 bool hasScene;
-
+// fixed an issue where closing the preview window for models doesn't open back when you close a material, and if you tried doing it via 
+// code, ogre brings already existing window errors. 
 void EditorApplication::closePreviewMaterialEditorGUI() {
 	if (!hasScene) return;
 	if (material_editor_preview_window && material_editor_preview_listener) {
