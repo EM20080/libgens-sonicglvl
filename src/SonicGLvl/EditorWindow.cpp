@@ -20,7 +20,6 @@
 #include "EditorApplication.h"
 #include "MessageTypes.h"
 
-// Add new menu command IDs for conversion actions
 #define IMD_CONVERT_MATERIALS_UNLEASHED      40101
 #define IMD_CONVERT_MATERIALS_GENERATIONS    40102
 #define IMD_CONVERT_MATERIALS_LOSTWORLD      40103

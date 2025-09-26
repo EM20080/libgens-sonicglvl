@@ -7,7 +7,7 @@
 #define IDD_LEFT_DIALOG                         107
 #define IDD_BOTTOM_DIALOG                       111
 #define IDD_TOP_DIALOG                          115
-#define IDD_EDIT_BOOL_DIALOG                    117		
+#define IDD_EDIT_BOOL_DIALOG                    117
 #define IDD_EDIT_FLOAT_DIALOG                   119
 #define IDD_EDIT_STRING_DIALOG                  121
 #define IDD_EDIT_VECTOR_DIALOG                  123
