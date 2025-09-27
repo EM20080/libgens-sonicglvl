@@ -14,6 +14,7 @@
     <ProjectGuid>{E2D0098D-4E36-4DFA-87BD-C7FEDC5CD39E}</ProjectGuid>
     <RootNamespace>cmdtest</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>HE1CompressionTool</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|Win32'" Label="Configuration">

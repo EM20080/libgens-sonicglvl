@@ -1,88 +1,169 @@
-//=========================================================================
-//	  Copyright (c) 2016 SonicGLvl
-//
-//    This file is part of SonicGLvl, a community-created free level editor 
-//    for the PC version of Sonic Generations.
-//
-//    SonicGLvl is free software: you can redistribute it and/or modify
-//    it under the terms of the GNU General Public License as published by
-//    the Free Software Foundation, either version 3 of the License, or
-//    (at your option) any later version.
-//
-//    SonicGLvl is distributed in the hope that it will be useful,
-//    but WITHOUT ANY WARRANTY; without even the implied warranty of
-//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-//    
-//
-//    Read AUTHORS.txt, LICENSE.txt and COPYRIGHT.txt for more details.
-//=========================================================================
-
 #include "LibGens.h"
-#include "Light.h"
-#include "GITextureGroup.h"
-#include "FreeImage.h"
+#include "Compression.h"
+#include "File.h"
+#include <iostream>
+#include <string>
+#include <thread>
+#include <mutex>
+#include <future>
+#include <queue>
+#include <vector>
+#include <condition_variable>
+#include <map>
 
-int main(int argc, char** argv) {
-	LibGens::initialize();
-	LibGens::Error::setLogging(true);
-	FreeImage_Initialise();
+using namespace std;
+using namespace LibGens;
 
-	LibGens::GITextureGroup group;
-	LibGens::File file("gia-296/atlasinfo", LIBGENS_FILE_READ_BINARY);
-	group.readAtlasinfo(&file);
-	list<LibGens::GITexture *> gi_textures = group.getTextures();
+string getFilename(const string& path) {
+    size_t pos = path.find_last_of("/\\");
+    return pos == string::npos ? path : path.substr(pos + 1);
+}
 
-	for (list<LibGens::GITexture *>::iterator it = gi_textures.begin(); it != gi_textures.end(); it++) {
-		string texture_name = (*it)->getName();
-		string texture_filename = "gia-296/" + texture_name + ".dds";
+void compressFile(const string& inputPath, CompressionType type) {
+    string tempPath = inputPath + ".tmp"; // outputs temp file incase crash and corrupts main file
+    
+    File inputFile(inputPath, LIBGENS_FILE_READ_BINARY);
+    
+    if (!inputFile.valid()) {
+        return;
+    }
 
-		// Use FreeImage to convert the DDS to a png properly, since Qt doesn't load the alpha channels like it should.
-		FIBITMAP *bitmap = NULL;
-		FREE_IMAGE_FORMAT fif = FreeImage_GetFileType(texture_filename.c_str());
-		if (fif == FIF_UNKNOWN)
-			fif = FreeImage_GetFIFFromFilename(texture_filename.c_str());
+    uint32_t signature;
+    inputFile.readInt32(&signature);
+    if (Compression::check(signature)) {
+        cout << "File is already Compressed! skipping.: " << inputPath << endl;
+        inputFile.close();
+        return;
+    }
+    inputFile.goToAddress(0);
 
-		if (fif != FIF_UNKNOWN) {
-			bitmap = FreeImage_Load(fif, texture_filename.c_str());
-		}
+    File outputFile(tempPath, LIBGENS_FILE_WRITE_BINARY);
+    if (!outputFile.valid()) {
+        inputFile.close();
+        return;
+    }
 
-		// Load the converter texture and use it to extract information from there.
-		if (bitmap) {
-			unsigned int texture_width = FreeImage_GetWidth(bitmap);
-			unsigned int texture_height = FreeImage_GetHeight(bitmap);
-			(*it)->setWidth(texture_width);
-			(*it)->setHeight(texture_height);
+    cout << "> " << inputPath << endl;
+    
+    // CAB needs file name apparently
+    string filename = getFilename(inputPath);
+    Compression::compress(&inputFile, &outputFile, type, type == COMPRESSION_CAB ? &filename[0] : nullptr);
+    
+    inputFile.close();
+    outputFile.close();
 
-			list<LibGens::GISubtexture *> subtextures = (*it)->getSubtextures();
-			for (list<LibGens::GISubtexture *>::iterator it2 = subtextures.begin(); it2 != subtextures.end(); it2++) {
-				unsigned int subtexture_width = texture_width * (*it2)->getWidth();
-				unsigned int subtexture_height = texture_height * (*it2)->getHeight();
+    if (remove(inputPath.c_str()) != 0) {
+        remove(tempPath.c_str());
+        return;
+    }
 
-				LibGens::GISubtexture *clone_subtexture = new LibGens::GISubtexture();
-				clone_subtexture->setPixelWidth(subtexture_width);
-				clone_subtexture->setPixelHeight(subtexture_height);
-				clone_subtexture->setName((*it2)->getName());
-				group.addSubtextureToOrganize(clone_subtexture);
-			}
+    if (rename(tempPath.c_str(), inputPath.c_str()) != 0) {
+        return;
+    }
+}
 
-			FreeImage_Unload(bitmap);
-		}
-	}
+void decompressFile(const string& inputPath) {
+    string tempPath = inputPath + ".tmp";
+    
+    File inputFile(inputPath, LIBGENS_FILE_READ_BINARY);
+    File outputFile(tempPath, LIBGENS_FILE_WRITE_BINARY);
 
-	group.deleteTextures();
-	group.organizeSubtextures(2048);
-	gi_textures = group.getTextures();
-	printf("Generated %d textures\n", gi_textures.size());
-	for (list<LibGens::GITexture *>::iterator it = gi_textures.begin(); it != gi_textures.end(); it++) {
-		printf("%s: %d %d\n", (*it)->getName().c_str(), (*it)->getWidth(), (*it)->getHeight());
+    if (!inputFile.valid() || !outputFile.valid()) {
+        inputFile.close();
+        outputFile.close();
+        return;
+    }
 
-		list<LibGens::GISubtexture *> gi_subtextures = (*it)->getSubtextures();
-		for (list<LibGens::GISubtexture *>::iterator it2 = gi_subtextures.begin(); it2 != gi_subtextures.end(); it2++) {
-			printf("%s: %f %f %f %f %d %d\n", (*it2)->getName().c_str(), (*it2)->getX(), (*it2)->getY(), (*it2)->getWidth(), (*it2)->getHeight(), (*it2)->getPixelWidth(), (*it2)->getPixelHeight());
-		}
-	}
+    uint32_t signature;
+    inputFile.readInt32(&signature);
+    inputFile.goToAddress(0);
 
-	getchar();
+    if (!Compression::check(signature)) {
+        inputFile.close();
+        outputFile.close();
+        return;
+    }
+
+    CompressionType type;
+    if (signature == COMPRESSION_CAB) type = COMPRESSION_CAB;
+    else if (signature == COMPRESSION_X) type = COMPRESSION_X;
+    else if (signature == COMPRESSION_SEGS) type = COMPRESSION_SEGS;
+    else {
+        inputFile.close();
+        outputFile.close();
+        return;
+    }
+
+    cout << "> " << inputPath << endl;
+    
+    Compression::decompress(&inputFile, &outputFile, type);
+    
+    inputFile.close();
+    outputFile.close();
+
+    if (remove(inputPath.c_str()) != 0) {
+        remove(tempPath.c_str());
+        return;
+    }
+
+    if (rename(tempPath.c_str(), inputPath.c_str()) != 0) {
+        return;
+    }
+}
+
+int main(int argc, char* argv[]) {
+    cout << "HE1CompressionTool" << endl;
+
+    if (argc < 2) {
+        return 0;
+    }
+
+    string arg = argv[1];
+    bool isCompressing = false;
+    CompressionType compressType;
+
+    if (arg == "-xcompress") {
+        isCompressing = true;
+        compressType = COMPRESSION_X;
+    }
+    else if (arg == "-genscompress") {
+        isCompressing = true;
+        compressType = COMPRESSION_CAB;
+    }
+    else if (arg != "-decompress") {
+        return 0;
+    }
+
+    vector<future<void>> futures;
+    size_t max_concurrent = thread::hardware_concurrency();
+    size_t batch_size = max_concurrent * 2;
+
+    for (int i = 2; i < argc; i++) {
+        try {
+            string current_file = argv[i];
+            if (isCompressing) {
+                futures.push_back(async(launch::async, [current_file, compressType]() {
+                    compressFile(current_file, compressType);
+                }));
+            } else {
+                futures.push_back(async(launch::async, [current_file]() {
+                    decompressFile(current_file);
+                }));
+            }
+            
+            if (futures.size() >= batch_size) {
+                for (auto& future : futures) {
+                    future.get();
+                }
+                futures.clear();
+            }
+        }
+        catch (...) { }
+    }
+
+    for (auto& future : futures) {
+        future.get();
+    }
 
     return 0;
 }
