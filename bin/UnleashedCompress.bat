@@ -1,0 +1,1 @@
+for /r %%f in (*.ar *.ar.?? *.dds *.xml *.hkx *.material) do he1compressiontool.exe -xcompress "%%~ff"
