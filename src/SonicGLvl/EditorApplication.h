@@ -240,6 +240,9 @@ class EditorApplication : public BaseApplication {
 		HWND hBottomDlg;
 		HWND hEditPropertyDlg;
 
+		// Add new dialog handle for terrain info
+		HWND hTerrainInfoDlg;
+
 		RECT hEditPropertyDlg_old_rect;
 		RECT hLookAtPointDlg_old_rect;
 
@@ -450,6 +453,10 @@ class EditorApplication : public BaseApplication {
 		void updateLookAtVectorGUI();
 		bool isUpdateLookAtVector();
 
+		void openTerrainInfoDialog();
+		void updateTerrainInfoDialog();
+		void closeTerrainInfoDialog();
+
 		void openMaterialEditorGUI();
 		void clearMaterialEditorGUI();
 		void enableMaterialEditorGUI(bool enable);
@@ -587,7 +594,7 @@ class EditorApplication : public BaseApplication {
 		void loadGhostAnimations();
 		void setupGhost();
 
-		// Ghost methods
+			// Ghost methods
 		void loadGhostRecording();
 		void saveGhostRecording();
 		void saveGhostRecordingFbx();
@@ -673,10 +680,6 @@ class EditorApplication : public BaseApplication {
 		void updateBottomSelectionRotation(float value_x, float value_y, float value_z);
 
 		static std::string SelectFolderWithIFileDialog(const wchar_t* title = L"Select Folder");
-
-		
-		// Adds a new set from XML and updates Stage.stg.xml in the cache
-		void addXmlObjectData(const std::string& setXmlPath, const std::string& cacheFolder);
 };
 
 extern EditorApplication *editor_application;

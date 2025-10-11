@@ -1779,8 +1779,8 @@ void EditorApplication::convertMaterialsToUnleashedShaders() {
 			if (shader == "ChrSkin_dsne") shader = "Common_dsne[b]";
 			if (shader == "ChrSkin_dsne1") shader = "Common_dsne[b]";
 			if (shader == "ChrSkin_dsnf") shader = "SonicSkin_dspf[b]";
-			if (shader == "ChrSkin_dsnfe") shader = "Common_dsne[b]";
-			if (shader == "ChrSkin_dsnfe1") shader = "Common_dsne[b]";
+			if (shader == "ChrSkin_dsfe") shader = "Common_dsne[b]";
+			if (shader == "ChrSkin_dsfe1") shader = "Common_dsne[b]";
 			if (shader == "Cloak_do") shader = "Common_d";
 			if (shader == "Cloak_doe1") shader = "Common_d";
 			if (shader == "Cloth_dsnt") shader = "Cloth_dsnt";
@@ -2147,30 +2147,51 @@ std::string EditorApplication::SelectFolderWithIFileDialog(const wchar_t* title)
 	}
 	return result;
 }
+void EditorApplication::openTerrainInfoDialog() {
+	updateTerrainInfoDialog();
+}
 
-void EditorApplication::addXmlObjectData(const std::string& setXmlPath, const std::string& cacheFolder) {
-	if (!current_level || !current_level->getLevel()) return;
-	std::string source = setXmlPath;
-	if (source.empty()) return;
-	std::string filename = source.substr(source.find_last_of("/\\") + 1);
-		if (filename.size() < 8 || filename.substr(filename.size() - 8) != ".set.xml") return;
-	std::string name_no_ext = filename.substr(0, filename.size() - 8);
-	std::string dest_folder = current_level->getLevel()->getFolder();
-	std::string dest_path = dest_folder + filename;
-	{
-		std::ifstream in(source, std::ios::binary);
-		if (!in) return;
-		std::ofstream out(dest_path, std::ios::binary);
-		if (!out) return;
-		out << in.rdbuf();
-	}
-	LibGens::ObjectSet* object_set = new LibGens::ObjectSet(dest_path);
-	object_set->setName(name_no_ext);
-	current_level->getLevel()->addSet(object_set);
-	if (object_node_manager) {
-		list<LibGens::Object*> objects = object_set->getObjects();
-		for (list<LibGens::Object*>::iterator it = objects.begin(); it != objects.end(); ++it) {
-			object_node_manager->createObjectNode(*it);
+void EditorApplication::updateTerrainInfoDialog() {
+	TerrainNode* terrainNode = nullptr;
+	for (auto* node : selected_nodes) {
+		if (node->getType() == EDITOR_NODE_TERRAIN) {
+			terrainNode = static_cast<TerrainNode*>(node);
+			break;
 		}
 	}
-}
+
+	if (!terrainNode || !current_level) return;
+
+	LibGens::TerrainInstance* instance = terrainNode->getTerrainInstance();
+	if (!instance) return;
+
+	const std::string instance_name = instance->getName();
+
+	LibGens::Terrain* terrain = current_level->getTerrain();
+	if (!terrain) return;
+
+	std::string group_name;
+	int subset_id = 0;
+	bool found = false;
+
+	auto groups = terrain->getGroups();
+	for (auto* group : groups) {
+		auto instances = group->getInstances();
+		for (auto* inst : instances) {
+			if (inst == instance) {
+				group_name = group->getName();
+				subset_id = group->getSubsetID();
+				found = true;
+				break;
+			}
+		}
+		if (found) break;
+	}
+
+	std::string msg = "Instance Name: " + instance_name + "\n";
+	msg += "Group: " + group_name + "\n";
+	msg += "Subset ID: " + std::to_string(subset_id) + "\n";
+	msg += "Model: " + instance->getModelName();
+
+	MessageBoxA(hwnd, msg.c_str(), "Terrain Info", MB_OK | MB_ICONINFORMATION);
+};

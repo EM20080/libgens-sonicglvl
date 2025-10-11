@@ -20,6 +20,7 @@
 #define IDD_PHYSICS_EDITOR                      137
 #define IDD_FIND_DIALOG                         139
 #define IDD_LOOK_AT_POINT                       141
+#define IDD_TERRAIN_INFO                        143
 #define IDC_EDIT_FLOAT_VALUE                    40000
 #define IDC_PALETTE_CATEGORY                    40000
 #define IDE_BOTTOM_SELECTION_POS_X              40000
@@ -99,6 +100,7 @@
 #define IDR_LOOK_AT_AXIS_Y                      40006
 #define IDS_BOTTOM_SELECTION_POS_X              40006
 #define IMD_CUT                                 40006
+#define IDT_TERRAIN_INFO_INSTANCE_NAME          40006
 #define IDB_EDIT_VECTOR_FOCUS                   40007
 #define IDB_MATERIAL_NEW_MATERIAL               40007
 #define IDC_MULTISETPARAM_SNAP_PATH_EDGES       40007
@@ -108,6 +110,7 @@
 #define IDT_FIND_OBJECT_NAME                    40007
 #define IDT_HELP_DESCRIPTION                    40007
 #define IMD_COPY                                40007
+#define IDT_TERRAIN_INFO_GROUP_NAME             40007
 #define IDB_MATERIAL_DELETE_MATERIAL            40008
 #define IDB_MULTISETPARAM_CREATE                40008
 #define IDC_EDIT_ID_LIST_ADD_FROM_VIEWPORT      40008
@@ -116,6 +119,7 @@
 #define IDR_LOOK_AT_AXIS_Z                      40008
 #define IDS_BOTTOM_SELECTION_POS_Z              40008
 #define IMD_PASTE                               40008
+#define IDT_TERRAIN_INFO_SUBSET_ID              40008
 #define IDC_EDIT_VECTOR_LIST_EDITING            40009
 #define IDE_EDIT_ID_LIST_VALUE                  40009
 #define IDE_MATERIAL_NAME                       40009
@@ -124,12 +128,14 @@
 #define IDS_LOOK_AT_Y                           40009
 #define IDS_MULTISETPARAM_COUNT                 40009
 #define IMD_DELETE                              40009
+#define IDT_TERRAIN_INFO_MODEL_NAME             40009
 #define IDB_EDIT_VECTOR_LIST_DELETE             40010
 #define IDC_MATERIAL_SHADER                     40010
 #define IDR_MULTISETPARAM_CLONE                 40010
 #define IDS_BOTTOM_SELECTION_ROT_Y              40010
 #define IDS_LOOK_AT_X                           40010
 #define IMD_SELECT_ALL                          40010
+#define IMD_TERRAIN_INFO                         40049
 #define IDB_EDIT_VECTOR_LIST_MOVE_UP            40011
 #define IDC_MATERIAL_MESH_SLOT                  40011
 #define IDR_MULTISETPARAM_MSP                   40011
@@ -271,10 +277,21 @@
 #define IDC_BOTTOM_CURRENT_OBJECT_SET_VISIBLE   40095
 #define IDB_MATERIAL_SAVE_MATERIAL              40096
 #define IDB_MATERIAL_SAVE_MATERIAL              40096
-#define IDB_MATERIAL_SAVE_ALL                 40097
-#define IMD_CONVERT_MATERIALS_UNLEASHED      40101
-#define IMD_CONVERT_MATERIALS_GENERATIONS    40102
-#define IMD_CONVERT_MATERIALS_LOSTWORLD      40103
-#define IDL_EDIT_ID_LIST 40100
-#define IDB_MATERIAL_FIX_SHADER 40110
-#define IMD_CONVERT_MATERIALS_UNLEASHED_SHADERS      40105
+#define IDB_MATERIAL_SAVE_ALL                   40097
+#define IMD_CONVERT_MATERIALS_UNLEASHED         40101
+#define IMD_CONVERT_MATERIALS_GENERATIONS       40102
+#define IMD_CONVERT_MATERIALS_LOSTWORLD         40103
+#define IDL_EDIT_ID_LIST                        40100
+#define IDB_MATERIAL_FIX_SHADER                 40110
+#define IMD_CONVERT_MATERIALS_UNLEASHED_SHADERS 40105
+
+#define IDC_INSTANCE_NAME                       40200
+#define IDC_GROUP_NAME                          40201
+#define IDC_MODEL_NAME                          40202
+#define IDC_SUBSET_ID                           40203
+#define IDC_POS_X                               40204
+#define IDC_POS_Y                               40205
+#define IDC_POS_Z                               40206
+#define IDC_SIZE_X                              40207
+#define IDC_SIZE_Y                              40208
+#define IDC_SIZE_Z                              40209

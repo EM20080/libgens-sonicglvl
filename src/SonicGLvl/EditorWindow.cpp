@@ -224,6 +224,11 @@ LRESULT APIENTRY SubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 					editor_application->saveGhostRecordingFbx();
 					break;
 
+				 // Terrain Info
+				case IMD_TERRAIN_INFO:
+					editor_application->openTerrainInfoDialog();
+					break;
+
 				// Help
 				case IMD_QUICK_OVERVIEW:
 					INFO_MSG(

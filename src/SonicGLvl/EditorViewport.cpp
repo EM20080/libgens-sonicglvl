@@ -132,6 +132,12 @@ bool EditorViewport::keyPressed(const OIS::KeyEvent &arg) {
 	if (arg.key == OIS::KC_LMENU) {
 		slowing_down = true;
 	}
+	
+	if (arg.key == OIS::KC_RETURN && (rotating || slowing_down)) {
+		if (editor_application) {
+			editor_application->openTerrainInfoDialog();
+		}
+	}
 
     return true;
 }
