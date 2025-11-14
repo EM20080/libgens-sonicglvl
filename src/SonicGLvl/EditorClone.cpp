@@ -1,62 +1,36 @@
 #include "StdAfx.h"
 #include "EditorApplication.h"
 
-INT_PTR CALLBACK MultiSetParamCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam);
-
 void EditorApplication::openMultiSetParamDlg()
 {
-	if (!hMultiSetParamDlg)
-	{
-		hMultiSetParamDlg = CreateDialog(NULL, MAKEINTRESOURCE(131), hwnd, MultiSetParamCallback);
-
-		SendDlgItemMessage(hMultiSetParamDlg, IDR_MULTISETPARAM_MSP, BM_SETCHECK, (WPARAM)(cloning_mode == SONICGLVL_MULTISETPARAM_MODE_MSP), 0);
-		SendDlgItemMessage(hMultiSetParamDlg, IDR_MULTISETPARAM_CLONE, BM_SETCHECK, (WPARAM)(cloning_mode == SONICGLVL_MULTISETPARAM_MODE_CLONE), 0);
-		EnableWindow(GetDlgItem(hMultiSetParamDlg, IDR_MULTISETPARAM_MSP_ADD), false);
-
-		clearMultiSetParamDlg();
-	}
-	
-	SetFocus(hMultiSetParamDlg);
+	show_multiset_dialog = true;
+	clearMultiSetParamDlg();
 }
 
 void EditorApplication::closeMultiSetParamDlg()
 {
-	if (hMultiSetParamDlg)
-		hMultiSetParamDlg = NULL;
-
+	show_multiset_dialog = false;
 	deleteTemporaryNodes();
 }
 
 void EditorApplication::clearMultiSetParamDlg()
 {
-	if (!hMultiSetParamDlg)
-		return;
-
-	SetDlgItemText(hMultiSetParamDlg, IDE_MULTISETPARAM_X, "0");
-	SetDlgItemText(hMultiSetParamDlg, IDE_MULTISETPARAM_Y, "0");
-	SetDlgItemText(hMultiSetParamDlg, IDE_MULTISETPARAM_Z, "0");
-	SetDlgItemText(hMultiSetParamDlg, IDE_MULTISETPARAM_COUNT, "0");
-	SetDlgItemText(hMultiSetParamDlg, IDE_MULTISETPARAM_SPACING, "0");
+	multiset_vec_x = 0.0f;
+	multiset_vec_y = 0.0f;
+	multiset_vec_z = 0.0f;
+	multiset_count = 0;
+	multiset_spacing = 0.0f;
 }
 
 void EditorApplication::createMultiSetParamObjects()
 {
-	float spacing = 0, count = 0;
-	float vec_x = 0, vec_y = 0, vec_z = 0;
-
-	spacing = GetDlgItemFloat(hMultiSetParamDlg, IDE_MULTISETPARAM_SPACING);
-	count = GetDlgItemInt(hMultiSetParamDlg, IDE_MULTISETPARAM_COUNT, NULL, TRUE);
-
-	if (count < 1 || selected_nodes.size() < 1)
+	if (multiset_count < 1 || selected_nodes.size() < 1)
 	{
 		deleteTemporaryNodes();
 		return;
 	}
 
-	vec_x = GetDlgItemFloat(hMultiSetParamDlg, IDE_MULTISETPARAM_X);
-	vec_y = GetDlgItemFloat(hMultiSetParamDlg, IDE_MULTISETPARAM_Y);
-	vec_z = GetDlgItemFloat(hMultiSetParamDlg, IDE_MULTISETPARAM_Z);
-	LibGens::Vector3 pos_vector(vec_x, vec_y, vec_z);
+	LibGens::Vector3 pos_vector(multiset_vec_x, multiset_vec_y, multiset_vec_z);
 
 	list<EditorNode*>::iterator it;
 
@@ -72,9 +46,9 @@ void EditorApplication::createMultiSetParamObjects()
 
 			if (cloning_mode == SONICGLVL_MULTISETPARAM_MODE_CLONE)
 			{
-				for (int i = 1; i <= count; ++i)
+				for (int i = 1; i <= multiset_count; ++i)
 				{
-					new_pos = base_pos + (pos_vector * (i * spacing));
+					new_pos = base_pos + (pos_vector * (i * multiset_spacing));
 					LibGens::Object* new_obj = new LibGens::Object(obj);
 					new_obj->setPosition(new_pos);
 					new_obj->setRotation(base_rot);
@@ -101,9 +75,9 @@ void EditorApplication::createMultiSetParamObjects()
 				// remove old instances
 				obj->getMultiSetParam()->removeAllNodes();
 
-				for (int i = 1; i <= count; ++i)
+				for (int i = 1; i <= multiset_count; ++i)
 				{
-					new_pos = base_pos + (pos_vector * (i * spacing));
+					new_pos = base_pos + (pos_vector * (i * multiset_spacing));
 					LibGens::MultiSetNode* msp_node = new LibGens::MultiSetNode();
 
 					msp_node->position = new_pos;
@@ -137,13 +111,11 @@ void EditorApplication::setVectorAndSpacing()
 			LibGens::Vector3 originPos = origin_node->getObject()->getPosition();
 			LibGens::Vector3 v = tgt_pos - originPos;
 
-			float spacing = v.normalise();
-
-			SetDlgItemText(hMultiSetParamDlg, IDE_MULTISETPARAM_X, ToString<float>(v.x).c_str());
-			SetDlgItemText(hMultiSetParamDlg, IDE_MULTISETPARAM_Y, ToString<float>(v.y).c_str());
-			SetDlgItemText(hMultiSetParamDlg, IDE_MULTISETPARAM_Z, ToString<float>(v.z).c_str());
-			SetDlgItemText(hMultiSetParamDlg, IDE_MULTISETPARAM_SPACING, ToString<float>(spacing).c_str());
-			SetDlgItemText(hMultiSetParamDlg, IDE_MULTISETPARAM_COUNT, "1");
+			multiset_spacing = v.normalise();
+			multiset_vec_x = v.x;
+			multiset_vec_y = v.y;
+			multiset_vec_z = v.z;
+			multiset_count = 1;
 		}
 	}
 }
@@ -163,9 +135,9 @@ void EditorApplication::getVectorFromObject()
 		Ogre::Vector3 direction(0, 0, 1);
 		direction = obj_rotation * direction;
 
-		SetDlgItemText(hMultiSetParamDlg, IDE_MULTISETPARAM_X, ToString<float>(direction.x).c_str());
-		SetDlgItemText(hMultiSetParamDlg, IDE_MULTISETPARAM_Y, ToString<float>(direction.y).c_str());
-		SetDlgItemText(hMultiSetParamDlg, IDE_MULTISETPARAM_Z, ToString<float>(direction.z).c_str());
+		multiset_vec_x = direction.x;
+		multiset_vec_y = direction.y;
+		multiset_vec_z = direction.z;
 	}
 }
 
@@ -199,66 +171,45 @@ void EditorApplication::deleteTemporaryNodes()
 	temporary_nodes.clear();
 }
 
-INT_PTR CALLBACK MultiSetParamCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
-{
-	switch (msg)
-	{
-	case WM_INITDIALOG:
-		return true;
+void EditorApplication::renderMultiSetDialog() {
+	if (!show_multiset_dialog) return;
 
-	case WM_CLOSE:
-		DestroyWindow(hDlg);
-		editor_application->closeMultiSetParamDlg();
-		return true;
-
-	case WM_COMMAND:
-		switch (LOWORD(wParam))
-		{
-		case IDCANCEL:
-			SendMessage(hDlg, WM_CLOSE, 0, 0);
-			return true;
-
-		case IDB_MULTISETPARAM_CREATE:
-			editor_application->createMultiSetParamObjects();
-			break;
-
-		case IDB_MULTISETPARAM_FROM_OBJECT:
-			editor_application->getVectorFromObject();
-			break;
-
-		case IDR_MULTISETPARAM_CLONE:
-			editor_application->setCloningMode(SONICGLVL_MULTISETPARAM_MODE_CLONE);
-			break;
-
-		case IDR_MULTISETPARAM_MSP:
-			editor_application->setCloningMode(SONICGLVL_MULTISETPARAM_MODE_MSP);
-			break;
-
-		case IDB_MULTISETPARAM_CLEAR:
-			editor_application->clearMultiSetParamDlg();
-			break;
+	if (ImGui::Begin("Multi Set / Clone", &show_multiset_dialog, ImGuiWindowFlags_NoResize)) {
+		ImGui::Text("Cloning Mode:");
+		if (ImGui::RadioButton("Clone", cloning_mode == SONICGLVL_MULTISETPARAM_MODE_CLONE)) {
+			setCloningMode(SONICGLVL_MULTISETPARAM_MODE_CLONE);
 		}
-		break;
+		ImGui::SameLine();
+		if (ImGui::RadioButton("Multi Set Param", cloning_mode == SONICGLVL_MULTISETPARAM_MODE_MSP)) {
+			setCloningMode(SONICGLVL_MULTISETPARAM_MODE_MSP);
+		}
 		
-	case WM_NOTIFY:
-		if (LOWORD(wParam) == IDS_MULTISETPARAM_COUNT)
-		{
-			if (((LPNMUPDOWN)lParam)->hdr.code == UDN_DELTAPOS)
-			{
-				int delta = (LPNMUPDOWN(lParam))->iDelta;
-				int count = GetDlgItemFloat(hDlg, IDE_MULTISETPARAM_COUNT);
-
-				if (delta > 1) delta = 1;
-				if (delta < -1) delta = -1;
-
-				count += -delta;
-				if (count < 1) 	count = 0;
-
-				SetDlgItemText(hDlg, IDE_MULTISETPARAM_COUNT, ToString<int>(count).c_str());
-			}
+		ImGui::Separator();
+		
+		ImGui::Text("Direction Vector:");
+		ImGui::InputFloat("X##multiset", &multiset_vec_x);
+		ImGui::InputFloat("Y##multiset", &multiset_vec_y);
+		ImGui::InputFloat("Z##multiset", &multiset_vec_z);
+		
+		ImGui::Separator();
+		
+		ImGui::InputFloat("Spacing", &multiset_spacing);
+		ImGui::InputInt("Count", &multiset_count);
+		if (multiset_count < 0) multiset_count = 0;
+		
+		ImGui::Separator();
+		
+		if (ImGui::Button("Get Vector from Object")) {
+			getVectorFromObject();
 		}
-		break;
+		
+		if (ImGui::Button("Clear")) {
+			clearMultiSetParamDlg();
+		}
+		
+		if (ImGui::Button("Create")) {
+			createMultiSetParamObjects();
+		}
 	}
-
-	return false;
+	ImGui::End();
 }

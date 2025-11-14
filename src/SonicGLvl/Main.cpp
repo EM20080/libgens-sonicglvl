@@ -18,7 +18,12 @@
 //=========================================================================
 
 #include "EditorApplication.h"
-#define WIN32_LEAN_AND_MEAN
+#include <SDL.h>
+#include <SDL_main.h>
+#include <Windows.h>
+#include <stdio.h>
+#include <io.h>
+#include <fcntl.h>
 
 extern "C" {
 	__declspec(dllexport) unsigned long NvOptimusEnablement = 0x00000001;
@@ -29,13 +34,31 @@ EditorApplication *editor_application;
  
 int main(int argc, char *argv[])
 {
+	// Allocate console for debug output
+	AllocConsole();
+	
+	// Redirect stdout and stderr to the console
+	FILE* fp;
+	freopen_s(&fp, "CONOUT$", "w", stdout);
+	freopen_s(&fp, "CONOUT$", "w", stderr);
+	
+
+	SetConsoleTitleA("SonicGLvl");
+	
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) < 0) {
+		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "SDL Failed", SDL_GetError(), NULL);
+		return 1;
+	}
+
 	EditorApplication editor_app;
 	editor_application = &editor_app;
 
 	try {
 		editor_app.go();
 	} catch( Ogre::Exception& e ) {
-		MessageBox( NULL, e.getFullDescription().c_str(), "An exception has occurred!", MB_OK | MB_ICONERROR | MB_TASKMODAL);
+		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "An exception has occurred!", e.getFullDescription().c_str(), NULL);
 	}
+
+	SDL_Quit();
 	return 0;
 }

@@ -23,17 +23,43 @@
 #include "ObjectSet.h"
 #include "ObjectLibrary.h"
 #include "MessageTypes.h"
+#include "Material.h"
+#include "Texture.h"
+#include "Parameter.h"
+
+#ifdef _WIN32
+#include <ShObjIdl.h>
+#include <ShlObj.h>
+#endif
 
 Ogre::Rectangle2D* mMiniScreen=NULL;
 
-INT_PTR CALLBACK LeftBarCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam);
-INT_PTR CALLBACK BottomBarCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam);
 void Game_ProcessMessage(PipeClient* client, PipeMessage* msg);
 
 EditorApplication::EditorApplication(void)
 {
-	hLeftDlg = NULL;
-	hBottomDlg = NULL;
+	show_left_panel = true;
+	show_bottom_panel = true;
+	show_properties_editor = false;
+	show_material_editor = false;
+	show_physics_editor = false;
+	show_find_dialog = false;
+	show_look_at_dialog = false;
+	show_multiset_dialog = false;
+	show_terrain_info = false;
+	show_quick_overview = false;
+
+	cursor_arrow = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
+	cursor_hand = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
+	cursor_sizeall = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEALL);
+	cursor_cross = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_CROSSHAIR);
+
+	bottom_pos_x = bottom_pos_y = bottom_pos_z = 0.0f;
+	bottom_rot_x = bottom_rot_y = bottom_rot_z = 0.0f;
+	multiset_vec_x = multiset_vec_y = multiset_vec_z = 0.0f;
+	multiset_spacing = 0.0f;
+	multiset_count = 0;
+
 	game_client = new PipeClient();
 	game_client->AddMessageProcessor(Game_ProcessMessage);
 	ghost_data = nullptr;
@@ -78,6 +104,7 @@ void EditorApplication::updateSelection() {
 	axis->setRotationFrozen((selected_nodes.size() > 1) || world_transform);
 	axis->setPosition(center);
 	axis->setRotation(rotation);
+	axis->resetState();
 
 	updateNodeVisibility();
 
@@ -357,7 +384,7 @@ void EditorApplication::makeHistorySelection(bool mode) {
 			wrapper->push(action);
 			if (editor_mode == EDITOR_NODE_QUERY_VECTOR) {
 				VectorNode* vector_node = static_cast<VectorNode*>(*it);
-				if (!hLookAtPointDlg)
+				if (!show_look_at_dialog)
 				{
 					while (property_vector_nodes[index] != vector_node)
 						++index;
@@ -395,12 +422,12 @@ void EditorApplication::makeHistorySelection(bool mode) {
 	if (is_list && editor_mode == EDITOR_NODE_QUERY_VECTOR)
 	{
 		updateEditPropertyVectorList(temp_property_vector_list);
-		if (hEditPropertyDlg && isVectorListSelectionValid())
+		if (show_properties_editor && isVectorListSelectionValid())
 		{
 			Ogre::Vector3 v = property_vector_nodes[current_vector_list_selection]->getPosition();
-			SetDlgItemText(hEditPropertyDlg, IDE_EDIT_VECTOR_LIST_X, ToString<float>(v.x).c_str());
-			SetDlgItemText(hEditPropertyDlg, IDE_EDIT_VECTOR_LIST_Y, ToString<float>(v.y).c_str());
-			SetDlgItemText(hEditPropertyDlg, IDE_EDIT_VECTOR_LIST_Z, ToString<float>(v.z).c_str());
+			edit_vector_x = v.x;
+			edit_vector_y = v.y;
+			edit_vector_z = v.z;
 		}
 	}
 	pushHistory(wrapper);
@@ -409,7 +436,7 @@ void EditorApplication::makeHistorySelection(bool mode) {
 
 void EditorApplication::undoHistory() {
 	if (editor_mode == EDITOR_NODE_QUERY_VECTOR) {
-		if (hLookAtPointDlg)
+		if (show_look_at_dialog)
 		{
 			look_at_vector_history->undo();
 			updateLookAtVectorGUI();
@@ -424,12 +451,12 @@ void EditorApplication::undoHistory() {
 			if (is_list)
 			{
 				updateEditPropertyVectorList(temp_property_vector_list);
-				if (hEditPropertyDlg && isVectorListSelectionValid())
+				if (show_properties_editor && isVectorListSelectionValid())
 				{
 					Ogre::Vector3 v = property_vector_nodes[current_vector_list_selection]->getPosition();
-					SetDlgItemText(hEditPropertyDlg, IDE_EDIT_VECTOR_LIST_X, ToString<float>(v.x).c_str());
-					SetDlgItemText(hEditPropertyDlg, IDE_EDIT_VECTOR_LIST_Y, ToString<float>(v.y).c_str());
-					SetDlgItemText(hEditPropertyDlg, IDE_EDIT_VECTOR_LIST_Z, ToString<float>(v.z).c_str());
+					edit_vector_x = v.x;
+					edit_vector_y = v.y;
+					edit_vector_z = v.z;
 				}
 			}
 		}
@@ -440,7 +467,7 @@ void EditorApplication::undoHistory() {
 
 void EditorApplication::redoHistory() {
 	if (editor_mode == EDITOR_NODE_QUERY_VECTOR) {
-		if (hLookAtPointDlg)
+		if (show_look_at_dialog)
 		{
 			look_at_vector_history->redo();
 			updateLookAtVectorGUI();
@@ -455,12 +482,12 @@ void EditorApplication::redoHistory() {
 			if (is_list)
 			{
 				updateEditPropertyVectorList(temp_property_vector_list);
-				if (hEditPropertyDlg && isVectorListSelectionValid())
+				if (show_properties_editor && isVectorListSelectionValid())
 				{
 					Ogre::Vector3 v = property_vector_nodes[current_vector_list_selection]->getPosition();
-					SetDlgItemText(hEditPropertyDlg, IDE_EDIT_VECTOR_LIST_X, ToString<float>(v.x).c_str());
-					SetDlgItemText(hEditPropertyDlg, IDE_EDIT_VECTOR_LIST_Y, ToString<float>(v.y).c_str());
-					SetDlgItemText(hEditPropertyDlg, IDE_EDIT_VECTOR_LIST_Z, ToString<float>(v.z).c_str());
+					edit_vector_x = v.x;
+					edit_vector_y = v.y;
+					edit_vector_z = v.z;
 				}
 			}
 		}
@@ -481,14 +508,7 @@ void EditorApplication::pushHistory(HistoryAction *action) {
 
 void EditorApplication::toggleWorldTransform() {
 	world_transform = !world_transform;
-
-	// Update WinAPI Menu Check
-	const int viewMenuPos=2;
-	HMENU hViewSubMenu=GetSubMenu(hMenu, viewMenuPos);
-
-	if (hViewSubMenu) {
-		CheckMenuItem(hViewSubMenu, IMD_WORLD_TRANSFORM, (world_transform ? MF_CHECKED : MF_UNCHECKED));
-	}
+	// ImGui menu handles checkmark state automatically
 }
 
 
@@ -499,36 +519,17 @@ void EditorApplication::togglePlacementSnap() {
 	else {
 		placement_grid_snap = 0.5f;
 	}
-
-	// Update WinAPI Menu Check
-	const int viewMenuPos=2;
-	HMENU hViewSubMenu=GetSubMenu(hMenu, viewMenuPos);
-
-	if (hViewSubMenu) {
-		CheckMenuItem(hViewSubMenu, IMD_PLACEMENT_SNAP, ((placement_grid_snap > 0.0f) ? MF_CHECKED : MF_UNCHECKED));
-	}
+	// ImGui menu handles checkmark state automatically
 }
 
 void EditorApplication::toggleLocalRotation() {
 	local_rotation = !local_rotation;
-
-	const int viewMenuPos = 2;
-	HMENU hViewSubMenu = GetSubMenu(hMenu, viewMenuPos);
-
-	if (hViewSubMenu) {
-		CheckMenuItem(hViewSubMenu, IMD_LOCAL_ROTATION, (local_rotation ? MF_CHECKED : MF_UNCHECKED));
-	}
+	// ImGui menu handles checkmark state automatically
 }
 
 void EditorApplication::toggleRotationSnap() {
 	axis->setRotationSnap(!axis->isRotationSnap());
-
-	const int viewMenuPos = 2;
-	HMENU hViewSubMenu = GetSubMenu(hMenu, viewMenuPos);
-
-	if (hViewSubMenu) {
-		CheckMenuItem(hViewSubMenu, IMD_ROTATION_SNAP, (axis->isRotationSnap() ? MF_CHECKED : MF_UNCHECKED));
-	}
+	// ImGui menu handles checkmark state automatically
 }
 
 void EditorApplication::snapToClosestPath() {
@@ -634,23 +635,6 @@ void EditorApplication::createScene(void) {
 	object_production->load(configuration->getObjectProductionPath());
 
 	havok_enviroment->addFolder(SONICGLVL_RESOURCES_PATH);
-
-	// Initialize WinAPI Interface
-	hMenu = LoadMenu(NULL, MAKEINTRESOURCE(IDR_TOOLMENU));
-	SetMenu(hwnd, hMenu);
-
-	hLeftDlg=CreateDialog(NULL, MAKEINTRESOURCE(IDD_LEFT_DIALOG), hwnd, LeftBarCallback);
-	SetParent(hLeftDlg, hwnd);
-
-	hBottomDlg=CreateDialog(NULL, MAKEINTRESOURCE(IDD_BOTTOM_DIALOG), hwnd, BottomBarCallback);
-	SetParent(hBottomDlg, hwnd);
-
-	hEditPropertyDlg = NULL;
-	hMaterialEditorDlg = NULL;
-	hPhysicsEditorDlg = NULL;
-	hMultiSetParamDlg = NULL;
-	hFindObjectDlg = NULL;
-	hLookAtPointDlg = NULL;
 	
 	updateVisibilityGUI();
 	updateObjectCategoriesGUI();
@@ -731,110 +715,38 @@ void EditorApplication::createScene(void) {
 void EditorApplication::windowResized(Ogre::RenderWindow* rw) {
 	BaseApplication::windowResized(rw);
 
-	int left_window_height=screen_height-SONICGLVL_GUI_BOTTOM_HEIGHT+1;
-
-	// Move Windows
-	if (hLeftDlg)   MoveWindow(hLeftDlg,   0, 0, SONICGLVL_GUI_LEFT_WIDTH, left_window_height, true);
-	if (hBottomDlg) MoveWindow(hBottomDlg, 0, screen_height-SONICGLVL_GUI_BOTTOM_HEIGHT, screen_width+1, SONICGLVL_GUI_BOTTOM_HEIGHT+1, true);
-
-	// Move Left Bar Elements
-	RECT temp_rect;
-	
-	HWND hHelpGroup = GetDlgItem(hLeftDlg, IDG_HELP_GROUP);
-	HWND hHelpText  = GetDlgItem(hLeftDlg, IDT_HELP_DESCRIPTION);
-	// Help Group
-	int help_y_coordinate=left_window_height - 90;
-	temp_rect.left = 2;
-	temp_rect.top = 0;
-	temp_rect.right = 181 + temp_rect.left;
-	temp_rect.bottom = 52 + temp_rect.top;
-	MapDialogRect(hLeftDlg, &temp_rect);
-	MoveWindow(hHelpGroup, temp_rect.left, temp_rect.top + help_y_coordinate, temp_rect.right - temp_rect.left, temp_rect.bottom - temp_rect.top, true);
-	temp_rect.top += help_y_coordinate;
-	temp_rect.bottom += help_y_coordinate;
-	InvalidateRect(hLeftDlg, &temp_rect, true);
-
-	// Help Text
-	temp_rect.left = 7;
-	temp_rect.top = 11;
-	temp_rect.right = 173 + temp_rect.left;
-	temp_rect.bottom = 37 + temp_rect.top;
-	MapDialogRect(hLeftDlg, &temp_rect);
-	MoveWindow(hHelpText, temp_rect.left, temp_rect.top + help_y_coordinate, temp_rect.right - temp_rect.left, temp_rect.bottom - temp_rect.top, true);
-	temp_rect.top += help_y_coordinate;
-	temp_rect.bottom += help_y_coordinate;
-	InvalidateRect(hLeftDlg, &temp_rect, true);
-
-
-	HWND hPaletteGroup      = GetDlgItem(hLeftDlg, IDG_PALETTE_GROUP);
-	HWND hPaletteList       = GetDlgItem(hLeftDlg, IDL_PALETTE_LIST);
-	int left_window_palette_properties_height=(left_window_height - 90 - 90) / 2;
-	// Palette Group
-	temp_rect.left = 2;
-	temp_rect.top = 55;
-	temp_rect.right = 181 + temp_rect.left;
-	temp_rect.bottom = 0 + temp_rect.top;
-	MapDialogRect(hLeftDlg, &temp_rect);
-	MoveWindow(hPaletteGroup, temp_rect.left, temp_rect.top, temp_rect.right - temp_rect.left, temp_rect.bottom - temp_rect.top + left_window_palette_properties_height, true);
-	temp_rect.bottom += left_window_palette_properties_height;
-	InvalidateRect(hLeftDlg, &temp_rect, true);
-
-	// Palette List
-	temp_rect.left = 6;
-	temp_rect.top = 82;
-	temp_rect.right = 174 + temp_rect.left;
-	temp_rect.bottom = 0 + temp_rect.top;
-	MapDialogRect(hLeftDlg, &temp_rect);
-	MoveWindow(hPaletteList, temp_rect.left, temp_rect.top, temp_rect.right - temp_rect.left, temp_rect.bottom - temp_rect.top + left_window_palette_properties_height - 50, true);
-	temp_rect.bottom += left_window_palette_properties_height - 50;
-	InvalidateRect(hLeftDlg, &temp_rect, true);
-
-	HWND hPropertiesGroup = GetDlgItem(hLeftDlg, IDG_PROPERTIES_GROUP);
-	HWND hPropertiesList  = GetDlgItem(hLeftDlg, IDL_PROPERTIES_LIST);
-
-	int properties_y_coordinate= 93 + left_window_palette_properties_height;
-	// Properties Group
-	temp_rect.left = 2;
-	temp_rect.top = 0;
-	temp_rect.right = 181 + temp_rect.left;
-	temp_rect.bottom = 0 + temp_rect.top;
-	MapDialogRect(hLeftDlg, &temp_rect);
-	MoveWindow(hPropertiesGroup, temp_rect.left, temp_rect.top + properties_y_coordinate, temp_rect.right - temp_rect.left, temp_rect.bottom - temp_rect.top + left_window_palette_properties_height - 8, true);
-	temp_rect.top += properties_y_coordinate;
-	temp_rect.bottom += properties_y_coordinate;
-	temp_rect.bottom += left_window_palette_properties_height - 8;
-	InvalidateRect(hLeftDlg, &temp_rect, true);
-
-	// Properties List
-	temp_rect.left = 6;
-	temp_rect.top = 11;
-	temp_rect.right = 174 + temp_rect.left;
-	temp_rect.bottom = 0 + temp_rect.top;
-	MapDialogRect(hLeftDlg, &temp_rect);
-	MoveWindow(hPropertiesList, temp_rect.left, temp_rect.top + properties_y_coordinate, temp_rect.right - temp_rect.left, temp_rect.bottom - temp_rect.top + left_window_palette_properties_height - 33, true);
-	temp_rect.top += properties_y_coordinate;
-	temp_rect.bottom += properties_y_coordinate;
-	temp_rect.bottom += left_window_palette_properties_height - 33;
-	InvalidateRect(hLeftDlg, &temp_rect, true);
-
-	// Resize Viewport
-	float left  = (float)SONICGLVL_GUI_LEFT_WIDTH / (float)screen_width;
-	float top   = 0.0f;
-	float width = (float)(screen_width  - SONICGLVL_GUI_LEFT_WIDTH) / (float)screen_width;
-	float height= (float)(screen_height - SONICGLVL_GUI_BOTTOM_HEIGHT) / (float)screen_height;
-	/*
-	float left   = 0.0f;
-	float top    = 0.0f;
-	float width  = 1.0f;
+	// Calculate viewport dimensions based on ImGui panel visibility
+	float left = 0.0f;
+	float top = 0.0f;
+	float width = 1.0f;
 	float height = 1.0f;
-	*/
+	
+	// Account for main menu bar (approximately 20 pixels)
+	float menu_bar_height = 20.0f;
+	top = menu_bar_height / (float)screen_height;
+	height -= top;
+	
+	// Account for left panel if visible
+	if (show_left_panel) {
+		left = (float)SONICGLVL_GUI_LEFT_WIDTH / (float)screen_width;
+		width -= left;
+	}
+	
+	// Account for bottom panel if visible
+	if (show_bottom_panel) {
+		float bottom_height = (float)SONICGLVL_GUI_BOTTOM_HEIGHT / (float)screen_height;
+		height -= bottom_height;
+	}
 
 	viewport->resize(left, top, width, height);
 }
 
 
 bool EditorApplication::keyPressed(const OIS::KeyEvent &arg) {
+	ImGuiIO& io = ImGui::GetIO();
+	
 	if (axis->isHolding()) return true;
+	
 	viewport->keyPressed(arg);
 
 	bool regular_mode = isRegularMode();
@@ -909,7 +821,7 @@ bool EditorApplication::keyPressed(const OIS::KeyEvent &arg) {
 			}
 
 			if(arg.key == OIS::KC_F) {
-				if (!hFindObjectDlg)
+				if (!show_find_dialog)
 					openFindGUI();
 			}
 
@@ -1061,6 +973,8 @@ bool EditorApplication::keyReleased(const OIS::KeyEvent &arg) {
 
 
 bool EditorApplication::mouseMoved(const OIS::MouseEvent &arg) {
+	ImGuiIO& io = ImGui::GetIO();
+	
 	viewport->setQueryFlags(editor_mode);
 
 	if (!axis->isHolding()) {
@@ -1133,7 +1047,8 @@ bool EditorApplication::mouseMoved(const OIS::MouseEvent &arg) {
 }
 
 bool EditorApplication::mousePressed(const OIS::MouseEvent &arg, OIS::MouseButtonID id) {
-	// Only register mouse clicks if it's inside the viewport
+	viewport->mousePressed(arg, id);
+	
 	if (viewport->isMouseInLocalScreen(arg)) {
 		focus();
 
@@ -1145,7 +1060,7 @@ bool EditorApplication::mousePressed(const OIS::MouseEvent &arg, OIS::MouseButto
 			if (axis->mousePressed(viewport, arg, id)) {
 				dragging_mode = 0;
 
-				if (keyboard->isModifierDown(OIS::Keyboard::Shift) && !hMultiSetParamDlg) {
+				if (keyboard->isModifierDown(OIS::Keyboard::Shift) && !show_multiset_dialog) {
 					dragging_mode = 1;
 					rememberCloningNodes();
 					temporaryCloneSelection();
@@ -1165,17 +1080,22 @@ bool EditorApplication::mousePressed(const OIS::MouseEvent &arg, OIS::MouseButto
 							clearSelection();
 						}
 
-						if (!current_node->isSelected())
+						bool was_already_selected = current_node->isSelected();
+						if (!was_already_selected)
 						{
 							HistoryActionSelectNode* action_select = new HistoryActionSelectNode(current_node, false, true, &selected_nodes);
 							current_node->setSelect(true);
 							selected_nodes.push_back(current_node);
 							addTrajectory(getTrajectoryMode(current_node));
 							pushHistory(action_select);
-
 						}
 
 						updateSelection();
+						
+						// Always reset axis state when clicking an object, even if already selected
+						if (was_already_selected) {
+							axis->resetState();
+						}
 					}
 					else
 					{
@@ -1188,8 +1108,7 @@ bool EditorApplication::mousePressed(const OIS::MouseEvent &arg, OIS::MouseButto
 							if (is_pick_target)
 							{
 								bool is_list = current_properties_types[current_property_index] == LibGens::OBJECT_ELEMENT_ID_LIST;
-								int combo_box = is_list ? IDE_EDIT_ID_LIST_VALUE : IDC_EDIT_ID_VALUE;
-								SetDlgItemText(hEditPropertyDlg, combo_box, ToString<size_t>(id).c_str());
+								edit_id_value = id;
 
 								setTargetName(id, is_list);
 							}
@@ -1199,9 +1118,9 @@ bool EditorApplication::mousePressed(const OIS::MouseEvent &arg, OIS::MouseButto
 								is_update_look_at_vector = false;
 
 								Ogre::Vector3 position = object_node->getPosition();
-								SetDlgItemText(hLookAtPointDlg, IDE_LOOK_AT_X, ToString<float>(position.x).c_str());
-								SetDlgItemText(hLookAtPointDlg, IDE_LOOK_AT_Y, ToString<float>(position.y).c_str());
-								SetDlgItemText(hLookAtPointDlg, IDE_LOOK_AT_Z, ToString<float>(position.z).c_str());
+								look_at_x = position.x;
+								look_at_y = position.y;
+								look_at_z = position.z;
 
 								updateLookAtPointVectorNode(position);
 								is_update_look_at_vector = true;
@@ -1266,7 +1185,7 @@ bool EditorApplication::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButt
 
 		if (dragging_mode == 1)
 		{
-			if (cloning_nodes.size() && !hMultiSetParamDlg)
+			if (cloning_nodes.size() && !show_multiset_dialog)
 			{
 				openMultiSetParamDlg();
 				setVectorAndSpacing();
@@ -1847,7 +1766,7 @@ void EditorApplication::convertMaterialsToUnleashedShaders() {
 			if (shader == "Common_dpn[u]") shader = "Common_dpn[u]";
 			if (shader == "Common_dpn[v]") shader = "Common_dpn[v]";
 			if (shader == "Common_dpn[w]") shader = "Common_dpn[w]";
-			if (shader == "Common_dpr") shader = "Common_dpr";
+			if (shader == "Common_dpr" ) shader = "Common_dpr";
 			if (shader == "Common_dp[bu]") shader = "Common_dp[bu]";
 			if (shader == "Common_dp[bw]") shader = "Common_dp[bw]";
 			if (shader == "Common_dp[b]") shader = "Common_dp[b]";
@@ -2193,5 +2112,213 @@ void EditorApplication::updateTerrainInfoDialog() {
 	msg += "Subset ID: " + std::to_string(subset_id) + "\n";
 	msg += "Model: " + instance->getModelName();
 
-	MessageBoxA(hwnd, msg.c_str(), "Terrain Info", MB_OK | MB_ICONINFORMATION);
+	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Terrain Info", msg.c_str(), sdl_window);
 };
+
+void EditorApplication::renderImGui() {
+	renderMainMenuBar();
+
+	if (show_left_panel) {
+		renderLeftPanel();
+	}
+
+	if (show_bottom_panel) {
+		renderBottomPanel();
+	}
+
+	if (show_properties_editor) {
+		renderPropertyEditor();
+	}
+
+	if (show_material_editor) {
+		renderMaterialEditor();
+	}
+
+	if (show_physics_editor) {
+		renderPhysicsEditor();
+	}
+
+	if (show_find_dialog) {
+		renderFindDialog();
+	}
+
+	if (show_look_at_dialog) {
+		renderLookAtDialog();
+	}
+
+	if (show_multiset_dialog) {
+		renderMultiSetDialog();
+	}
+
+	if (show_terrain_info) {
+		renderTerrainInfoDialog();
+	}
+
+	if (show_quick_overview) {
+		renderQuickOverviewDialog();
+	}
+}
+
+void EditorApplication::renderMaterialEditor() {
+	ImVec2 center = ImVec2(ImGui::GetIO().DisplaySize.x * 0.5f, ImGui::GetIO().DisplaySize.y * 0.5f);
+	ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+	ImGui::SetNextWindowSize(ImVec2(700, 600), ImGuiCond_FirstUseEver);
+	
+	ImGui::Begin("Material Editor", &show_material_editor, ImGuiWindowFlags_NoCollapse);
+
+	// Mode and info on same line
+	const char* mode_labels[] = { "Model", "Material", "Terrain" };
+	int mode = (int)material_editor_mode;
+	ImGui::SetNextItemWidth(120);
+	if (ImGui::Combo("Mode", &mode, mode_labels, IM_ARRAYSIZE(mode_labels))) {
+		material_editor_mode = (size_t)mode;
+		if (mode == SONICGLVL_MATERIAL_EDITOR_MODE_TERRAIN) materialEditorTerrainMode();
+		else materialEditorModelMode();	
+	}
+	ImGui::SameLine();
+	ImGui::Text("Model: %s", material_editor_model ? material_editor_model->getName().c_str() : "None");
+	ImGui::Text("Skeleton: %s  Animation: %s", 
+		material_editor_skeleton_name.size()? material_editor_skeleton_name.c_str():"None",
+		material_editor_animation_name.size()? material_editor_animation_name.c_str():"None");
+
+	ImGui::Separator();
+	
+	// Materials and Shader side by side
+	ImGui::BeginChild("MaterialList", ImVec2(220, 150), true);
+	ImGui::Text("Materials");
+	ImGui::Separator();
+	for (int i=0;i<(int)material_editor_materials.size();++i) {
+		bool selected = (i == material_editor_list_selection);
+		if (ImGui::Selectable(material_editor_materials[i]->getName().c_str(), selected)) {
+			updateMaterialEditorIndex(i);
+		}
+		if (selected) ImGui::SetItemDefaultFocus();
+	}
+	ImGui::EndChild();
+
+	ImGui::SameLine();
+	ImGui::BeginGroup();
+	ImGui::Text("Shader");
+	ImGui::SetNextItemWidth(250);
+	const char* current_shader = material_editor_material ? material_editor_material->getShader().c_str() : "";
+	if (ImGui::BeginCombo("##ShaderCombo", current_shader)) {
+		for (size_t i=0;i<material_editor_shader_names.size();++i) {
+			bool is_selected = (material_editor_material && material_editor_material->getShader()==material_editor_shader_names[i]);
+			if (ImGui::Selectable(material_editor_shader_names[i].c_str(), is_selected)) {
+				updateEditShaderMaterialEditor(material_editor_shader_names[i]);
+				if (material_editor_defaults_on_shader_change) {
+					loadMaterialDefaultParams();
+				}
+				updateMaterialEditorInfo();
+			}
+			if (is_selected) ImGui::SetItemDefaultFocus();
+		}
+		ImGui::EndCombo();
+	}
+	ImGui::Checkbox("Defaults on Shader Change", &material_editor_defaults_on_shader_change);
+	ImGui::EndGroup();
+
+	if (material_editor_material) {
+		bool no_cull = material_editor_material->hasNoCulling();
+		if (ImGui::Checkbox("No Culling", &no_cull)) {
+			material_editor_material->setNoCulling(no_cull);
+		}
+		ImGui::SameLine();
+		bool additive = material_editor_material->hasColorBlend();
+		if (ImGui::Checkbox("Additive", &additive)) {
+			material_editor_material->setColorBlend(additive);
+		}
+	}
+
+	ImGui::Text("Texture Units");
+	ImGui::BeginChild("TextureList", ImVec2(250, 120), true);
+	if (material_editor_material) {
+		for (int i=0;i<material_editor_material->getTextureUnitsSize();++i) {
+			LibGens::Texture* tex = material_editor_material->getTextureByIndex(i);
+			string label = tex->getName()+" ("+tex->getUnit()+")";
+			bool selected = (i==texture_list_selection);
+			if (ImGui::Selectable(label.c_str(), selected)) {
+				updateMaterialEditorTextureIndex(i);
+			}
+			if (selected) ImGui::SetItemDefaultFocus();
+		}
+	}
+	ImGui::EndChild();
+	if (ImGui::Button("Add Texture")) addMaterialEditorTextureGUI();
+	ImGui::SameLine();
+	if (ImGui::Button("Remove Texture")) removeMaterialEditorTexture();
+	ImGui::SameLine();
+	if (ImGui::Button("Defaults")) loadMaterialDefaultParams();
+
+	if (material_editor_texture) {
+		ImGui::InputText("Texture Name", texture_filename_buf, sizeof(texture_filename_buf));
+		if (ImGui::IsItemDeactivatedAfterEdit()) {
+			updateEditTextureMaterialEditor(texture_filename_buf, true);
+		}
+		ImGui::InputText("Unit", texture_unit_name_buf, sizeof(texture_unit_name_buf));
+		if (ImGui::IsItemDeactivatedAfterEdit()) {
+			updateEditTextureUnitMaterialEditor(texture_unit_name_buf);
+		}
+		if (!material_editor_slot_names.empty()) {
+			if (texture_slot_index < 0) texture_slot_index = 0;
+			if (texture_slot_index >= (int)material_editor_slot_names.size()) texture_slot_index = (int)material_editor_slot_names.size()-1;
+			const char* current_slot = material_editor_slot_names[texture_slot_index].c_str();
+			if (ImGui::BeginCombo("Slot", current_slot)) {
+				for (int i=0;i<(int)material_editor_slot_names.size();++i) {
+					bool sel = (i==texture_slot_index);
+					if (ImGui::Selectable(material_editor_slot_names[i].c_str(), sel)) {
+						texture_slot_index = i;
+						updateEditTextureUnitMaterialEditor(material_editor_slot_names[i]);
+					}
+					if (sel) ImGui::SetItemDefaultFocus();
+				}
+				ImGui::EndCombo();
+			}
+		}
+		if (ImGui::Button("Choose Texture")) pickMaterialEditorTextureGUI();
+	}
+
+	ImGui::Separator();
+	ImGui::Text("Parameters");
+	ImGui::BeginChild("ParamGrid", ImVec2(400, 0), true);
+	if (material_editor_material) {
+		vector<LibGens::Parameter*> params = material_editor_material->getParameters();
+		for (int i=0;i<(int)params.size();i++) {
+			ImGui::PushID(i);
+			ImGui::Text("%s", params[i]->getName().c_str());
+			float rgba[4];
+			LibGens::Color c = params[i]->getColor();
+			rgba[0]=c.r; rgba[1]=c.g; rgba[2]=c.b; rgba[3]=c.a;
+			
+			bool changed = false;
+			ImGui::Text("R:"); ImGui::SameLine();
+			ImGui::SetNextItemWidth(60);
+			changed |= ImGui::InputFloat("##R", &rgba[0], 0.0f, 0.0f, "%.3f");
+			ImGui::SameLine();
+			
+			ImGui::Text("G:"); ImGui::SameLine();
+			ImGui::SetNextItemWidth(60);
+			changed |= ImGui::InputFloat("##G", &rgba[1], 0.0f, 0.0f, "%.3f");
+			ImGui::SameLine();
+			
+			ImGui::Text("B:"); ImGui::SameLine();
+			ImGui::SetNextItemWidth(60);
+			changed |= ImGui::InputFloat("##B", &rgba[2], 0.0f, 0.0f, "%.3f");
+			ImGui::SameLine();
+			
+			ImGui::Text("A:"); ImGui::SameLine();
+			ImGui::SetNextItemWidth(60);
+			changed |= ImGui::InputFloat("##A", &rgba[3], 0.0f, 0.0f, "%.3f");
+			
+			if (changed) {
+				updateEditParameterMaterialEditor(i, LibGens::Color(rgba[0], rgba[1], rgba[2], rgba[3]));
+			}
+			ImGui::PopID();
+		}
+	}
+	ImGui::EndChild();
+
+
+
+	ImGui::End();
+}

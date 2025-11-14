@@ -61,7 +61,10 @@
     <ClCompile Include="EditorConfiguration.cpp">
       <Filter>Editor</Filter>
     </ClCompile>
-    <ClCompile Include="EditorGhost.cpp">
+    <ClCompile Include="EmbeddedConfig.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="EditorStubs.cpp">
       <Filter>Editor</Filter>
     </ClCompile>
     <ClCompile Include="EditorGUI.cpp">
@@ -141,6 +144,28 @@
     <ClCompile Include="TrajectoryNode.cpp">
       <Filter>Editor Nodes</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\depends\imgui\imgui.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\depends\imgui\imgui_demo.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\depends\imgui\imgui_draw.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\depends\imgui\imgui_tables.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\depends\imgui\imgui_widgets.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\depends\imgui\backends\imgui_impl_dx9.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\depends\imgui\backends\imgui_impl_sdl2.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="EditorGhost.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BaseApplication.h">
@@ -191,7 +216,10 @@
     <ClInclude Include="EditorConfiguration.h">
       <Filter>Editor</Filter>
     </ClInclude>
-    <ClInclude Include="EditorLevel.h">
+    <ClInclude Include="EmbeddedConfig.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="EditorMaterial.h">
       <Filter>Editor</Filter>
     </ClInclude>
     <ClInclude Include="EditorMaterial.h">
@@ -234,6 +262,7 @@
     <ClInclude Include="TrajectoryNode.h">
       <Filter>Editor Nodes</Filter>
     </ClInclude>
+    <ClInclude Include="EditorLevel.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Resource">
@@ -250,6 +279,9 @@
     </Filter>
     <Filter Include="Editor Game Message">
       <UniqueIdentifier>{8e0d817d-fe40-4d79-a7f6-78b024e7c0c1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="imgui">
+      <UniqueIdentifier>{28d99cc2-727a-4150-943c-b7908680d1ed}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

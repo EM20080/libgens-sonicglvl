@@ -20,293 +20,322 @@
 #include "EditorApplication.h"
 #include "MessageTypes.h"
 
-#define IMD_CONVERT_MATERIALS_UNLEASHED      40101
-#define IMD_CONVERT_MATERIALS_GENERATIONS    40102
-#define IMD_CONVERT_MATERIALS_LOSTWORLD      40103
-#define IMD_CONVERT_MATERIALS_UNLEASHED_SHADERS      40105
-
 int global_cursor_state=0;
 
 void EditorApplication::focus() {
-	SetFocus(hwnd);
+	SDL_RaiseWindow(sdl_window);
 }
 
 bool EditorApplication::inFocus() {
-	return GetFocus() == hwnd;
+	return (SDL_GetWindowFlags(sdl_window) & SDL_WINDOW_INPUT_FOCUS) != 0;
 }
 
-void EditorApplication::updateMenu() {
-	bool connected = checkGameConnection();
-	UINT connected_state = connected ? MF_ENABLED : MF_GRAYED;
+void EditorApplication::updateCursor() {
+	switch (global_cursor_state) {
+		case 0:
+			SDL_SetCursor(cursor_arrow);
+			break;
+		case 1:
+			SDL_SetCursor(cursor_hand);
+			break;
+		case 2:
+			SDL_SetCursor(cursor_sizeall);
+			break;
+		case 3:
+			SDL_SetCursor(cursor_cross);
+			break;
+	}
+}
+
+void EditorApplication::handleSDLEvent(const SDL_Event& event) {
+	ImGui_ImplSDL2_ProcessEvent(&event);
 	
-	EnableMenuItem(hMenu, IMD_CONNECT_GAME, connected ? MF_GRAYED : MF_ENABLED);
-	EnableMenuItem(hMenu, IMD_START_GHOST_RECORD, connected_state);
-	EnableMenuItem(hMenu, IMD_STOP_GHOST_RECORD, connected_state);
-
-	EnableMenuItem(hMenu, IMD_SAVE_GHOST_RECORDING, ghost_data ? MF_ENABLED : MF_GRAYED);
-	EnableMenuItem(hMenu, IMD_SAVE_GHOST_RECORDING_FBX, ghost_data ? MF_ENABLED : MF_GRAYED);
-	EnableMenuItem(hMenu, IMD_LOAD_GHOST_RECORDING_FROM_GAME, connected_state);
-
-	if (isGhostRecording && connected) {
-		EnableMenuItem(hMenu, IMD_START_GHOST_RECORD, MF_GRAYED);
-		EnableMenuItem(hMenu, IMD_STOP_GHOST_RECORD, MF_ENABLED);
-	}
-	else if (!isGhostRecording && connected) {
-		EnableMenuItem(hMenu, IMD_START_GHOST_RECORD, MF_ENABLED);
-		EnableMenuItem(hMenu, IMD_STOP_GHOST_RECORD, MF_GRAYED);
+	if (event.type == SDL_QUIT) {
+		shut_down = true;
+		return;
 	}
 }
 
-extern WNDPROC globalWinProc;
-LRESULT APIENTRY SubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-	//MINMAXINFO FAR *lpMinMaxInfo;
-	switch(uMsg)
-	{
-		case WM_MENUSELECT:
-			editor_application->updateMenu();
-			break;
-
-		case WM_COMMAND:
-			switch(LOWORD(wParam))
-			{
-				// File
-				case IMD_OPEN_LEVEL :
-					editor_application->openLevelGUI();
-					break;
-				case IMD_SAVE_LEVEL_DATA :
-					editor_application->saveLevelDataGUI();
-					break;
-				case IMD_SAVE_LEVEL_RESOURCES :
-					editor_application->saveLevelResourcesGUI();
-					break;
-				case IMD_CLOSE:
-					SendMessage(editor_application->getHwnd(), WM_CLOSE, 0, 0);
-					break;
-
-				// Edit
-				case IMD_UNDO:
-					editor_application->undoHistory();
-					break;
-				case IMD_REDO:
-					editor_application->redoHistory();
-					break;
-				case IMD_CUT:
-					editor_application->copySelection();
-					editor_application->deleteSelection();
-					break;
-				case IMD_COPY:
-					editor_application->copySelection();
-					break;
-				case IMD_PASTE:
-					editor_application->pasteSelection();
-					break;
-				case IMD_DELETE:
-					editor_application->deleteSelection();
-					break;
-				case IMD_CLEAR_SELECTION:
-					editor_application->clearSelection();
-					break;
-				case IMD_SELECT_ALL:
-					editor_application->selectAll();
-					break;
-				case IMD_FIND:
-					editor_application->openFindGUI();
-					break;
-				case IMD_LOOK_AT_EACH_OTHER_X:
-					editor_application->lookAtEachOther(LIBGENS_MATH_AXIS_X);
-					break;
-				case IMD_LOOK_AT_EACH_OTHER_Y:
-					editor_application->lookAtEachOther(LIBGENS_MATH_AXIS_Y);
-					break;
-				case IMD_LOOK_AT_EACH_OTHER_Z:
-					editor_application->lookAtEachOther(LIBGENS_MATH_AXIS_Z);
-					break;
-				case IMD_LOOK_AT_POINT:
-					editor_application->openLookAtPointGUI();
-					break;
-				case IMD_SNAP_OBJECTS_TO_CLOSEST_PATH:
-					editor_application->snapToClosestPath(); 
-					break;
-
-				// Materials
-				case IMD_OPEN_MATERIAL_EDITOR :
-					editor_application->openMaterialEditorGUI();
-					break;
-
-				// Terrain
-				case IMD_LOAD_ALL_TERRAIN:
-					editor_application->loadAllTerrain();
-					break;
-				case IMD_EXPORT_SCENE_FBX:
-					editor_application->exportSceneFBXGUI();
-					break;
-
-				// Objects
-				case IMD_RELOAD_TEMPLATES_DATABASE :
-					editor_application->reloadTemplatesDatabase();
-					break;
-				case IMD_SAVE_TEMPLATES_DATABASE :
-					editor_application->saveTemplatesDatabase();
-					break;
-
-				// Show
-				case IMD_SHOW_OBJECTS :
-					editor_application->toggleNodeVisibility(EDITOR_NODE_OBJECT);
-					editor_application->toggleNodeVisibility(EDITOR_NODE_OBJECT_MSP);
-					break;
-				case IMD_SHOW_TERRAIN :
-					editor_application->toggleNodeVisibility(EDITOR_NODE_TERRAIN);
-					break;
-				case IMD_SHOW_COLLISION :
-					editor_application->toggleNodeVisibility(EDITOR_NODE_HAVOK);
-					break;
-				case IMD_SHOW_PATHS :
-					editor_application->toggleNodeVisibility(EDITOR_NODE_PATH);
-					break;
-				case IMD_SHOW_GHOST :
-					editor_application->toggleNodeVisibility(EDITOR_NODE_GHOST);
-					break;
-				case IMD_WORLD_TRANSFORM:
-					editor_application->toggleWorldTransform();
-					editor_application->updateSelection();
-					break;
-				case IMD_PLACEMENT_SNAP:
-					editor_application->togglePlacementSnap();
-					break;
-				case IMD_LOCAL_ROTATION:
-					editor_application->toggleLocalRotation();
-					break;
-				case IMD_ROTATION_SNAP:
-					editor_application->toggleRotationSnap();
-					break;
-
-				// Editor
-				case IMD_SAVE_CONFIG:
-					editor_application->getConfiguration()->save(SONICGLVL_CONFIGURATION_FILE);
-					break;
-
-				case IMD_LOAD_CONFIG:
-					editor_application->getConfiguration()->load(SONICGLVL_CONFIGURATION_FILE);
-					break;
-
-				// Game
-				case IMD_LAUNCH_GAME:
-					editor_application->launchGame();
-					break;
-
-				case IMD_CONNECT_GAME:
-					editor_application->connectGame();
-					break;
-
-				// Ghost
-				case IMD_START_GHOST_RECORD:
-					editor_application->sendMessageGame(MsgSetRecording(true), sizeof(MsgSetRecording));
-					break;
-
-				case IMD_STOP_GHOST_RECORD:
-					editor_application->sendMessageGame(MsgSetRecording(false), sizeof(MsgSetRecording));
-					break;
-
-				case IMD_LOAD_GHOST_RECORDING_FROM_GAME:
-					editor_application->setupGhost();
-					editor_application->sendMessageGame(MsgSaveRecording(), sizeof(MsgSaveRecording));
-					break;
-
-				case IMD_LOAD_GHOST_RECORDING:
-					editor_application->loadGhostRecording();
-					break;
-
-				case IMD_SAVE_GHOST_RECORDING:
-					editor_application->saveGhostRecording();
-					break;
-
-				case IMD_SAVE_GHOST_RECORDING_FBX:
-					editor_application->saveGhostRecordingFbx();
-					break;
-
-				 // Terrain Info
-				case IMD_TERRAIN_INFO:
-					editor_application->openTerrainInfoDialog();
-					break;
-
-				// Help
-				case IMD_QUICK_OVERVIEW:
-					INFO_MSG(
-						"Camera Controls:\n"
-						"  Middle Mouse Button:\n"
-						"    Drag: Move Camera\n"
-						"    Ctrl + Drag: Zoom In/Out\n"
-						"    Alt + Drag: Rotate View\n"
-						"    Mouse Wheel: Zoom In/Out (Speed affected by Shift/Alt)\n\n"
-
-						"  Right Mouse Button:\n"
-						"    Drag: Rotate View\n"
-						"    WASD: Move\n"
-						"    Space: Move Up\n"
-						"    Ctrl: Move Down\n"
-						"    Shift: Increase Move Speed\n"
-						"    Alt: Decrease Move Speed\n\n"
-
-						"General Hotkeys:\n"
-						"  Ctrl+O: Open Level\n"
-						"  Ctrl+S: Save Stage Data\n"
-						"  Ctrl+F: Find\n\n"
-
-						"Editing Hotkeys:\n"
-						"  Ctrl+Z: Undo\n"
-						"  Ctrl+Y: Redo\n"
-						"  Ctrl+C: Copy\n"
-						"  Ctrl+V: Paste\n"
-						"  Ctrl+D: Clear Selection\n"
-						"  Ctrl+A: Select All\n"
-						"  Del: Delete Object\n"
-						"  Ctrl+Drag: Clone Object\n"
-						"  Shift+Drag: Clone or Instance Object\n\n"
-
-						"Transform Gizmos:\n"
-						"  T: Translation Gizmo\n"
-						"  R: Rotation Gizmo\n"
-						"  Tap Right Mouse Button: Toggle Translation/Rotation Gizmo\n"
-						"  Ctrl+E: Toggle World/Local Transform\n"
-					);
-					break;
-				case IMD_CONVERT_MATERIALS_UNLEASHED:
-					editor_application->convertMaterialsToUnleashed();
-					break;
-				case IMD_CONVERT_MATERIALS_GENERATIONS:
-					editor_application->convertMaterialsToGenerations();
-					break;
-				case IMD_CONVERT_MATERIALS_LOSTWORLD:
-					editor_application->convertMaterialsToLostWorld();
-					break;
-				case IMD_CONVERT_MATERIALS_UNLEASHED_SHADERS:
-					editor_application->convertMaterialsToUnleashedShaders();
-					break;
+void EditorApplication::renderMainMenuBar() {
+	if (ImGui::BeginMainMenuBar()) {
+		if (ImGui::BeginMenu("File")) {
+			if (ImGui::MenuItem("Open Stage...", "Ctrl+O")) {
+				openLevelGUI();
 			}
-			break;
-	}
-
-	HCURSOR current_cursor = GetCursor();
-	HCURSOR arrow_cursor = LoadCursor(NULL, IDC_ARROW);
-
-	if (current_cursor == arrow_cursor) {
-		switch (global_cursor_state) {
-			case -1:
-				break;
-			case 0:
-				break;
-			case 1:
-				SetCursor(LoadCursor(NULL, IDC_HAND));
-				break;
-			case 2:
-				SetCursor(LoadCursor(NULL, IDC_SIZEALL));
-				break;
-			case 3:
-				SetCursor(LoadCursor(NULL, IDC_CROSS));
-				break;
+			if (ImGui::MenuItem("Save Stage Data...", "Ctrl+S")) {
+				saveLevelDataGUI();
+			}
+			if (ImGui::MenuItem("Save Stage Resources...")) {
+				saveLevelResourcesGUI();
+			}
+			ImGui::Separator();
+			if (ImGui::MenuItem("Convert/Fix All Materials (Unleashed)")) {
+				convertMaterialsToUnleashed();
+			}
+			if (ImGui::MenuItem("Convert/Fix All Materials (Unleashed Shaders)")) {
+				convertMaterialsToUnleashedShaders();
+			}
+			if (ImGui::MenuItem("Convert/Fix All Materials (Generations)")) {
+				convertMaterialsToGenerations();
+			}
+			if (ImGui::MenuItem("Convert/Fix All Materials (Lost World)")) {
+				convertMaterialsToLostWorld();
+			}
+			ImGui::Separator();
+			if (ImGui::MenuItem("Close")) {
+				shut_down = true;
+			}
+			ImGui::EndMenu();
 		}
+		
+		if (ImGui::BeginMenu("Edit")) {
+			if (ImGui::MenuItem("Undo", "Ctrl+Z")) {
+				undoHistory();
+			}
+			if (ImGui::MenuItem("Redo", "Ctrl+Y")) {
+				redoHistory();
+			}
+			ImGui::Separator();
+			if (ImGui::MenuItem("Cut", "Ctrl+X")) {
+				copySelection();
+				deleteSelection();
+			}
+			if (ImGui::MenuItem("Copy", "Ctrl+C")) {
+				copySelection();
+			}
+			if (ImGui::MenuItem("Paste", "Ctrl+V")) {
+				pasteSelection();
+			}
+			if (ImGui::MenuItem("Delete", "Del")) {
+				deleteSelection();
+			}
+			ImGui::Separator();
+			if (ImGui::MenuItem("Clear Selection", "Ctrl+D")) {
+				clearSelection();
+			}
+			if (ImGui::MenuItem("Select All", "Ctrl+A")) {
+				selectAll();
+			}
+			ImGui::Separator();
+			if (ImGui::BeginMenu("Look at each other (two objects)")) {
+				if (ImGui::MenuItem("Use X-Axis As Direction")) {
+					lookAtEachOther(LIBGENS_MATH_AXIS_X);
+				}
+				if (ImGui::MenuItem("Use Y-Axis As Direction")) {
+					lookAtEachOther(LIBGENS_MATH_AXIS_Y);
+				}
+				if (ImGui::MenuItem("Use Z-Axis As Direction")) {
+					lookAtEachOther(LIBGENS_MATH_AXIS_Z);
+				}
+				ImGui::EndMenu();
+			}
+			if (ImGui::MenuItem("Look at...", "")) {
+				openLookAtPointGUI();
+			}
+			ImGui::Separator();
+			if (ImGui::MenuItem("Snap objects to closest path")) {
+				snapToClosestPath();
+			}
+			ImGui::Separator();
+			if (ImGui::MenuItem("Find", "Ctrl+F")) {
+				openFindGUI();
+			}
+			ImGui::EndMenu();
+		}
+		
+		if (ImGui::BeginMenu("View")) {
+			if (ImGui::BeginMenu("Show")) {
+				if (ImGui::MenuItem("Objects", "Ctrl+1", (node_visibility_flags & EDITOR_NODE_OBJECT) != 0)) {
+					toggleNodeVisibility(EDITOR_NODE_OBJECT);
+					toggleNodeVisibility(EDITOR_NODE_OBJECT_MSP);
+				}
+				if (ImGui::MenuItem("Terrain", "Ctrl+2", (node_visibility_flags & EDITOR_NODE_TERRAIN) != 0)) {
+					toggleNodeVisibility(EDITOR_NODE_TERRAIN);
+				}
+				if (ImGui::MenuItem("Terrain Autodraw", "Ctrl+3", (node_visibility_flags & EDITOR_NODE_TERRAIN_AUTODRAW) != 0)) {
+					toggleNodeVisibility(EDITOR_NODE_TERRAIN_AUTODRAW);
+				}
+				if (ImGui::MenuItem("Collision", "Ctrl+4", (node_visibility_flags & EDITOR_NODE_HAVOK) != 0)) {
+					toggleNodeVisibility(EDITOR_NODE_HAVOK);
+				}
+				if (ImGui::MenuItem("Paths", "Ctrl+5", (node_visibility_flags & EDITOR_NODE_PATH) != 0)) {
+					toggleNodeVisibility(EDITOR_NODE_PATH);
+				}
+				if (ImGui::MenuItem("Ghost", "Ctrl+6", (node_visibility_flags & EDITOR_NODE_GHOST) != 0)) {
+					toggleNodeVisibility(EDITOR_NODE_GHOST);
+				}
+				ImGui::EndMenu();
+			}
+			if (ImGui::BeginMenu("Graphics")) {
+				if (ImGui::MenuItem("Game Shaders", "F5", game_shaders_enabled)) {
+					game_shaders_enabled = !game_shaders_enabled;
+				}
+				ImGui::Separator();
+				if (ImGui::MenuItem("Framebuffer & Depth Buffer", "F6", framebuffer_enabled)) {
+					framebuffer_enabled = !framebuffer_enabled;
+				}
+				if (ImGui::MenuItem("UV Animations", "F7", uv_animations_enabled)) {
+					uv_animations_enabled = !uv_animations_enabled;
+				}
+				if (ImGui::MenuItem("Skybox", "F8", skybox_enabled)) {
+					skybox_enabled = !skybox_enabled;
+				}
+				ImGui::EndMenu();
+			}
+			ImGui::Separator();
+			if (ImGui::MenuItem("Use World Transform", "Ctrl+E", world_transform)) {
+				toggleWorldTransform();
+				updateSelection();
+			}
+			if (ImGui::MenuItem("Use Local Rotation", "", local_rotation)) {
+				toggleLocalRotation();
+			}
+			if (ImGui::MenuItem("Use Placement Snap", "", placement_grid_snap > 0.0f)) {
+				togglePlacementSnap();
+			}
+			if (ImGui::MenuItem("Use Rotation Snap", "", axis->isRotationSnap())) {
+				toggleRotationSnap();
+			}
+			ImGui::EndMenu();
+		}
+		
+		if (ImGui::BeginMenu("Terrain")) {
+			if (ImGui::MenuItem("Load All Terrain...")) {
+				loadAllTerrain();
+			}
+			if (ImGui::MenuItem("Export Scene as FBX...")) {
+				exportSceneFBXGUI();
+			}
+			if (ImGui::MenuItem("Terrain Info...")) {
+				openTerrainInfoDialog();
+			}
+			ImGui::EndMenu();
+		}
+		
+		if (ImGui::BeginMenu("Objects")) {
+			if (ImGui::MenuItem("Reload Object Templates Database...")) {
+				reloadTemplatesDatabase();
+			}
+			if (ImGui::MenuItem("Save Object Templates Database...")) {
+				saveTemplatesDatabase();
+			}
+			ImGui::EndMenu();
+		}
+		
+		if (ImGui::BeginMenu("Materials")) {
+			if (ImGui::MenuItem("Open Material Editor...")) {
+				openMaterialEditorGUI();
+			}
+			ImGui::EndMenu();
+		}
+		
+		if (ImGui::BeginMenu("Editor")) {
+			if (ImGui::MenuItem("Save Configuration...")) {
+				configuration->save(SONICGLVL_CONFIGURATION_FILE);
+			}
+			if (ImGui::MenuItem("Reload Configuration...")) {
+				configuration->load(SONICGLVL_CONFIGURATION_FILE);
+			}
+			ImGui::Separator();
+			if (ImGui::MenuItem("Launch Game")) {
+				launchGame();
+			}
+			ImGui::Separator();
+			
+			bool connected = checkGameConnection();
+			if (ImGui::MenuItem("Connect To Game", "", false, !connected)) {
+				connectGame();
+			}
+			ImGui::Separator();
+			
+			if (ImGui::BeginMenu("Ghost")) {
+				if (ImGui::MenuItem("Start Recording", "", false, connected && !isGhostRecording)) {
+					sendMessageGame(MsgSetRecording(true), sizeof(MsgSetRecording));
+				}
+				if (ImGui::MenuItem("Stop Recording", "", false, connected && isGhostRecording)) {
+					sendMessageGame(MsgSetRecording(false), sizeof(MsgSetRecording));
+				}
+				if (ImGui::MenuItem("Load Recording From Game", "", false, connected)) {
+					setupGhost();
+					sendMessageGame(MsgSaveRecording(), sizeof(MsgSaveRecording));
+				}
+				ImGui::Separator();
+				if (ImGui::MenuItem("Load From File")) {
+					loadGhostRecording();
+				}
+				if (ImGui::MenuItem("Save Recording", "", false, ghost_data != nullptr)) {
+					saveGhostRecording();
+				}
+				if (ImGui::MenuItem("Save Recording (FBX)", "", false, ghost_data != nullptr)) {
+					saveGhostRecordingFbx();
+				}
+				ImGui::EndMenu();
+			}
+			ImGui::EndMenu();
+		}
+		
+		if (ImGui::BeginMenu("Help")) {
+			if (ImGui::MenuItem("Quick Overview")) {
+				show_quick_overview = true;
+			}
+			ImGui::EndMenu();
+		}
+		
+		ImGui::EndMainMenuBar();
 	}
+}
 
-	return CallWindowProc(globalWinProc, hwnd, uMsg, wParam, lParam);
+void EditorApplication::renderQuickOverviewDialog() {
+	if (!show_quick_overview) return;
+	
+	ImGui::SetNextWindowSize(ImVec2(600, 500), ImGuiCond_FirstUseEver);
+	if (ImGui::Begin("Quick Overview", &show_quick_overview, ImGuiWindowFlags_NoResize)) {
+		ImGui::TextWrapped("Camera Controls:");
+		ImGui::Spacing();
+		ImGui::BulletText("Middle Mouse Button:");
+		ImGui::Indent();
+		ImGui::Text("Drag: Move Camera");
+		ImGui::Text("Ctrl + Drag: Zoom In/Out");
+		ImGui::Text("Alt + Drag: Rotate View");
+		ImGui::Text("Mouse Wheel: Zoom In/Out (Speed affected by Shift/Alt)");
+		ImGui::Unindent();
+		ImGui::Spacing();
+		
+		ImGui::BulletText("Right Mouse Button:");
+		ImGui::Indent();
+		ImGui::Text("Drag: Rotate View");
+		ImGui::Text("WASD: Move");
+		ImGui::Text("Space: Move Up");
+		ImGui::Text("Ctrl: Move Down");
+		ImGui::Text("Shift: Increase Move Speed");
+		ImGui::Text("Alt: Decrease Move Speed");
+		ImGui::Unindent();
+		ImGui::Spacing();
+		
+		ImGui::TextWrapped("General Hotkeys:");
+		ImGui::BulletText("Ctrl+O: Open Level");
+		ImGui::BulletText("Ctrl+S: Save Stage Data");
+		ImGui::BulletText("Ctrl+F: Find");
+		ImGui::Spacing();
+		
+		ImGui::TextWrapped("Editing Hotkeys:");
+		ImGui::BulletText("Ctrl+Z: Undo");
+		ImGui::BulletText("Ctrl+Y: Redo");
+		ImGui::BulletText("Ctrl+C: Copy");
+		ImGui::BulletText("Ctrl+V: Paste");
+		ImGui::BulletText("Ctrl+D: Clear Selection");
+		ImGui::BulletText("Ctrl+A: Select All");
+		ImGui::BulletText("Del: Delete Object");
+		ImGui::BulletText("Ctrl+Drag: Clone Object");
+		ImGui::BulletText("Shift+Drag: Clone or Instance Object");
+		ImGui::Spacing();
+		
+		ImGui::TextWrapped("Transform Gizmos:");
+		ImGui::BulletText("T: Translation Gizmo");
+		ImGui::BulletText("R: Rotation Gizmo");
+		ImGui::BulletText("Tap Right Mouse Button: Toggle Translation/Rotation Gizmo");
+		ImGui::BulletText("Ctrl+E: Toggle World/Local Transform");
+	}
+	ImGui::End();
 }
 

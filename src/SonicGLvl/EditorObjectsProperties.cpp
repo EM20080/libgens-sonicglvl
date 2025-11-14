@@ -1,2131 +1,1013 @@
-//=========================================================================
-//	  Copyright (c) 2016 SonicGLvl
-//
-//    This file is part of SonicGLvl, a community-created free level editor 
-//    for the PC version of Sonic Generations.
-//
-//    SonicGLvl is free software: you can redistribute it and/or modify
-//    it under the terms of the GNU General Public License as published by
-//    the Free Software Foundation, either version 3 of the License, or
-//    (at your option) any later version.
-//
-//    SonicGLvl is distributed in the hope that it will be useful,
-//    but WITHOUT ANY WARRANTY; without even the implied warranty of
-//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-//    
-//
-//    Read AUTHORS.txt, LICENSE.txt and COPYRIGHT.txt for more details.
-//=========================================================================
+#include "imgui.h"
+#include "imgui_impl_sdl2.h"
+#include "imgui_impl_opengl3.h"
+#include <SDL.h>
+#include <string>
+#include <vector>
+#include <array>
 
-#include "EditorApplication.h"
-#include "EditorNodeHistory.h"
-#include "ObjectNodeHistory.h"
-#include "ObjectLibrary.h"
-#include "ObjectSet.h"
+class SonicGLvlUI {
+public:
+    bool show_main_menu = true;
+    bool show_properties_panel = true;
+    bool show_palette_panel = true;
+    bool show_bottom_panel = true;
+    bool show_stage_info_panel = true;
+    bool show_help_panel = true;
 
-INT_PTR CALLBACK EditBoolCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam);
-INT_PTR CALLBACK EditIntCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam);
-INT_PTR CALLBACK EditFloatCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam);
-INT_PTR CALLBACK EditStringCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam);
-INT_PTR CALLBACK EditVectorCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam);
-INT_PTR CALLBACK EditIdCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam);
-INT_PTR CALLBACK EditIdListCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam);
-INT_PTR CALLBACK EditVectorListCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam);
+    bool show_edit_bool_dialog = false;
+    bool show_edit_float_dialog = false;
+    bool show_edit_string_dialog = false;
+    bool show_edit_vector_dialog = false;
+    bool show_edit_vector_list_dialog = false;
+    bool show_edit_id_dialog = false;
+    bool show_edit_id_list_dialog = false;
+    bool show_multiset_param_dialog = false;
+    bool show_material_editor = false;
+    bool show_material_preview = false;
+    bool show_physics_editor = false;
+    bool show_find_dialog = false;
+    bool show_look_at_point_dialog = false;
+    bool show_terrain_info_dialog = false;
 
-LRESULT CALLBACK EditControlCallback(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
-WNDPROC globalEditControlOldProc;
+    bool show_objects = true;
+    bool show_terrain = true;
+    bool show_terrain_autodraw = true;
+    bool show_collision = true;
+    bool show_paths = true;
+    bool show_ghost = true;
 
-void EditorApplication::updateObjectsPropertiesGUI() {
-	list<LibGens::Object *> selected_objects;
-	list<LibGens::MultiSetNode*> selected_msp;
-	string object_name = "";
-	bool multiple_object_types = false;
-	bool multiple_multiset_types = false;
-	HWND hPropertiesList = GetDlgItem(hLeftDlg, IDL_PROPERTIES_LIST);
+    bool game_shaders = true;
+    bool framebuffer_enabled = true;
+    bool uv_animations = true;
+    bool skybox_enabled = true;
 
-	if (current_single_property_object) {
-		updateObjectsPropertiesValuesGUI(current_single_property_object);
-	}
+    bool world_transform = false;
+    bool local_rotation = false;
+    bool placement_snap = false;
+    bool rotation_snap = false;
 
-	// Retrieve Object pointers from Object Nodes
-	for (list<EditorNode *>::iterator it=selected_nodes.begin(); it!=selected_nodes.end(); it++) {
-		if ((*it)->getType() == EDITOR_NODE_OBJECT) {
-			ObjectNode *object_node=static_cast<ObjectNode *>(*it);
+    struct Selection {
+        float pos_x = 0.0f, pos_y = 0.0f, pos_z = 0.0f;
+        float rot_x = 0.0f, rot_y = 0.0f, rot_z = 0.0f;
+    } current_selection;
 
-			LibGens::Object *object = object_node->getObject();
+    int current_object_set = 0;
+    bool object_set_visible = true;
+    std::vector<std::string> object_sets = { "Default", "Set A", "Set B" };
 
-			if (object) {
-				selected_objects.push_back(object);
+    float ghost_seek = 0.0f;
+    bool ghost_playing = false;
 
-				// Check if there's multiple object names in the current selection
-				if (!multiple_object_types) {
-					if (object_name.size()) {
-						if (object_name != object->getName()) {
-							multiple_object_types = true;
-						}
-					}
-					else {
-						object_name = object->getName();
-					}
-				}
-			}
-		}
-		else if ((*it)->getType() == EDITOR_NODE_OBJECT_MSP)
-		{
-			ObjectMultiSetNode* object_msp_node = static_cast<ObjectMultiSetNode*>(*it);
-			LibGens::MultiSetNode * msp_node = object_msp_node->getMultiSetNode();
+    std::vector<std::pair<std::string, std::string>> properties;
+    int selected_property = -1;
 
-			LibGens::Object* object = object_msp_node->getObject();
-			if (object)
-			{
-				selected_msp.push_back(msp_node);
-				if (object_name.size())
-				{
-					if (object_name != object->getName())
-					{
-						multiple_object_types = true;
-						multiple_multiset_types = true;
-					}
-				}
-				else
-				{
-					object_name = "MultiSetParamObject (" + object->getName() + ")";
-				}
-			}
-		}
-	}
+    int selected_palette_category = 0;
+    std::vector<std::string> palette_categories = { "Objects", "Terrain", "Collision" };
+    std::vector<std::string> palette_items;
 
+    struct Material {
+        std::string name;
+        std::string shader;
+        int mesh_slot = 0;
+        bool unknown_flag = false;
+        std::vector<std::string> texture_units;
+    };
+    std::vector<Material> materials;
+    int selected_material = -1;
 
-	// Compare the current selected objects list with the last one
-	bool same_list = true;
+    std::string stage_name = "No stage loaded";
+    std::string model_open = "N/A";
+    std::string skeleton_open = "N/A";
+    std::string animation_open = "N/A";
 
-	if (selected_objects.size() != current_object_list_properties.size()) {
-		same_list = false;
-	}
-	else {
-		for (list<LibGens::Object *>::iterator it=selected_objects.begin(); it!=selected_objects.end(); it++) {
-			bool found=false;
+    std::string help_description = "Description lines of current selection. Object's Description will be used if selected on stage or palette. Property description will be used if a property is selected.";
 
-			for (list<LibGens::Object *>::iterator it_o=current_object_list_properties.begin(); it_o!=current_object_list_properties.end(); it_o++) {
-				if ((*it) == (*it_o)) {
-					found = true;
-					break;
-				}
-			}
+    void Initialize();
+    void Render();
+    void Shutdown();
 
-			if (!found) {
-				same_list = false;
-				break;
-			}
-		}
-	}
+private:
+    void RenderMainMenuBar();
+    void RenderPropertiesPanel();
+    void RenderPalettePanel();
+    void RenderBottomPanel();
+    void RenderStageInfoPanel();
+    void RenderHelpPanel();
 
-	if (same_list) {
-		return;
-	}
+    void RenderEditBoolDialog();
+    void RenderEditFloatDialog();
+    void RenderEditStringDialog();
+    void RenderEditVectorDialog();
+    void RenderEditVectorListDialog();
+    void RenderEditIdDialog();
+    void RenderEditIdListDialog();
+    void RenderMultiSetParamDialog();
+    void RenderMaterialEditor();
+    void RenderMaterialPreview();
+    void RenderPhysicsEditor();
+    void RenderFindDialog();
+    void RenderLookAtPointDialog();
+    void RenderTerrainInfoDialog();
+};
 
-	current_object_list_properties = selected_objects;
+static SonicGLvlUI g_UI;
 
-	// Update text
-	updateHelpWithObjectGUI(NULL);
+void SonicGLvlUI::Initialize() {
+    properties.push_back({ "Position", "0, 0, 0" });
+    properties.push_back({ "Rotation", "0, 0, 0" });
+    properties.push_back({ "Scale", "1, 1, 1" });
 
-	string group_text = "";
-	if (multiple_object_types || multiple_multiset_types) {
-		group_text = "Multiple Objects";
-	}
-	else if (object_name.size()) {
-		group_text = object_name;
-
-		if (selected_objects.size() == 1) {
-			LibGens::Object *first_object = (*selected_objects.begin());
-			if (first_object) {
-				group_text += " (ID:" + ToString(first_object->getID());
-				if (first_object->getParentSet()) {
-					group_text += ", " + first_object->getParentSet()->getName();
-				}
-				group_text += ")";
-			}
-		}
-
-		LibGens::Object *template_object=library->getTemplate(object_name);
-		updateHelpWithObjectGUI(template_object);
-	}
-	else {
-		group_text = "(No selection)";
-	}
-
-	SetDlgItemText(hLeftDlg, IDG_PROPERTIES_GROUP, group_text.c_str());
-
-	// Scan for Common Properties in the list of selected objects
-	current_properties_names.clear();
-	current_properties_types.clear();
-	vector<string> temp_properties_names;
-	vector<LibGens::ObjectElementType> temp_properties_types; 
-
-	// Add the properties of the first object for cross-comparisons
-	if (selected_objects.size()) {
-		
-		LibGens::Object *first_object = (*selected_objects.begin());
-
-		list<LibGens::ObjectElement *> elements = first_object->getElements();
-		for (list<LibGens::ObjectElement *>::iterator it_e=elements.begin(); it_e!=elements.end(); it_e++) {
-			string element_name = (*it_e)->getName();
-			LibGens::ObjectElementType element_type = (*it_e)->getType();
-
-			temp_properties_names.push_back(element_name);
-			temp_properties_types.push_back(element_type);
-		}
-	}
-
-	// If the property is not found in an object in the selection, it won't get added to the new list
-	for (size_t i=0; i<temp_properties_names.size(); i++) {
-		bool in_objects = true;
-
-		for (list<LibGens::Object *>::iterator it=selected_objects.begin(); it!=selected_objects.end(); it++) {
-			list<LibGens::ObjectElement *> elements = (*it)->getElements();
-
-			bool found = false;
-			for (list<LibGens::ObjectElement *>::iterator it_e=elements.begin(); it_e!=elements.end(); it_e++) {
-				string element_name = (*it_e)->getName();
-				LibGens::ObjectElementType element_type = (*it_e)->getType();
-
-				if ((element_name == temp_properties_names[i]) && (element_type == temp_properties_types[i])) {
-					found = true;
-					break;
-				}
-			}
-
-			if (!found) {
-				in_objects = false;
-				break;
-			}
-		}
-
-		if (in_objects) {
-			current_properties_names.push_back(temp_properties_names[i]);
-			current_properties_types.push_back(temp_properties_types[i]);
-		}
-	}
-
-
-	// Cleanup previous list
-	if (ListView_GetItemCount(hPropertiesList)!=0) {
-		ListView_DeleteAllItems(hPropertiesList);
-		ListView_SetItemCount(hPropertiesList, 0);
-	}
-
-	// Fill list with the common current properties
-	char name_str[1024]="";
-	char value_str[1024]="(shared)";
-
-	for (size_t i=0; i<current_properties_names.size(); i++) {
-		strcpy(name_str, current_properties_names[i].c_str());
-
-		// Append property type string
-		/*
-		strcat(name_str, " (");
-
-		switch (current_properties_types[i]) {
-			case LibGens::OBJECT_ELEMENT_UNDEFINED :
-				strcat(name_str, LIBGENS_OBJECT_ELEMENT_UNDEFINED_TEMPLATE);
-				break;
-			case LibGens::OBJECT_ELEMENT_BOOL :
-				strcat(name_str, LIBGENS_OBJECT_ELEMENT_BOOL_TEMPLATE);
-				break;
-			case LibGens::OBJECT_ELEMENT_FLOAT :
-				strcat(name_str, LIBGENS_OBJECT_ELEMENT_FLOAT_TEMPLATE);
-				break;
-			case LibGens::OBJECT_ELEMENT_STRING :
-				strcat(name_str, LIBGENS_OBJECT_ELEMENT_STRING_TEMPLATE);
-				break;
-			case LibGens::OBJECT_ELEMENT_ID :
-				strcat(name_str, LIBGENS_OBJECT_ELEMENT_ID_TEMPLATE);
-				break;
-			case LibGens::OBJECT_ELEMENT_ID_LIST :
-				strcat(name_str, LIBGENS_OBJECT_ELEMENT_ID_LIST_TEMPLATE);
-				break;
-			case LibGens::OBJECT_ELEMENT_VECTOR :
-				strcat(name_str, LIBGENS_OBJECT_ELEMENT_VECTOR_TEMPLATE);
-				break;
-			case LibGens::OBJECT_ELEMENT_VECTOR_LIST :
-				strcat(name_str, LIBGENS_OBJECT_ELEMENT_VECTOR_LIST_TEMPLATE);
-				break;
-		};
-
-		strcat(name_str, ")");
-		*/
-
-		LV_ITEM Item;                                 
-		Item.mask = LVIF_TEXT;
-		Item.pszText = name_str; 
-		Item.state = 0;
-		Item.cchTextMax = strlen(name_str);            
-		Item.iSubItem = 0;                           
-		Item.lParam = (LPARAM) NULL;                   
-		Item.iItem = i; 
-		ListView_InsertItem(hPropertiesList, &Item);
-		ListView_SetItemText(hPropertiesList, i, 1, value_str);
-	}
-
-	EnableWindow(hPropertiesList, (current_properties_names.size() ? true : false));
-
-	closeEditPropertyGUI();
-	current_single_property_object = NULL;
-	current_property_index = -1;
-
-	// If only one object was selected, update the Values column
-	if (selected_objects.size() == 1) {
-		LibGens::Object *first_object = (*selected_objects.begin());
-		current_single_property_object = first_object;
-		updateObjectsPropertiesValuesGUI(first_object);
-	}
+    palette_items.push_back("Ring");
+    palette_items.push_back("Spring");
+    palette_items.push_back("DashPanel");
 }
 
-
-void EditorApplication::updateObjectsPropertiesValuesGUI(LibGens::Object *object) {
-	if (!object) {
-		return;
-	}
-
-	HWND hPropertiesList = GetDlgItem(hLeftDlg, IDL_PROPERTIES_LIST);
-	
-	for (size_t i=0; i<current_properties_names.size(); i++) {
-		string element_name = current_properties_names[i];
-		LibGens::ObjectElement *element = object->getElement(element_name);
-
-		if (element) {
-			LibGens::ObjectElementType element_type = element->getType();
-			string value="";
-
-			LibGens::ObjectElementBool *element_cast_bool;
-			LibGens::ObjectElementInteger *element_cast_int;
-			LibGens::ObjectElementFloat *element_cast_float;
-			LibGens::ObjectElementString *element_cast_string;
-			LibGens::ObjectElementID *element_cast_id;
-			LibGens::ObjectElementIDList *element_cast_id_list;
-			LibGens::ObjectElementVector *element_cast_vector;
-			LibGens::ObjectElementVectorList *element_cast_vector_list;
-			
-			switch (current_properties_types[i]) {
-				case LibGens::OBJECT_ELEMENT_BOOL :
-					element_cast_bool=static_cast<LibGens::ObjectElementBool *>(element);
-					value = (element_cast_bool->value ? "true" : "false");
-					break;
-				case LibGens::OBJECT_ELEMENT_INTEGER :
-					element_cast_int=static_cast<LibGens::ObjectElementInteger *>(element);
-					value = ToString(element_cast_int->value);
-					break;
-				case LibGens::OBJECT_ELEMENT_FLOAT :
-					element_cast_float=static_cast<LibGens::ObjectElementFloat *>(element);
-					value = ToString(element_cast_float->value);
-					break;
-				case LibGens::OBJECT_ELEMENT_STRING :
-					element_cast_string=static_cast<LibGens::ObjectElementString *>(element);
-					value = element_cast_string->value;
-					break;
-				case LibGens::OBJECT_ELEMENT_ID :
-					element_cast_id=static_cast<LibGens::ObjectElementID *>(element);
-
-					if (current_level) {
-						if (current_level->getLevel()) {
-							LibGens::Object *target_object = current_level->getLevel()->getObjectByID(element_cast_id->value);
-
-							if (target_object) {
-								value = target_object->getName();
-							}
-						}
-					}
-
-					value += "(ID: " + ToString(element_cast_id->value) + ")";
-					break;
-				case LibGens::OBJECT_ELEMENT_ID_LIST :
-					element_cast_id_list=static_cast<LibGens::ObjectElementIDList *>(element);
-					value = "ID Count: " + ToString(element_cast_id_list->value.size());
-					break;
-				case LibGens::OBJECT_ELEMENT_VECTOR :
-					element_cast_vector=static_cast<LibGens::ObjectElementVector *>(element);
-					value = "(" + ToString(element_cast_vector->value.x) + ", " + ToString(element_cast_vector->value.y) + ", " + ToString(element_cast_vector->value.z) + ")";
-					break;
-				case LibGens::OBJECT_ELEMENT_VECTOR_LIST :
-					element_cast_vector_list=static_cast<LibGens::ObjectElementVectorList *>(element);
-					value = "Vector Count: " + ToString(element_cast_vector_list->value.size());
-					break;
-			};
-
-			ListView_SetItemText(hPropertiesList, i, 1, (char *) value.c_str());
-		}
-	}
+void SonicGLvlUI::Shutdown() {
 }
 
+void SonicGLvlUI::Render() {
+    if (show_main_menu) {
+        RenderMainMenuBar();
+    }
 
-void EditorApplication::createObjectsPropertiesGUI() {
-	HWND hPropertiesList = GetDlgItem(hLeftDlg, IDL_PROPERTIES_LIST);
+    if (show_properties_panel) {
+        RenderPropertiesPanel();
+    }
 
-	LVCOLUMN Col;                                   
-	Col.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM;
-	Col.cx = 142;
-	Col.pszText = "Name";
-	Col.cchTextMax = strlen(Col.pszText);
-	ListView_InsertColumn(hPropertiesList, 0, &Col);
+    if (show_palette_panel) {
+        RenderPalettePanel();
+    }
 
+    if (show_bottom_panel) {
+        RenderBottomPanel();
+    }
 
-	Col.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM;
-	Col.cx = 115;
-	Col.pszText = "Value";
-	Col.cchTextMax = strlen(Col.pszText);
-	ListView_InsertColumn(hPropertiesList, 1, &Col);
+    if (show_stage_info_panel) {
+        RenderStageInfoPanel();
+    }
 
-	ListView_SetExtendedListViewStyleEx(hPropertiesList, LVS_EX_FULLROWSELECT, LVS_EX_FULLROWSELECT);
-	EnableWindow(hPropertiesList, false);
+    if (show_help_panel) {
+        RenderHelpPanel();
+    }
+
+    if (show_edit_bool_dialog) RenderEditBoolDialog();
+    if (show_edit_float_dialog) RenderEditFloatDialog();
+    if (show_edit_string_dialog) RenderEditStringDialog();
+    if (show_edit_vector_dialog) RenderEditVectorDialog();
+    if (show_edit_vector_list_dialog) RenderEditVectorListDialog();
+    if (show_edit_id_dialog) RenderEditIdDialog();
+    if (show_edit_id_list_dialog) RenderEditIdListDialog();
+    if (show_multiset_param_dialog) RenderMultiSetParamDialog();
+    if (show_material_editor) RenderMaterialEditor();
+    if (show_material_preview) RenderMaterialPreview();
+    if (show_physics_editor) RenderPhysicsEditor();
+    if (show_find_dialog) RenderFindDialog();
+    if (show_look_at_point_dialog) RenderLookAtPointDialog();
+    if (show_terrain_info_dialog) RenderTerrainInfoDialog();
 }
 
+void SonicGLvlUI::RenderMainMenuBar() {
+    if (ImGui::BeginMainMenuBar()) {
+        if (ImGui::BeginMenu("File")) {
+            if (ImGui::MenuItem("Open Stage...")) {  }
+            if (ImGui::MenuItem("Save Stage Data...")) {  }
+            if (ImGui::MenuItem("Save Stage Resources...")) {  }
+            ImGui::Separator();
+            if (ImGui::MenuItem("Convert/Fix All Materials (Unleashed)")) {  }
+            if (ImGui::MenuItem("Convert/Fix All Materials (Unleashed Shaders)")) {  }
+            if (ImGui::MenuItem("Convert/Fix All Materials (Generations)")) {  }
+            if (ImGui::MenuItem("Convert/Fix All Materials (Lost World)")) {  }
+            ImGui::Separator();
+            if (ImGui::MenuItem("Close")) {  }
+            ImGui::EndMenu();
+        }
 
-void EditorApplication::updateObjectPropertyIndex(int selection_index) {
-	if (selection_index < 0) {
-		updateHelpWithPropertyGUI(NULL);
-		return;
-	}
+        if (ImGui::BeginMenu("Edit")) {
+            if (ImGui::MenuItem("Undo", "Ctrl+Z")) {  }
+            if (ImGui::MenuItem("Redo", "Ctrl+Y")) {  }
+            ImGui::Separator();
+            if (ImGui::MenuItem("Cut", "Ctrl+X")) {  }
+            if (ImGui::MenuItem("Copy", "Ctrl+C")) {  }
+            if (ImGui::MenuItem("Paste", "Ctrl+V")) {  }
+            if (ImGui::MenuItem("Delete", "Del")) {  }
+            ImGui::Separator();
+            if (ImGui::MenuItem("Clear Selection", "Ctrl+D")) {  }
+            if (ImGui::MenuItem("Select All", "Ctrl+A")) {  }
+            ImGui::Separator();
 
-	if ((size_t)selection_index < current_properties_names.size()) {
-		if (current_object_list_properties.size()) {
-			LibGens::Object *first_object = (*current_object_list_properties.begin());
+            if (ImGui::BeginMenu("Look at each other (two objects)")) {
+                if (ImGui::MenuItem("Use X-Axis As Direction")) {  }
+                if (ImGui::MenuItem("Use Y-Axis As Direction")) {  }
+                if (ImGui::MenuItem("Use Z-Axis As Direction")) {  }
+                ImGui::EndMenu();
+            }
 
-			if (first_object) {
-				LibGens::ObjectElement *element = first_object->getElement(current_properties_names[selection_index]);
-				updateHelpWithPropertyGUI(element);
-			}
-		}
-	}
+            if (ImGui::MenuItem("Look at...")) { show_look_at_point_dialog = true; }
+            ImGui::Separator();
+            if (ImGui::MenuItem("Snap objects to closest path")) {  }
+            ImGui::Separator();
+            if (ImGui::MenuItem("Find", "Ctrl+F")) { show_find_dialog = true; }
+            ImGui::EndMenu();
+        }
+
+        if (ImGui::BeginMenu("View")) {
+            if (ImGui::BeginMenu("Show")) {
+                ImGui::MenuItem("Objects", "Ctrl+1", &show_objects);
+                ImGui::MenuItem("Terrain", "Ctrl+2", &show_terrain);
+                ImGui::MenuItem("Terrain Autodraw", "Ctrl+3", &show_terrain_autodraw);
+                ImGui::MenuItem("Collision", "Ctrl+4", &show_collision);
+                ImGui::MenuItem("Paths", "Ctrl+5", &show_paths);
+                ImGui::MenuItem("Ghost", "Ctrl+6", &show_ghost);
+                ImGui::EndMenu();
+            }
+
+            if (ImGui::BeginMenu("Graphics")) {
+                ImGui::MenuItem("Game Shaders", "F5", &game_shaders);
+                ImGui::Separator();
+                ImGui::MenuItem("Framebuffer & Depth Buffer (Requires Shaders)", "F6", &framebuffer_enabled);
+                ImGui::MenuItem("UV Animations (Requires Shaders)", "F7", &uv_animations);
+                ImGui::MenuItem("Skybox", "F8", &skybox_enabled);
+                ImGui::EndMenu();
+            }
+
+            ImGui::Separator();
+            ImGui::MenuItem("Use World Transform", "Ctrl+E", &world_transform);
+            ImGui::MenuItem("Use Local Rotation", nullptr, &local_rotation);
+            ImGui::MenuItem("Use Placement Snap", nullptr, &placement_snap);
+            ImGui::MenuItem("Use Rotation Snap", nullptr, &rotation_snap);
+            ImGui::EndMenu();
+        }
+
+        if (ImGui::BeginMenu("Terrain")) {
+            if (ImGui::MenuItem("Load All Terrain...")) {  }
+            if (ImGui::MenuItem("Export Scene as FBX...")) {  }
+            if (ImGui::MenuItem("Terrain Info...")) { show_terrain_info_dialog = true; }
+            ImGui::EndMenu();
+        }
+
+        if (ImGui::BeginMenu("Objects")) {
+            if (ImGui::MenuItem("Reload Object Templates Database...")) {  }
+            if (ImGui::MenuItem("Save Object Templates Database...")) {  }
+            ImGui::EndMenu();
+        }
+
+        if (ImGui::BeginMenu("Materials")) {
+            if (ImGui::MenuItem("Open Material Editor...")) { show_material_editor = true; }
+            ImGui::EndMenu();
+        }
+
+        if (ImGui::BeginMenu("Editor")) {
+            if (ImGui::MenuItem("Save Configuration...")) {  }
+            if (ImGui::MenuItem("Reload Configuration...")) {  }
+            ImGui::Separator();
+            if (ImGui::MenuItem("Launch Game")) {  }
+            ImGui::Separator();
+            if (ImGui::MenuItem("Connect To Game")) {  }
+            ImGui::Separator();
+
+            if (ImGui::BeginMenu("Ghost")) {
+                if (ImGui::MenuItem("Start Recording")) {  }
+                if (ImGui::MenuItem("Stop Recording")) {  }
+                if (ImGui::MenuItem("Load Recording From Game")) {  }
+                ImGui::Separator();
+                if (ImGui::MenuItem("Load From File")) {  }
+                if (ImGui::MenuItem("Save Recording", nullptr, false, false)) {  }
+                if (ImGui::MenuItem("Save Recording (FBX)", nullptr, false, false)) {  }
+                ImGui::EndMenu();
+            }
+            ImGui::EndMenu();
+        }
+
+        if (ImGui::BeginMenu("Help")) {
+            if (ImGui::MenuItem("Quick Overview")) {  }
+            ImGui::EndMenu();
+        }
+
+        ImGui::EndMainMenuBar();
+    }
 }
 
+void SonicGLvlUI::RenderPropertiesPanel() {
+    ImGui::Begin("Object Properties", &show_properties_panel);
 
-void EditorApplication::editObjectPropertyIndex(int selection_index) {
-	if (selection_index < 0) {
-		return;
-	}
+    if (ImGui::BeginTable("Properties", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
+        ImGui::TableSetupColumn("Name");
+        ImGui::TableSetupColumn("Value");
+        ImGui::TableHeadersRow();
 
-	if ((size_t)selection_index < current_properties_names.size()) {
-		if (selection_index != current_property_index) {
-			closeEditPropertyGUI();
-		}
+        for (int i = 0; i < properties.size(); i++) {
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("%s", properties[i].first.c_str());
+            ImGui::TableSetColumnIndex(1);
+            if (ImGui::Selectable(properties[i].second.c_str(), selected_property == i, ImGuiSelectableFlags_SpanAllColumns)) {
+                selected_property = i;
+            }
+            if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
+                show_edit_string_dialog = true;
+            }
+        }
 
-		current_property_index = selection_index;
+        ImGui::EndTable();
+    }
 
-		if (!hEditPropertyDlg) {
-			history_edit_property_wrapper = new HistoryActionWrapper();
-
-			if (current_properties_types[current_property_index] == LibGens::OBJECT_ELEMENT_BOOL) {
-				// Create Dialog for Bool
-				hEditPropertyDlg = CreateDialog(NULL, MAKEINTRESOURCE(IDD_EDIT_BOOL_DIALOG), hwnd, EditBoolCallback);
-
-				SendDlgItemMessage(hEditPropertyDlg, IDC_EDIT_BOOL_VALUE, CB_RESETCONTENT, (WPARAM)0, (LPARAM)0);
-				SendDlgItemMessage(hEditPropertyDlg, IDC_EDIT_BOOL_VALUE, (UINT)CB_ADDSTRING, (WPARAM)0, (LPARAM)"false");
-				SendDlgItemMessage(hEditPropertyDlg, IDC_EDIT_BOOL_VALUE, (UINT)CB_ADDSTRING, (WPARAM)0, (LPARAM)"true");
-
-				COMBOBOXINFO hComboBoxInfo;
-				hComboBoxInfo.cbSize = sizeof(COMBOBOXINFO);
-
-				HWND hEditMainControl = GetDlgItem(hEditPropertyDlg, IDC_EDIT_BOOL_VALUE);
-				GetComboBoxInfo(hEditMainControl, &hComboBoxInfo);
-				SetFocus(hEditMainControl);
-				globalEditControlOldProc = (WNDPROC) SetWindowLong(hComboBoxInfo.hwndList, GWL_WNDPROC, (LONG) EditControlCallback);
-
-				// Set Default
-				if (current_single_property_object) {
-					string element_name = current_properties_names[current_property_index];
-					LibGens::ObjectElement *element = current_single_property_object->getElement(element_name);
-
-					if (element) {
-						LibGens::ObjectElementBool *element_bool = static_cast<LibGens::ObjectElementBool *>(element);
-						bool default_value = element_bool->value;
-						SendDlgItemMessage(hEditPropertyDlg, IDC_EDIT_BOOL_VALUE, CB_SETCURSEL, (WPARAM) (default_value ? 1 : 0), (LPARAM) 0);
-					}
-				}
-			}
-
-			
-			if (current_properties_types[current_property_index] == LibGens::OBJECT_ELEMENT_ID) {
-				// Create Dialog for ID
-				hEditPropertyDlg = CreateDialog(NULL, MAKEINTRESOURCE(IDD_EDIT_ID_DIALOG), hwnd, EditIdCallback);
-
-				COMBOBOXINFO hComboBoxInfo;
-				hComboBoxInfo.cbSize = sizeof(COMBOBOXINFO);
-
-				HWND hEditMainControl = GetDlgItem(hEditPropertyDlg, IDC_EDIT_ID_VALUE);
-				GetComboBoxInfo(hEditMainControl, &hComboBoxInfo);
-				SetFocus(hEditMainControl);
-				globalEditControlOldProc = (WNDPROC) SetWindowLong(hComboBoxInfo.hwndItem, GWL_WNDPROC, (LONG) EditControlCallback);
-
-				// Set Default
-				if (current_single_property_object) {
-					string element_name = current_properties_names[current_property_index];
-					LibGens::ObjectElement *element = current_single_property_object->getElement(element_name);
-
-					if (element) {
-						LibGens::ObjectElementID *element_id = static_cast<LibGens::ObjectElementID *>(element);
-						unsigned int default_value = element_id->value;
-
-						// get the target object's name
-						editor_application->setTargetName(default_value);
-
-						SetDlgItemText(hEditPropertyDlg, IDC_EDIT_ID_VALUE, ToString(default_value).c_str());
-						SendDlgItemMessage(hEditPropertyDlg, IDC_EDIT_ID_VALUE, (UINT)CB_SETEDITSEL, (WPARAM)0, MAKELPARAM(0, -1));
-					}
-				}
-			}
-
-			if (current_properties_types[current_property_index] == LibGens::OBJECT_ELEMENT_ID_LIST) {
-				// Create dialog for ID list
-				hEditPropertyDlg = CreateDialog(NULL, MAKEINTRESOURCE(IDD_EDIT_ID_LIST_DIALOG), hwnd, EditIdListCallback);
-				HWND hIDList = GetDlgItem(hEditPropertyDlg, IDL_EDIT_ID_LIST_LIST);
-
-				LVCOLUMN Col;
-				Col.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM;
-				Col.cx = 285;
-				Col.pszText = "Object IDs";
-				Col.cchTextMax = strlen(Col.pszText);
-				ListView_InsertColumn(hIDList, 0, &Col);
-
-				if (current_single_property_object) {
-					string element_name = current_properties_names[current_property_index];
-					LibGens::ObjectElement* element = current_single_property_object->getElement(element_name);
-
-					if (element) {
-						LibGens::ObjectElementIDList* element_id_list = static_cast<LibGens::ObjectElementIDList*>(element);
-						
-						for (vector<size_t>::iterator it = element_id_list->value.begin(); it != element_id_list->value.end(); ++it) {
-							addIDToList(*it);
-						}
-
-						updateEditPropertyIDList(temp_property_id_list);
-					}
-				}
-			}
-
-
-			if (current_properties_types[current_property_index] == LibGens::OBJECT_ELEMENT_INTEGER) {
-				// Create Dialog for Float
-				hEditPropertyDlg = CreateDialog(NULL, MAKEINTRESOURCE(IDD_EDIT_FLOAT_DIALOG), hwnd, EditIntCallback);
-
-				COMBOBOXINFO hComboBoxInfo;
-				hComboBoxInfo.cbSize = sizeof(COMBOBOXINFO);
-
-				HWND hEditMainControl = GetDlgItem(hEditPropertyDlg, IDC_EDIT_FLOAT_VALUE);
-				GetComboBoxInfo(hEditMainControl, &hComboBoxInfo);
-				SetFocus(hEditMainControl);
-				globalEditControlOldProc = (WNDPROC) SetWindowLong(hComboBoxInfo.hwndItem, GWL_WNDPROC, (LONG) EditControlCallback);
-
-				// Set Default
-				if (current_single_property_object) {
-					string element_name = current_properties_names[current_property_index];
-					LibGens::ObjectElement *element = current_single_property_object->getElement(element_name);
-
-					if (element) {
-						LibGens::ObjectElementInteger *element_integer = static_cast<LibGens::ObjectElementInteger *>(element);
-						unsigned int default_value = element_integer->value;
-						SetDlgItemText(hEditPropertyDlg, IDC_EDIT_FLOAT_VALUE, ToString(default_value).c_str());
-						SendDlgItemMessage(hEditPropertyDlg, IDC_EDIT_FLOAT_VALUE, (UINT)CB_SETEDITSEL, (WPARAM)0, MAKELPARAM(0, -1));
-					}
-				}
-			}
-
-			
-			if (current_properties_types[current_property_index] == LibGens::OBJECT_ELEMENT_FLOAT) {
-				// Create Dialog for Float
-				hEditPropertyDlg = CreateDialog(NULL, MAKEINTRESOURCE(IDD_EDIT_FLOAT_DIALOG), hwnd, EditFloatCallback);
-
-				COMBOBOXINFO hComboBoxInfo;
-				hComboBoxInfo.cbSize = sizeof(COMBOBOXINFO);
-
-				HWND hEditMainControl = GetDlgItem(hEditPropertyDlg, IDC_EDIT_FLOAT_VALUE);
-				GetComboBoxInfo(hEditMainControl, &hComboBoxInfo);
-				SetFocus(hEditMainControl);
-				globalEditControlOldProc = (WNDPROC) SetWindowLong(hComboBoxInfo.hwndItem, GWL_WNDPROC, (LONG) EditControlCallback);
-
-				// Set Default
-				if (current_single_property_object) {
-					string element_name = current_properties_names[current_property_index];
-					LibGens::ObjectElement *element = current_single_property_object->getElement(element_name);
-
-					if (element) {
-						LibGens::ObjectElementFloat *element_float = static_cast<LibGens::ObjectElementFloat *>(element);
-						float default_value = element_float->value;
-						SetDlgItemText(hEditPropertyDlg, IDC_EDIT_FLOAT_VALUE, ToString(default_value).c_str());
-						SendDlgItemMessage(hEditPropertyDlg, IDC_EDIT_FLOAT_VALUE, (UINT)CB_SETEDITSEL, (WPARAM)0, MAKELPARAM(0, -1));
-					}
-				}
-			}
-
-
-			if (current_properties_types[current_property_index] == LibGens::OBJECT_ELEMENT_STRING) {
-				// Create Dialog for String
-				hEditPropertyDlg = CreateDialog(NULL, MAKEINTRESOURCE(IDD_EDIT_STRING_DIALOG), hwnd, EditStringCallback);
-
-				COMBOBOXINFO hComboBoxInfo;
-				hComboBoxInfo.cbSize = sizeof(COMBOBOXINFO);
-
-				HWND hEditMainControl = GetDlgItem(hEditPropertyDlg, IDC_EDIT_STRING_VALUE);
-				GetComboBoxInfo(hEditMainControl, &hComboBoxInfo);
-				SetFocus(hEditMainControl);
-				globalEditControlOldProc = (WNDPROC) SetWindowLong(hComboBoxInfo.hwndItem, GWL_WNDPROC, (LONG) EditControlCallback);
-
-				// Set Default
-				if (current_single_property_object) {
-					string element_name = current_properties_names[current_property_index];
-					LibGens::ObjectElement *element = current_single_property_object->getElement(element_name);
-
-					if (element) {
-						LibGens::ObjectElementString *element_string = static_cast<LibGens::ObjectElementString *>(element);
-						string default_value = element_string->value;
-						SetDlgItemText(hEditPropertyDlg, IDC_EDIT_STRING_VALUE, default_value.c_str());
-						SendDlgItemMessage(hEditPropertyDlg, IDC_EDIT_STRING_VALUE, (UINT)CB_SETEDITSEL, (WPARAM)0, MAKELPARAM(0, -1));
-					}
-				}
-
-				// If ObjectPhysics & Type, pre-load all ObjectProduction entries into the ComboBox
-				if (current_object_list_properties.size() && object_production) {
-					LibGens::Object *first_object = (*current_object_list_properties.begin());
-					
-					if (first_object) {
-						string object_name = first_object->getName();
-						string element_name = current_properties_names[current_property_index];
-
-						if ((object_name == OBJECT_NODE_OBJECT_PHYSICS) && (element_name == OBJECT_NODE_OBJECT_PHYSICS_ELEMENT_TYPE)) {
-							object_production->readySortedEntries();
-
-							string entry_name="";
-							while (object_production->getNextEntryName(entry_name)) {
-								SendDlgItemMessage(hEditPropertyDlg, IDC_EDIT_STRING_VALUE, (UINT)CB_ADDSTRING, (WPARAM)0, (LPARAM)entry_name.c_str());
-							}
-						}
-					}
-				}
-			}
-
-			
-			if (current_properties_types[current_property_index] == LibGens::OBJECT_ELEMENT_VECTOR) {
-				// Create Dialog for Vector
-				hEditPropertyDlg = CreateDialog(NULL, MAKEINTRESOURCE(IDD_EDIT_VECTOR_DIALOG), hwnd, EditVectorCallback);
-
-				HWND hEditMainControl = GetDlgItem(hEditPropertyDlg, IDE_EDIT_VECTOR_X);
-				SetFocus(hEditMainControl);
-				
-				ObjectNode* first_selection = static_cast<ObjectNode*>(*(selected_nodes.begin()));
-				LibGens::Vector3 dv = first_selection->getObject()->getPosition();
-
-				// Set Default
-				if (current_single_property_object) {
-					string element_name = current_properties_names[current_property_index];
-					LibGens::ObjectElement *element = current_single_property_object->getElement(element_name);
-
-					if (element) {
-						LibGens::ObjectElementVector *element_vector = static_cast<LibGens::ObjectElementVector *>(element);
-						dv = element_vector->value;
-
-						SetDlgItemText(hEditPropertyDlg, IDE_EDIT_VECTOR_X, ToString(dv.x).c_str());
-						SetDlgItemText(hEditPropertyDlg, IDE_EDIT_VECTOR_Y, ToString(dv.y).c_str());
-						SetDlgItemText(hEditPropertyDlg, IDE_EDIT_VECTOR_Z, ToString(dv.z).c_str());
-					}
-				}
-
-				VectorNode *vector_node = new VectorNode(scene_manager);
-				vector_node->setPosition(Ogre::Vector3(dv.x, dv.y, dv.z));
-				property_vector_nodes.push_back(vector_node);
-			}
-
-			if (current_properties_types[current_property_index] == LibGens::OBJECT_ELEMENT_VECTOR_LIST) {
-				// Create Dialog for Vector List
-				hEditPropertyDlg = CreateDialog(NULL, MAKEINTRESOURCE(IDD_EDIT_VECTOR_LIST_DIALOG), hwnd, EditVectorListCallback);
-				HWND hVectorList = GetDlgItem(hEditPropertyDlg, IDL_EDIT_VECTOR_LIST_LIST);
-
-				LVCOLUMN Col;
-				Col.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM;
-				Col.cx = 285;
-				Col.pszText = "Vector (x, y, z)";
-				Col.cchTextMax = strlen(Col.pszText);
-				ListView_InsertColumn(hVectorList, 0, &Col);
-
-				if (current_single_property_object) {
-					string element_name = current_properties_names[current_property_index];
-					LibGens::ObjectElement* element = current_single_property_object->getElement(element_name);
-
-					if (element) {
-						LibGens::ObjectElementVectorList* element_vector_list = static_cast<LibGens::ObjectElementVectorList*>(element);
-
-						for (vector<LibGens::Vector3>::iterator it = element_vector_list->value.begin(); it != element_vector_list->value.end(); ++it)
-							addVectorToList(*it);
-
-						updateEditPropertyVectorList(temp_property_vector_list);
-					}
-				}
-			}
-		}
-	}
+    ImGui::End();
 }
 
+void SonicGLvlUI::RenderPalettePanel() {
+    ImGui::Begin("Object Palette", &show_palette_panel);
 
-void EditorApplication::updateEditPropertyBool(bool v) {
-	string element_name = current_properties_names[current_property_index];
+    ImGui::Text("Category:");
+    if (ImGui::BeginCombo("##PaletteCategory", palette_categories[selected_palette_category].c_str())) {
+        for (int i = 0; i < palette_categories.size(); i++) {
+            bool is_selected = (selected_palette_category == i);
+            if (ImGui::Selectable(palette_categories[i].c_str(), is_selected)) {
+                selected_palette_category = i;
+            }
+            if (is_selected) {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
 
-	for (list<LibGens::Object *>::iterator it=current_object_list_properties.begin(); it!=current_object_list_properties.end(); it++) {
-		LibGens::ObjectElement *element = (*it)->getElement(element_name);
+    ImGui::Separator();
 
-		if (element) {
-			if (element->getType() == LibGens::OBJECT_ELEMENT_BOOL) {
-				LibGens::ObjectElementBool *element_bool = static_cast<LibGens::ObjectElementBool *>(element);
-				HistoryActionEditObjectElementBool *history_action = new HistoryActionEditObjectElementBool((*it), object_node_manager, element_bool, element_bool->value, v);
-				element_bool->value = v;
-				history_edit_property_wrapper->push(history_action);
+    if (ImGui::BeginListBox("##PaletteItems", ImVec2(-FLT_MIN, -FLT_MIN))) {
+        for (int i = 0; i < palette_items.size(); i++) {
+            if (ImGui::Selectable(palette_items[i].c_str())) {
+            }
+        }
+        ImGui::EndListBox();
+    }
 
-				object_node_manager->reloadObjectNode((*it));
-			}
-		}
-	}
-
-	if (current_single_property_object) {
-		updateObjectsPropertiesValuesGUI(current_single_property_object);
-	}
+    ImGui::End();
 }
 
+void SonicGLvlUI::RenderBottomPanel() {
+    ImGui::Begin("Bottom Panel", &show_bottom_panel, ImGuiWindowFlags_NoTitleBar);
 
+    ImGui::BeginGroup();
+    ImGui::Text("Current Object Set");
+    ImGui::SetNextItemWidth(150.0f);
+    if (ImGui::BeginCombo("##ObjectSet", object_sets[current_object_set].c_str())) {
+        for (int i = 0; i < object_sets.size(); i++) {
+            bool is_selected = (current_object_set == i);
+            if (ImGui::Selectable(object_sets[i].c_str(), is_selected)) {
+                current_object_set = i;
+            }
+            if (is_selected) {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::Checkbox("Visible", &object_set_visible);
+    ImGui::EndGroup();
 
-void EditorApplication::updateEditPropertyInteger(unsigned int v) {
-	string element_name = current_properties_names[current_property_index];
+    ImGui::SameLine(200.0f);
 
-	for (list<LibGens::Object *>::iterator it=current_object_list_properties.begin(); it!=current_object_list_properties.end(); it++) {
-		LibGens::ObjectElement *element = (*it)->getElement(element_name);
+    ImGui::BeginGroup();
+    ImGui::Text("Current Selection's Transform");
+    ImGui::Text("Position:");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(60.0f);
+    ImGui::DragFloat("##PosX", &current_selection.pos_x, 0.1f);
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(60.0f);
+    ImGui::DragFloat("##PosY", &current_selection.pos_y, 0.1f);
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(60.0f);
+    ImGui::DragFloat("##PosZ", &current_selection.pos_z, 0.1f);
 
-		if (element) {
-			if (element->getType() == LibGens::OBJECT_ELEMENT_ID) {
-				LibGens::ObjectElementID *element_id = static_cast<LibGens::ObjectElementID *>(element);
-				HistoryActionEditObjectElementID *history_action = new HistoryActionEditObjectElementID((*it), object_node_manager, element_id, element_id->value, v);
-				element_id->value = v;
-				history_edit_property_wrapper->push(history_action);
+    ImGui::Text("Rotation:");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(60.0f);
+    ImGui::DragFloat("##RotX", &current_selection.rot_x, 0.1f);
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(60.0f);
+    ImGui::DragFloat("##RotY", &current_selection.rot_y, 0.1f);
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(60.0f);
+    ImGui::DragFloat("##RotZ", &current_selection.rot_z, 0.1f);
+    ImGui::EndGroup();
 
-				object_node_manager->reloadObjectNode((*it));
-			}
+    ImGui::SameLine(600.0f);
 
-			if (element->getType() == LibGens::OBJECT_ELEMENT_INTEGER) {
-				LibGens::ObjectElementInteger *element_integer = static_cast<LibGens::ObjectElementInteger *>(element);
-				HistoryActionEditObjectElementInteger *history_action = new HistoryActionEditObjectElementInteger((*it), object_node_manager, element_integer, element_integer->value, v);
-				element_integer->value = v;
-				history_edit_property_wrapper->push(history_action);
+    ImGui::BeginGroup();
+    ImGui::Text("Ghost Playback Controls");
+    ImGui::SliderFloat("##GhostSeek", &ghost_seek, 0.0f, 1.0f, "%.2f");
+    if (ImGui::Button("<<")) {  }
+    ImGui::SameLine();
+    if (ImGui::Button("| |")) { ghost_playing = false; }
+    ImGui::SameLine();
+    if (ImGui::Button("|>")) { ghost_playing = true; }
+    ImGui::SameLine();
+    if (ImGui::Button(">>")) {  }
+    ImGui::EndGroup();
 
-				object_node_manager->reloadObjectNode((*it));
-			}
-		}
-	}
-
-	if (current_single_property_object) {
-		updateObjectsPropertiesValuesGUI(current_single_property_object);
-	}
+    ImGui::End();
 }
 
+void SonicGLvlUI::RenderStageInfoPanel() {
+    ImGui::Begin("Stage Information", &show_stage_info_panel);
 
-void EditorApplication::updateEditPropertyFloat(float v) {
-	string element_name = current_properties_names[current_property_index];
+    ImGui::Text("Stage: %s", stage_name.c_str());
+    ImGui::Text("Current Model Open: %s", model_open.c_str());
+    ImGui::Text("Current Skeleton Open: %s", skeleton_open.c_str());
+    ImGui::Text("Current Animation Open: %s", animation_open.c_str());
 
-	for (list<LibGens::Object *>::iterator it=current_object_list_properties.begin(); it!=current_object_list_properties.end(); it++) {
-		LibGens::ObjectElement *element = (*it)->getElement(element_name);
-
-		if (element) {
-			if (element->getType() == LibGens::OBJECT_ELEMENT_FLOAT) {
-				LibGens::ObjectElementFloat *element_float = static_cast<LibGens::ObjectElementFloat *>(element);
-				HistoryActionEditObjectElementFloat *history_action = new HistoryActionEditObjectElementFloat((*it), object_node_manager, element_float, element_float->value, v);
-				element_float->value = v;
-				history_edit_property_wrapper->push(history_action);
-
-				object_node_manager->reloadObjectNode((*it));
-			}
-		}
-	}
-
-	if (current_single_property_object) {
-		updateObjectsPropertiesValuesGUI(current_single_property_object);
-	}
+    ImGui::End();
 }
 
+void SonicGLvlUI::RenderHelpPanel() {
+    ImGui::Begin("Help", &show_help_panel);
 
+    ImGui::TextWrapped("%s", help_description.c_str());
 
-void EditorApplication::updateEditPropertyString(string v) {
-	string element_name = current_properties_names[current_property_index];
-
-	for (list<LibGens::Object *>::iterator it=current_object_list_properties.begin(); it!=current_object_list_properties.end(); it++) {
-		LibGens::ObjectElement *element = (*it)->getElement(element_name);
-
-		if (element) {
-			if (element->getType() == LibGens::OBJECT_ELEMENT_STRING) {
-				LibGens::ObjectElementString *element_string = static_cast<LibGens::ObjectElementString *>(element);
-				HistoryActionEditObjectElementString *history_action = new HistoryActionEditObjectElementString((*it), object_node_manager, element_string, element_string->value, v);
-				element_string->value = v;
-				history_edit_property_wrapper->push(history_action);
-
-				object_node_manager->reloadObjectNode((*it));
-			}
-		}
-	}
-
-	if (current_single_property_object) {
-		updateObjectsPropertiesValuesGUI(current_single_property_object);
-	}
+    ImGui::End();
 }
 
-void EditorApplication::updateEditPropertyID(size_t v)
-{
-	string element_name = current_properties_names[current_property_index];
+void SonicGLvlUI::RenderEditBoolDialog() {
+    ImGui::OpenPopup("Change Property Value##Bool");
 
-	for (list<LibGens::Object*>::iterator it = current_object_list_properties.begin(); it != current_object_list_properties.end(); ++it)
-	{
-		LibGens::ObjectElement* element = (*it)->getElement(element_name);
+    if (ImGui::BeginPopupModal("Change Property Value##Bool", &show_edit_bool_dialog, ImGuiWindowFlags_AlwaysAutoResize)) {
+        static int bool_value = 0;
+        const char* items[] = { "false", "true" };
 
-		if (element)
-		{
-			if (element->getType() == LibGens::OBJECT_ELEMENT_ID)
-			{
-				LibGens::ObjectElementID* element_id = static_cast<LibGens::ObjectElementID*>(element);
-				HistoryActionEditObjectElementID* history_action = new HistoryActionEditObjectElementID((*it), object_node_manager, element_id, element_id->value, v);
-				element_id->value = v;
-				history_edit_property_wrapper->push(history_action);
-			}
-		}
-	}
+        ImGui::Text("New Value (true/false)");
+        ImGui::Combo("##BoolValue", &bool_value, items, 2);
 
-	if (current_single_property_object) {
-		updateObjectsPropertiesValuesGUI(current_single_property_object);
-	}
+        ImGui::Separator();
+
+        if (ImGui::Button("Confirm", ImVec2(120, 0))) {
+            show_edit_bool_dialog = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+            show_edit_bool_dialog = false;
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::EndPopup();
+    }
 }
 
-void EditorApplication::updateEditPropertyIDList(vector<size_t> v)
-{
-	string element_name = current_properties_names[current_property_index];
+void SonicGLvlUI::RenderEditFloatDialog() {
+    ImGui::OpenPopup("Change Property Value##Float");
 
-	for (list<LibGens::Object*>::iterator it = current_object_list_properties.begin(); it != current_object_list_properties.end(); ++it)
-	{
-		LibGens::ObjectElement* element = (*it)->getElement(element_name);
+    if (ImGui::BeginPopupModal("Change Property Value##Float", &show_edit_float_dialog, ImGuiWindowFlags_AlwaysAutoResize)) {
+        static char float_value[64] = "0.0";
 
-		if (element)
-		{
-			if (element->getType() == LibGens::OBJECT_ELEMENT_ID_LIST)
-			{
-				LibGens::ObjectElementIDList* element_id_list = static_cast<LibGens::ObjectElementIDList*>(element);
-				HistoryActionEditObjectElementIDList* history_action = new HistoryActionEditObjectElementIDList((*it), object_node_manager, element_id_list, element_id_list->value, v);
-				element_id_list->value = v;
-				history_edit_property_wrapper->push(history_action);
-			}
-		}
-	}
+        ImGui::Text("New Value (float)");
+        ImGui::InputText("##FloatValue", float_value, 64);
 
-	if (current_single_property_object) {
-		updateObjectsPropertiesValuesGUI(current_single_property_object);
-	}
+        ImGui::Separator();
+
+        if (ImGui::Button("Confirm", ImVec2(120, 0))) {
+            show_edit_float_dialog = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+            show_edit_float_dialog = false;
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::EndPopup();
+    }
 }
 
+void SonicGLvlUI::RenderEditStringDialog() {
+    ImGui::OpenPopup("Change Property Value##String");
 
-void EditorApplication::updateEditPropertyVector(LibGens::Vector3 v) {
-	string element_name = current_properties_names[current_property_index];
+    if (ImGui::BeginPopupModal("Change Property Value##String", &show_edit_string_dialog, ImGuiWindowFlags_AlwaysAutoResize)) {
+        static char string_value[256] = "";
 
-	for (list<LibGens::Object *>::iterator it=current_object_list_properties.begin(); it!=current_object_list_properties.end(); it++) {
-		LibGens::ObjectElement *element = (*it)->getElement(element_name);
+        ImGui::Text("New Value (string)");
+        ImGui::InputText("##StringValue", string_value, 256);
 
-		if (element) {
-			if (element->getType() == LibGens::OBJECT_ELEMENT_VECTOR) {
-				LibGens::ObjectElementVector *element_vector = static_cast<LibGens::ObjectElementVector *>(element);
-				HistoryActionEditObjectElementVector *history_action = new HistoryActionEditObjectElementVector((*it), object_node_manager, element_vector, element_vector->value, v);
-				element_vector->value = v;
-				history_edit_property_wrapper->push(history_action);
+        ImGui::Separator();
 
-				object_node_manager->reloadObjectNode((*it));
-			}
-		}
-	}
+        if (ImGui::Button("Confirm", ImVec2(120, 0))) {
+            show_edit_string_dialog = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+            show_edit_string_dialog = false;
+            ImGui::CloseCurrentPopup();
+        }
 
-	if (current_single_property_object) {
-		updateObjectsPropertiesValuesGUI(current_single_property_object);
-	}
-
-	if (property_vector_nodes.size()) {
-		property_vector_nodes[0]->setPosition(Ogre::Vector3(v.x, v.y, v.z));
-	}
+        ImGui::EndPopup();
+    }
 }
 
-void EditorApplication::updateEditPropertyVectorList(vector<LibGens::Vector3> v)
-{
-	string element_name = current_properties_names[current_property_index];
+void SonicGLvlUI::RenderEditVectorDialog() {
+    ImGui::OpenPopup("Change Property Value##Vector");
 
-	for (list<LibGens::Object*>::iterator it = current_object_list_properties.begin(); it != current_object_list_properties.end(); ++it)
-	{
-		LibGens::ObjectElement* element = (*it)->getElement(element_name);
-		if (element)
-		{
-			if (element->getType() == LibGens::OBJECT_ELEMENT_VECTOR_LIST)
-			{
-				LibGens::ObjectElementVectorList* element_vector_list = static_cast<LibGens::ObjectElementVectorList*>(element);
-				HistoryActionEditObjectElementVectorList* history_action = new HistoryActionEditObjectElementVectorList((*it), object_node_manager, element_vector_list, element_vector_list->value, v);
-				element_vector_list->value = v;
-				history_edit_property_wrapper->push(history_action);
+    if (ImGui::BeginPopupModal("Change Property Value##Vector", &show_edit_vector_dialog, ImGuiWindowFlags_AlwaysAutoResize)) {
+        static float vec[3] = { 0.0f, 0.0f, 0.0f };
+        static bool enable_viewport_editing = false;
 
-				object_node_manager->reloadObjectNode((*it));
-			}
-		}
-	}
+        ImGui::Text("New Value (vector / point)");
+        ImGui::InputFloat3("##Vector", vec);
 
-	if (current_single_property_object) {
-		updateObjectsPropertiesValuesGUI(current_single_property_object);
-	}
+        ImGui::Checkbox("Enable editing in viewport", &enable_viewport_editing);
+        if (ImGui::Button("Focus on point")) {
+        }
 
-	if (property_vector_nodes.size()) {
-		for (int i = 0; i < property_vector_nodes.size(); ++i)
-		{
-			LibGens::Vector3 v3 = v[i];
-			property_vector_nodes[i]->setPosition(Ogre::Vector3(v3.x, v3.y, v3.z));
-		}
-	}
+        ImGui::Separator();
+
+        if (ImGui::Button("Confirm", ImVec2(120, 0))) {
+            show_edit_vector_dialog = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+            show_edit_vector_dialog = false;
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::EndPopup();
+    }
 }
 
+void SonicGLvlUI::RenderEditVectorListDialog() {
+    ImGui::OpenPopup("Change Property Value##VectorList");
 
-void EditorApplication::updateEditPropertyVectorFocus(int index) {
-	if (property_vector_nodes.size()) {
-		viewport->focusOnPoint(property_vector_nodes[index]->getPosition());
-	}
+    if (ImGui::BeginPopupModal("Change Property Value##VectorList", &show_edit_vector_list_dialog, ImGuiWindowFlags_AlwaysAutoResize)) {
+        static std::vector<std::array<float, 3>> vector_list;
+        static int selected_vec = -1;
+        static float edit_vec[3] = { 0.0f, 0.0f, 0.0f };
+
+        ImGui::Text("Vector List");
+
+        if (ImGui::BeginListBox("##VectorList", ImVec2(300, 150))) {
+            for (int i = 0; i < vector_list.size(); i++) {
+                char label[64];
+                snprintf(label, 64, "%.2f, %.2f, %.2f", vector_list[i][0], vector_list[i][1], vector_list[i][2]);
+                if (ImGui::Selectable(label, selected_vec == i)) {
+                    selected_vec = i;
+                    edit_vec[0] = vector_list[i][0];
+                    edit_vec[1] = vector_list[i][1];
+                    edit_vec[2] = vector_list[i][2];
+                }
+            }
+            ImGui::EndListBox();
+        }
+
+        ImGui::SameLine();
+        ImGui::BeginGroup();
+        if (ImGui::Button("Create")) {
+            std::array<float, 3> new_vec = { 0.0f, 0.0f, 0.0f };
+            vector_list.push_back(new_vec);
+        }
+        if (ImGui::Button("Delete") && selected_vec >= 0) {
+            vector_list.erase(vector_list.begin() + selected_vec);
+            selected_vec = -1;
+        }
+        if (ImGui::Button("Move Up") && selected_vec > 0) {
+            std::swap(vector_list[selected_vec], vector_list[selected_vec - 1]);
+            selected_vec--;
+        }
+        if (ImGui::Button("Move Down") && selected_vec >= 0 && selected_vec < vector_list.size() - 1) {
+            std::swap(vector_list[selected_vec], vector_list[selected_vec + 1]);
+            selected_vec++;
+        }
+        ImGui::EndGroup();
+
+        ImGui::InputFloat3("##EditVec", edit_vec);
+        if (selected_vec >= 0) {
+            vector_list[selected_vec][0] = edit_vec[0];
+            vector_list[selected_vec][1] = edit_vec[1];
+            vector_list[selected_vec][2] = edit_vec[2];
+        }
+
+        static bool enable_viewport_editing = false;
+        ImGui::Checkbox("Enable editing in viewport", &enable_viewport_editing);
+        if (ImGui::Button("Focus on point")) {
+        }
+
+        ImGui::Separator();
+
+        if (ImGui::Button("Confirm", ImVec2(120, 0))) {
+            show_edit_vector_list_dialog = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+            show_edit_vector_list_dialog = false;
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::EndPopup();
+    }
 }
 
+void SonicGLvlUI::RenderEditIdDialog() {
+    ImGui::OpenPopup("Change Property Value##ID");
 
-void EditorApplication::updateEditPropertyVectorGUI(int index, bool is_list) {
-	if (property_vector_nodes.size()) {
+    if (ImGui::BeginPopupModal("Change Property Value##ID", &show_edit_id_dialog, ImGuiWindowFlags_AlwaysAutoResize)) {
+        static char id_value[128] = "";
+        static bool select_from_viewport = false;
 
-		Ogre::Vector3 v=property_vector_nodes[index]->getPosition();
+        ImGui::Text("New Value (Object ID)");
+        ImGui::InputText("##IDValue", id_value, 128);
+        ImGui::Text("Points to: (none)");
 
-		if (hEditPropertyDlg) {
+        ImGui::Checkbox("Select From Viewport", &select_from_viewport);
+        if (ImGui::Button("Go to Target")) {
+        }
 
-			if (!is_list)
-			{
-				SetDlgItemText(hEditPropertyDlg, IDE_EDIT_VECTOR_X, ToString((float)v.x).c_str());
-				SetDlgItemText(hEditPropertyDlg, IDE_EDIT_VECTOR_Y, ToString((float)v.y).c_str());
-				SetDlgItemText(hEditPropertyDlg, IDE_EDIT_VECTOR_Z, ToString((float)v.z).c_str());
-			}
-		}
+        ImGui::Separator();
 
-		if (!is_list)
-			updateEditPropertyVector(LibGens::Vector3(v.x, v.y, v.z));
-		else
-		{
-			HWND list_view = GetDlgItem(hEditPropertyDlg, IDL_EDIT_VECTOR_LIST_LIST);
-			temp_property_vector_list[index] = LibGens::Vector3(v.x, v.y, v.z);
+        if (ImGui::Button("Confirm", ImVec2(120, 0))) {
+            show_edit_id_dialog = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+            show_edit_id_dialog = false;
+            ImGui::CloseCurrentPopup();
+        }
 
-			if (hEditPropertyDlg)
-			{
-				string vector_string = ToString<float>(v.x) + ", " + ToString<float>(v.y) + ", " + ToString<float>(v.z);
-				char buffer[128];
-				strcpy(buffer, vector_string.c_str());
-
-				ListView_SetItemText(list_view, index, 0, buffer);
-			}
-		}
-	}
+        ImGui::EndPopup();
+    }
 }
 
+void SonicGLvlUI::RenderEditIdListDialog() {
+    ImGui::OpenPopup("Change Property Value##IDList");
 
-void EditorApplication::updateEditPropertyVectorMode(bool mode_state, bool is_list, int index) {
-	SendDlgItemMessage(hEditPropertyDlg, IDC_EDIT_VECTOR_EDITING, BM_SETCHECK, (WPARAM)mode_state, 0);
-	SendDlgItemMessage(hEditPropertyDlg, IDC_EDIT_VECTOR_LIST_EDITING, BM_SETCHECK, (WPARAM)mode_state, 0);
-	if (!is_list)
-	{
-		EnableWindow(GetDlgItem(hEditPropertyDlg, IDE_EDIT_VECTOR_X), !mode_state);
-		EnableWindow(GetDlgItem(hEditPropertyDlg, IDE_EDIT_VECTOR_Y), !mode_state);
-		EnableWindow(GetDlgItem(hEditPropertyDlg, IDE_EDIT_VECTOR_Z), !mode_state);
+    if (ImGui::BeginPopupModal("Change Property Value##IDList", &show_edit_id_list_dialog, ImGuiWindowFlags_AlwaysAutoResize)) {
+        static std::vector<std::string> id_list;
+        static int selected_id = -1;
+        static char edit_id[128] = "";
 
-		EnableWindow(GetDlgItem(hEditPropertyDlg, IDS_EDIT_VECTOR_X), !mode_state);
-		EnableWindow(GetDlgItem(hEditPropertyDlg, IDS_EDIT_VECTOR_Y), !mode_state);
-		EnableWindow(GetDlgItem(hEditPropertyDlg, IDS_EDIT_VECTOR_Z), !mode_state);
-	}
-	else
-	{
-		EnableWindow(GetDlgItem(hEditPropertyDlg, IDE_EDIT_VECTOR_LIST_X), !mode_state);
-		EnableWindow(GetDlgItem(hEditPropertyDlg, IDE_EDIT_VECTOR_LIST_Y), !mode_state);
-		EnableWindow(GetDlgItem(hEditPropertyDlg, IDE_EDIT_VECTOR_LIST_Z), !mode_state);
+        ImGui::Text("Object ID List");
 
-		EnableWindow(GetDlgItem(hEditPropertyDlg, IDS_EDIT_VECTOR_LIST_X), !mode_state);
-		EnableWindow(GetDlgItem(hEditPropertyDlg, IDS_EDIT_VECTOR_LIST_Y), !mode_state);
-		EnableWindow(GetDlgItem(hEditPropertyDlg, IDS_EDIT_VECTOR_LIST_Z), !mode_state);
-	}
+        if (ImGui::BeginListBox("##IDList", ImVec2(300, 150))) {
+            for (int i = 0; i < id_list.size(); i++) {
+                if (ImGui::Selectable(id_list[i].c_str(), selected_id == i)) {
+                    selected_id = i;
+                    strncpy(edit_id, id_list[i].c_str(), 128);
+                }
+            }
+            ImGui::EndListBox();
+        }
 
-	if (mode_state) {
-		previous_selected_nodes = selected_nodes;
-		for (list<EditorNode *>::iterator it=selected_nodes.begin(); it!=selected_nodes.end(); it++) {
-			(*it)->setSelect(false);
-		}
-		selected_nodes.clear();
+        ImGui::SameLine();
+        ImGui::BeginGroup();
+        if (ImGui::Button("Create")) {
+            id_list.push_back("NewID");
+        }
+        if (ImGui::Button("Delete") && selected_id >= 0) {
+            id_list.erase(id_list.begin() + selected_id);
+            selected_id = -1;
+        }
+        if (ImGui::Button("Move Up") && selected_id > 0) {
+            std::swap(id_list[selected_id], id_list[selected_id - 1]);
+            selected_id--;
+        }
+        if (ImGui::Button("Move Down") && selected_id >= 0 && selected_id < id_list.size() - 1) {
+            std::swap(id_list[selected_id], id_list[selected_id + 1]);
+            selected_id++;
+        }
+        ImGui::EndGroup();
 
-		setEditorMode(EDITOR_NODE_QUERY_VECTOR);
-		SetFocus(hwnd);
+        ImGui::InputText("##EditID", edit_id, 128);
+        if (selected_id >= 0) {
+            id_list[selected_id] = edit_id;
+        }
+        ImGui::Text("Points to: (none)");
 
-		property_vector_history->clear();
+        static bool select_from_viewport = false;
+        ImGui::Checkbox("Select from viewport", &select_from_viewport);
+        if (ImGui::Button("Go to Target")) {
+        }
 
-		selected_nodes.push_back(property_vector_nodes[index]);
-		property_vector_nodes[index]->setSelect(true);
+        ImGui::Separator();
 
-		updateSelection();
-		updateEditPropertyVectorFocus(index);
+        if (ImGui::Button("Confirm", ImVec2(120, 0))) {
+            show_edit_id_list_dialog = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+            show_edit_id_list_dialog = false;
+            ImGui::CloseCurrentPopup();
+        }
 
-		// Move window to the bottom right corner of the main window
-		RECT main_window_rect;
-		GetWindowRect(hwnd, &main_window_rect);
-		GetWindowRect(hEditPropertyDlg, &hEditPropertyDlg_old_rect);
-
-		LONG dlg_w=hEditPropertyDlg_old_rect.right - hEditPropertyDlg_old_rect.left;
-		LONG dlg_h=hEditPropertyDlg_old_rect.bottom - hEditPropertyDlg_old_rect.top;
-		MoveWindow(hEditPropertyDlg, main_window_rect.right - dlg_w - 15, main_window_rect.bottom - dlg_h - SONICGLVL_GUI_BOTTOM_HEIGHT - 15, dlg_w, dlg_h, true);
-	}
-	else {
-		for (list<EditorNode *>::iterator it=selected_nodes.begin(); it!=selected_nodes.end(); it++) {
-			(*it)->setSelect(false);
-		}
-
-		selected_nodes = previous_selected_nodes;
-		for (list<EditorNode *>::iterator it=selected_nodes.begin(); it!=selected_nodes.end(); it++) {
-			(*it)->setSelect(true);
-		}
-
-		setEditorMode(EDITOR_NODE_QUERY_OBJECT);
-		SetFocus(hEditPropertyDlg);
-
-		property_vector_history->clear();
-
-		updateSelection();
-
-		// Restore Window to old position
-		LONG dlg_w=hEditPropertyDlg_old_rect.right - hEditPropertyDlg_old_rect.left;
-		LONG dlg_h=hEditPropertyDlg_old_rect.bottom - hEditPropertyDlg_old_rect.top;
-		MoveWindow(hEditPropertyDlg, hEditPropertyDlg_old_rect.left, hEditPropertyDlg_old_rect.top, dlg_w, dlg_h, true);
-	}
+        ImGui::EndPopup();
+    }
 }
 
+void SonicGLvlUI::RenderMultiSetParamDialog() {
+    ImGui::OpenPopup("Cloning / Instancing Options");
 
-void EditorApplication::closeVectorQueryMode() {
-	if (editor_mode == EDITOR_NODE_QUERY_VECTOR) {
-		updateEditPropertyVectorMode(false);
-	}
+    if (ImGui::BeginPopupModal("Cloning / Instancing Options", &show_multiset_param_dialog, ImGuiWindowFlags_AlwaysAutoResize)) {
+        static int method = 0; 
+        static float separation[3] = { 0.0f, 0.0f, 0.0f };
+        static int count = 1;
+        static float spacing = 1.0f;
+        static bool snap_path_edges = false;
+        static bool snap_path_centers = false;
 
-	editor_mode = EDITOR_NODE_QUERY_OBJECT;
-	global_cursor_state = 0;
+        ImGui::BeginGroup();
+        ImGui::Text("Method");
+        ImGui::RadioButton("Cloning", &method, 0);
+        ImGui::RadioButton("Instancing", &method, 1);
+        ImGui::BeginDisabled();
+        ImGui::RadioButton("Instancing (additive)", &method, 2);
+        ImGui::EndDisabled();
+
+        ImGui::Text("Options");
+        ImGui::BeginDisabled();
+        ImGui::Checkbox("Snap to path edges", &snap_path_edges);
+        ImGui::Checkbox("Snap to path centers", &snap_path_centers);
+        ImGui::EndDisabled();
+        ImGui::EndGroup();
+
+        ImGui::SameLine(150.0f);
+
+        ImGui::BeginGroup();
+        ImGui::Text("Parameters");
+        ImGui::Text("Separation Vector");
+        ImGui::Text("X:"); ImGui::SameLine();
+        ImGui::InputFloat("##SepX", &separation[0]);
+        ImGui::Text("Y:"); ImGui::SameLine();
+        ImGui::InputFloat("##SepY", &separation[1]);
+        ImGui::Text("Z:"); ImGui::SameLine();
+        ImGui::InputFloat("##SepZ", &separation[2]);
+        if (ImGui::Button("Get from object")) {
+        }
+        ImGui::EndGroup();
+
+        ImGui::SameLine();
+
+        ImGui::BeginGroup();
+        ImGui::Text("Count");
+        ImGui::InputInt("##Count", &count);
+        ImGui::Text("Spacing");
+        ImGui::InputFloat("##Spacing", &spacing);
+        ImGui::EndGroup();
+
+        ImGui::Separator();
+        ImGui::TextWrapped("Cloning will create new copies of the selected object with independent properties.\n\nInstancing will use the game's cloning method. The copies will share their properties with the source object.");
+
+        ImGui::Separator();
+
+        if (ImGui::Button("Create", ImVec2(120, 0))) {
+            show_multiset_param_dialog = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Clear", ImVec2(120, 0))) {
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Close", ImVec2(120, 0))) {
+            show_multiset_param_dialog = false;
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::EndPopup();
+    }
 }
 
-void EditorApplication::closeTargetQueryMode() {
-	editor_mode = EDITOR_NODE_QUERY_OBJECT;
-	global_cursor_state = 0;
+void SonicGLvlUI::RenderMaterialEditor() {
+    ImGui::Begin("Material Editor", &show_material_editor, ImGuiWindowFlags_AlwaysAutoResize);
+
+    static int editing_mode = 0; 
+
+    ImGui::Text("Editing Mode");
+    ImGui::RadioButton("Model Mode", &editing_mode, 0);
+    ImGui::SameLine();
+    ImGui::RadioButton("Material Mode", &editing_mode, 1);
+    ImGui::SameLine();
+    ImGui::RadioButton("Terrain Mode", &editing_mode, 2);
+
+    ImGui::Text("Current Model Open: %s", model_open.c_str());
+    ImGui::Text("Current Skeleton Open: %s", skeleton_open.c_str());
+    ImGui::Text("Current Animation Open: %s", animation_open.c_str());
+
+    if (ImGui::Button("Load Model...")) {  }
+    ImGui::SameLine();
+    if (ImGui::Button("Save Model...")) {  }
+    ImGui::SameLine();
+    if (ImGui::Button("Load Skeleton...")) {  }
+    ImGui::SameLine();
+    if (ImGui::Button("Load Animation...")) {  }
+
+    ImGui::Separator();
+
+    ImGui::BeginGroup();
+    ImGui::Text("Material List");
+    if (ImGui::BeginListBox("##MaterialList", ImVec2(200, 300))) {
+        for (int i = 0; i < materials.size(); i++) {
+            if (ImGui::Selectable(materials[i].name.c_str(), selected_material == i)) {
+                selected_material = i;
+            }
+        }
+        ImGui::EndListBox();
+    }
+    if (ImGui::Button("Save")) {  }
+    ImGui::SameLine();
+    if (ImGui::Button("Save All")) {  }
+    ImGui::EndGroup();
+
+    ImGui::SameLine();
+
+    if (selected_material >= 0 && selected_material < materials.size()) {
+        ImGui::BeginGroup();
+        ImGui::Text("Material Parameters");
+
+        Material& mat = materials[selected_material];
+        char name_buf[128];
+        strncpy(name_buf, mat.name.c_str(), 128);
+        ImGui::InputText("Name", name_buf, 128);
+        mat.name = name_buf;
+
+        char shader_buf[128];
+        strncpy(shader_buf, mat.shader.c_str(), 128);
+        ImGui::InputText("Shader", shader_buf, 128);
+        mat.shader = shader_buf;
+
+        ImGui::InputInt("Mesh Slot", &mat.mesh_slot);
+        ImGui::Checkbox("Unknown Flag", &mat.unknown_flag);
+
+        ImGui::Separator();
+        ImGui::Text("Texture Units");
+
+        ImGui::Separator();
+
+        static bool load_defaults_on_change = true;
+        ImGui::Checkbox("Load new defaults when Shader is changed", &load_defaults_on_change);
+        if (ImGui::Button("Load Default Parameters for Shader")) {
+        }
+
+        ImGui::EndGroup();
+    }
+
+    if (ImGui::Button("Close")) {
+        show_material_editor = false;
+    }
+
+    ImGui::End();
 }
 
-void EditorApplication::openQueryTargetMode(bool mode)
-{
-	if (mode)
-	{
-		is_pick_target = true;
-		SetFocus(hwnd);
+void SonicGLvlUI::RenderMaterialPreview() {
+    ImGui::Begin("Preview", &show_material_preview);
 
-		RECT main_window_rect;
-		GetWindowRect(hwnd, &main_window_rect);
-		GetWindowRect(hEditPropertyDlg, &hEditPropertyDlg_old_rect);
+    ImGui::Text("Material Preview Viewport");
 
-		LONG dlg_w = hEditPropertyDlg_old_rect.right - hEditPropertyDlg_old_rect.left;
-		LONG dlg_h = hEditPropertyDlg_old_rect.bottom - hEditPropertyDlg_old_rect.top;
-		MoveWindow(hEditPropertyDlg, main_window_rect.right - dlg_w - 15, main_window_rect.bottom - dlg_h - SONICGLVL_GUI_BOTTOM_HEIGHT - 15, dlg_w, dlg_h, true);
-	}
-	else
-	{
-		is_pick_target = false;
-		LONG dlg_w = hEditPropertyDlg_old_rect.right - hEditPropertyDlg_old_rect.left;
-		LONG dlg_h = hEditPropertyDlg_old_rect.bottom - hEditPropertyDlg_old_rect.top;
-		MoveWindow(hEditPropertyDlg, hEditPropertyDlg_old_rect.left, hEditPropertyDlg_old_rect.top, dlg_w, dlg_h, true);
-	}
+    ImGui::End();
 }
 
-void EditorApplication::verifySonicSpawnChange() {
-	// Verify that property is valid and only a single object is selected
-	if ((current_property_index < current_properties_names.size()) && current_single_property_object) {
-		string element_name = current_properties_names[current_property_index];
+void SonicGLvlUI::RenderPhysicsEditor() {
+    ImGui::OpenPopup("Physics Editor");
 
-		// Verify if SonicSpawn is the type of selected object, and if the "Active" flag was the property edited
-		if ((current_single_property_object->getName() == LIBGENS_SPAWN_POINT_OBJECT_NAME) && (element_name == LIBGENS_SPAWN_POINT_OBJECT_FLAG)) {
-			LibGens::ObjectElement *element_single = current_single_property_object->getElement(LIBGENS_SPAWN_POINT_OBJECT_FLAG);
+    if (ImGui::BeginPopupModal("Physics Editor", &show_physics_editor, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("Collision Files:");
 
-			if (element_single) {
-				LibGens::ObjectElementBool *element_single_bool = static_cast<LibGens::ObjectElementBool *>(element_single);
+        if (ImGui::BeginListBox("##CollisionList", ImVec2(300, 200))) {
+            ImGui::EndListBox();
+        }
 
-				// Only change other elements if the flag was set to "true"
-				if (element_single_bool->value) {
-					// Verify if level exists
-					if (current_level && current_level->getLevel()) {
-						// Retrieve list of all SonicSpawn objects in the level
-						list<LibGens::Object *> spawn_objects;
-						current_level->getLevel()->getObjectsByName(LIBGENS_SPAWN_POINT_OBJECT_NAME, spawn_objects);
+        if (ImGui::Button("Import...")) {
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Delete")) {
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Close")) {
+            show_physics_editor = false;
+            ImGui::CloseCurrentPopup();
+        }
 
-						for (list<LibGens::Object *>::iterator it=spawn_objects.begin(); it!=spawn_objects.end(); it++) {
-							// Skip currently selected object
-							if ((*it) == current_single_property_object) continue;
-
-							LibGens::ObjectElement *element = (*it)->getElement(LIBGENS_SPAWN_POINT_OBJECT_FLAG);
-
-							// Verify if it has an "Active" element
-							if (element) {
-								// Edit Boolean value and add to history wrapper
-								LibGens::ObjectElementBool *element_bool = static_cast<LibGens::ObjectElementBool *>(element);
-
-								HistoryActionEditObjectElementBool *history_action = new HistoryActionEditObjectElementBool((*it), object_node_manager, element_bool, element_bool->value, false);
-								element_bool->value = false;
-
-								if (history_edit_property_wrapper) {
-									history_edit_property_wrapper->push(history_action);
-								}
-
-								object_node_manager->reloadObjectNode((*it));
-							}
-						}
-					}
-				}
-			}
-		}
-	}
+        ImGui::EndPopup();
+    }
 }
 
-void EditorApplication::confirmEditProperty() {
-	// Check if a Sonic Spawn was changed to "true", and disable the flag in any other spawns
-	verifySonicSpawnChange();
+void SonicGLvlUI::RenderFindDialog() {
+    ImGui::OpenPopup("Find");
 
-	if (history_edit_property_wrapper) {
-		pushHistory(history_edit_property_wrapper);
-		history_edit_property_wrapper = NULL;
-	}
+    if (ImGui::BeginPopupModal("Find", &show_find_dialog, ImGuiWindowFlags_AlwaysAutoResize)) {
+        static char object_name[256] = "";
+        static bool match_exactly = false;
+        static bool find_all = false;
+        static bool with_property = false;
+        static char property_name[128] = "";
+        static char property_value[128] = "";
+
+        ImGui::Text("Basic Options");
+        ImGui::Text("Object Name");
+        ImGui::InputText("##ObjectName", object_name, 256);
+        ImGui::Checkbox("Find And Select All", &find_all);
+        ImGui::Checkbox("Match Exactly", &match_exactly);
+
+        ImGui::Separator();
+        ImGui::Text("Filter Options");
+        ImGui::Checkbox("With Property And Value", &with_property);
+        if (with_property) {
+            ImGui::Text("Property");
+            ImGui::InputText("##PropertyName", property_name, 128);
+            ImGui::Text("Value");
+            ImGui::InputText("##PropertyValue", property_value, 128);
+        }
+
+        ImGui::Separator();
+
+        if (ImGui::Button("Find Next", ImVec2(120, 0))) {
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Close", ImVec2(120, 0))) {
+            show_find_dialog = false;
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::EndPopup();
+    }
 }
 
-void EditorApplication::revertEditProperty() {
-	if (history_edit_property_wrapper) {
-		history_edit_property_wrapper->undo();
-		delete history_edit_property_wrapper;
+void SonicGLvlUI::RenderLookAtPointDialog() {
+    ImGui::OpenPopup("Look At Point");
 
-		if (current_single_property_object) {
-			updateObjectsPropertiesValuesGUI(current_single_property_object);
-		}
+    if (ImGui::BeginPopupModal("Look At Point", &show_look_at_point_dialog, ImGuiWindowFlags_AlwaysAutoResize)) {
+        static float point[3] = { 0.0f, 0.0f, 0.0f };
+        static int axis = 0; 
+        static bool enable_viewport = false;
+        static bool get_from_object = false;
 
-		history_edit_property_wrapper = NULL;
-	}
+        ImGui::Text("New point value");
+        ImGui::InputFloat3("##Point", point);
+
+        ImGui::Separator();
+
+        ImGui::BeginGroup();
+        ImGui::Text("Modify Point");
+        ImGui::Checkbox("Enable editing in viewport", &enable_viewport);
+        ImGui::Checkbox("Get from object", &get_from_object);
+        if (ImGui::Button("Focus on point")) {
+        }
+        ImGui::EndGroup();
+
+        ImGui::SameLine();
+
+        ImGui::BeginGroup();
+        ImGui::Text("Direction Axis");
+        ImGui::RadioButton("X-Axis", &axis, 0);
+        ImGui::RadioButton("Y-Axis", &axis, 1);
+        ImGui::RadioButton("Z-Axis", &axis, 2);
+        ImGui::EndGroup();
+
+        ImGui::Separator();
+
+        if (ImGui::Button("Confirm", ImVec2(120, 0))) {
+            show_look_at_point_dialog = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+            show_look_at_point_dialog = false;
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::EndPopup();
+    }
 }
 
+void SonicGLvlUI::RenderTerrainInfoDialog() {
+    ImGui::OpenPopup("Terrain Info");
 
-void EditorApplication::updateHelpWithPropertyGUI(LibGens::ObjectElement *element) {
-	string help_name="";
-	string help_description="";
+    if (ImGui::BeginPopupModal("Terrain Info", &show_terrain_info_dialog, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("Instance Name: N/A");
+        ImGui::Text("Group Name: N/A");
+        ImGui::Text("Model Name: N/A");
+        ImGui::Text("Subset ID: N/A");
 
-	if (element) {
-		help_name = element->getName();
-		help_description = element->getDescription();
-	}
+        ImGui::Separator();
 
-	SetDlgItemText(hLeftDlg, IDG_HELP_GROUP, help_name.c_str());
-	SetDlgItemText(hLeftDlg, IDT_HELP_DESCRIPTION, help_description.c_str());
+        if (ImGui::Button("Close", ImVec2(120, 0))) {
+            show_terrain_info_dialog = false;
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::EndPopup();
+    }
 }
 
-void EditorApplication::clearEditPropertyGUI() {
-	hEditPropertyDlg = NULL;
+extern "C" {
+    void SonicGLvl_InitUI() {
+        g_UI.Initialize();
+    }
 
-	for (vector<VectorNode *>::iterator it=property_vector_nodes.begin(); it!=property_vector_nodes.end(); it++) {
-		delete (*it);
-	}
-	property_vector_nodes.clear();
-	temp_property_vector_list.clear();
-	temp_property_id_list.clear();
+    void SonicGLvl_RenderUI() {
+        g_UI.Render();
+    }
+
+    void SonicGLvl_ShutdownUI() {
+        g_UI.Shutdown();
+    }
 }
-
-void EditorApplication::closeEditPropertyGUI() {
-	if (hEditPropertyDlg) {
-		SendMessage(hEditPropertyDlg, WM_CLOSE, 0, 0);
-	}
-
-	if (editor_mode == EDITOR_NODE_QUERY_VECTOR) {
-		editor_mode = EDITOR_NODE_QUERY_OBJECT;
-	}
-
-	if (editor_mode == EDITOR_NODE_QUERY_NODE) {
-		editor_mode = EDITOR_NODE_QUERY_OBJECT;
-	}
-
-	hEditPropertyDlg = NULL;
-	revertEditProperty();
-}
-
-HWND EditorApplication::getEditPropertyDlg() {
-	return hEditPropertyDlg;
-}
-
-float GetDlgItemInteger(HWND hDlg, int idDlgItem) {
-	char value_str[1024] = "";
-	unsigned int value = 0.0f;
-
-	GetDlgItemText(hDlg, idDlgItem, value_str, 1024);
-	FromString<unsigned int>(value, ToString(value_str), std::dec);
-
-	return value;
-}
-
-float GetDlgItemFloat(HWND hDlg, int idDlgItem) {
-	char value_str[1024] = "";
-	float value = 0.0f;
-
-	GetDlgItemText(hDlg, idDlgItem, value_str, 1024);
-	FromString<float>(value, ToString(value_str), std::dec);
-
-	return value;
-}
-
-
-INT_PTR CALLBACK EditBoolCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
-	switch(msg) {
-		case WM_INITDIALOG:
-			return true;
-
-		case WM_CLOSE:
-			DestroyWindow(hDlg);
-			editor_application->clearEditPropertyGUI();
-			return true;
-
-		case WM_COMMAND:
-			if(HIWORD(wParam) == CBN_SELCHANGE) { 
-				int item_index = SendMessage((HWND) lParam, (UINT) CB_GETCURSEL, (WPARAM) 0, (LPARAM) 0);
-				if (LOWORD(wParam) == IDC_EDIT_BOOL_VALUE) {
-					editor_application->updateEditPropertyBool((item_index == 1));
-					break;
-				}
-			}
-
-			switch(LOWORD(wParam)) {
-				case IDOK:
-					SendMessage(hDlg, WM_CLOSE, 0, 0);
-					editor_application->confirmEditProperty();
-					return true;
-
-				case IDCANCEL:
-					SendMessage(hDlg, WM_CLOSE, 0, 0);
-					editor_application->revertEditProperty();
-					return true;
-			}
-			break;
-
-		case WM_NOTIFY:
-			return true;
-	}
-	
-	return false;
-}
-
-
-
-INT_PTR CALLBACK EditIntCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
-	switch(msg) {
-		case WM_INITDIALOG:
-			return true;
-
-		case WM_CLOSE:
-			DestroyWindow(hDlg);
-			editor_application->clearEditPropertyGUI();
-			return true;
-
-		case WM_COMMAND:
-			if(HIWORD(wParam) == CBN_SELCHANGE) { 
-				char value_str[1024] = "";
-				unsigned int value = 0.0f;
-
-				int nIndex=SendDlgItemMessage(hDlg, IDC_EDIT_FLOAT_VALUE, (UINT) CB_GETCURSEL, (WPARAM) 0, (LPARAM) 0);
-				SendDlgItemMessage(hDlg, IDC_EDIT_FLOAT_VALUE, (UINT)CB_GETLBTEXT, (WPARAM)nIndex, (LPARAM)value_str);
-
-				FromString<unsigned int>(value, ToString(value_str), std::dec);
-				editor_application->updateEditPropertyInteger(value);
-				break;
-			}
-
-			if (HIWORD(wParam) == CBN_EDITCHANGE) {
-				unsigned int value = 0.0f;
-				value = GetDlgItemInteger(hDlg, IDC_EDIT_FLOAT_VALUE);
-				editor_application->updateEditPropertyInteger(value);
-				break;
-			}
-
-			switch(LOWORD(wParam)) {
-				case IDOK:
-					SendMessage(hDlg, WM_CLOSE, 0, 0);
-					editor_application->confirmEditProperty();
-					return true;
-
-				case IDCANCEL:
-					SendMessage(hDlg, WM_CLOSE, 0, 0);
-					editor_application->revertEditProperty();
-					return true;
-			}
-
-			break;
-
-		case WM_NOTIFY:
-			return true;
-	}
-	
-	return false;
-}
-
-
-
-INT_PTR CALLBACK EditFloatCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
-	switch(msg) {
-		case WM_INITDIALOG:
-			return true;
-
-		case WM_CLOSE:
-			DestroyWindow(hDlg);
-			editor_application->clearEditPropertyGUI();
-			return true;
-
-		case WM_COMMAND:
-			if(HIWORD(wParam) == CBN_SELCHANGE) { 
-				char value_str[1024] = "";
-				float value = 0.0f;
-
-				int nIndex=SendDlgItemMessage(hDlg, IDC_EDIT_FLOAT_VALUE, (UINT) CB_GETCURSEL, (WPARAM) 0, (LPARAM) 0);
-				SendDlgItemMessage(hDlg, IDC_EDIT_FLOAT_VALUE, (UINT)CB_GETLBTEXT, (WPARAM)nIndex, (LPARAM)value_str);
-
-				FromString<float>(value, ToString(value_str), std::dec);
-				editor_application->updateEditPropertyFloat(value);
-				break;
-			}
-
-			if (HIWORD(wParam) == CBN_EDITCHANGE) {
-				float value = 0.0f;
-				value = GetDlgItemFloat(hDlg, IDC_EDIT_FLOAT_VALUE);
-				editor_application->updateEditPropertyFloat(value);
-				break;
-			}
-
-			switch(LOWORD(wParam)) {
-				case IDOK:
-					SendMessage(hDlg, WM_CLOSE, 0, 0);
-					editor_application->confirmEditProperty();
-					return true;
-
-				case IDCANCEL:
-					SendMessage(hDlg, WM_CLOSE, 0, 0);
-					editor_application->revertEditProperty();
-					return true;
-			}
-
-			break;
-
-		case WM_NOTIFY:
-			return true;
-	}
-	
-	return false;
-}
-
-
-
-INT_PTR CALLBACK EditStringCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
-	switch(msg) {
-		case WM_INITDIALOG:
-			return true;
-
-		case WM_CLOSE:
-			DestroyWindow(hDlg);
-			editor_application->clearEditPropertyGUI();
-			return true;
-
-		case WM_COMMAND:
-			if(HIWORD(wParam) == CBN_SELCHANGE) { 
-				char value_str[1024] = "";
-				int nIndex=SendDlgItemMessage(hDlg, IDC_EDIT_STRING_VALUE, (UINT) CB_GETCURSEL, (WPARAM) 0, (LPARAM) 0);
-				SendDlgItemMessage(hDlg, IDC_EDIT_STRING_VALUE, (UINT)CB_GETLBTEXT, (WPARAM)nIndex, (LPARAM)value_str);
-				editor_application->updateEditPropertyString(ToString(value_str));
-				break;
-			}
-
-			if (HIWORD(wParam) == CBN_EDITCHANGE) {
-				char value_str[1024] = "";
-				GetDlgItemText(hDlg, IDC_EDIT_STRING_VALUE, value_str, 1024);
-				editor_application->updateEditPropertyString(ToString(value_str));
-				break;
-			}
-
-			switch(LOWORD(wParam)) {
-				case IDOK:
-					SendMessage(hDlg, WM_CLOSE, 0, 0);
-					editor_application->confirmEditProperty();
-					return true;
-
-				case IDCANCEL:
-					SendMessage(hDlg, WM_CLOSE, 0, 0);
-					editor_application->revertEditProperty();
-					return true;
-			}
-
-			break;
-
-		case WM_NOTIFY:
-			return true;
-	}
-	
-	return false;
-}
-
-
-INT_PTR CALLBACK EditVectorCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
-	switch(msg) {
-		case WM_INITDIALOG:
-			return true;
-
-		case WM_CLOSE:
-			if (IsDlgButtonChecked(hDlg, IDC_EDIT_VECTOR_EDITING)) {
-				editor_application->updateEditPropertyVectorMode(false);
-			}
-
-			DestroyWindow(hDlg);
-
-			editor_application->clearEditPropertyGUI();
-			return true;
-
-		case WM_COMMAND:
-			if (HIWORD(wParam) == EN_CHANGE) {
-				if ((LOWORD(wParam) == IDE_EDIT_VECTOR_X) || (LOWORD(wParam) == IDE_EDIT_VECTOR_Y) || (LOWORD(wParam) == IDE_EDIT_VECTOR_Z)) {
-					float value_x = 0.0f;
-					float value_y = 0.0f;
-					float value_z = 0.0f;
-
-					value_x = GetDlgItemFloat(hDlg, IDE_EDIT_VECTOR_X);
-					value_y = GetDlgItemFloat(hDlg, IDE_EDIT_VECTOR_Y);
-					value_z = GetDlgItemFloat(hDlg, IDE_EDIT_VECTOR_Z);
-
-					editor_application->updateEditPropertyVector(LibGens::Vector3(value_x, value_y, value_z));
-				}
-				break;
-			}
-
-			switch(LOWORD(wParam)) {
-				case IDOK:
-					SendMessage(hDlg, WM_CLOSE, 0, 0);
-					editor_application->confirmEditProperty();
-					return true;
-
-				case IDCANCEL:
-					SendMessage(hDlg, WM_CLOSE, 0, 0);
-					editor_application->revertEditProperty();
-					return true;
-
-				case IDC_EDIT_VECTOR_EDITING:
-					editor_application->updateEditPropertyVectorMode(IsDlgButtonChecked(hDlg, IDC_EDIT_VECTOR_EDITING));
-					return true;
-
-				case IDB_EDIT_VECTOR_FOCUS:
-					editor_application->updateEditPropertyVectorFocus();
-					return true;
-
-				/*
-				case IDB_VECTOR_SELECT_FROM_POLYGON:
-					editor_application->ignoreMouseClicks(5);
-					editor_application->setEditorMode(EDITOR_NODE_QUERY_VECTOR_POLYGON);
-					ShowWindow(hDlg, SW_HIDE);
-					return true;
-
-				case IDB_VECTOR_SELECT_FROM_NODE:
-					editor_application->ignoreMouseClicks(5);
-					editor_application->setEditorMode(EDITOR_NODE_QUERY_VECTOR_NODE);
-					ShowWindow(hDlg, SW_HIDE);
-					return true;
-				*/
-			}
-
-			break;
-
-		case WM_NOTIFY:
-			if ((LOWORD(wParam) == IDS_EDIT_VECTOR_X) || (LOWORD(wParam) == IDS_EDIT_VECTOR_Y) || (LOWORD(wParam) == IDS_EDIT_VECTOR_Z)) {
-				if (((LPNMUPDOWN)lParam)->hdr.code == UDN_DELTAPOS) {
-					int delta = ((LPNMUPDOWN)lParam)->iDelta;
-
-					float value_x = 0.0f;
-					float value_y = 0.0f;
-					float value_z = 0.0f;
-
-					float spin_factor = 1.0;
-
-					value_x = GetDlgItemFloat(hDlg, IDE_EDIT_VECTOR_X);
-					value_y = GetDlgItemFloat(hDlg, IDE_EDIT_VECTOR_Y);
-					value_z = GetDlgItemFloat(hDlg, IDE_EDIT_VECTOR_Z);
-
-					if (delta > 1)  delta = 1;
-					if (delta < -1) delta = -1;
-
-					if (LOWORD(wParam) == IDS_EDIT_VECTOR_X) {
-						value_x += (float)-delta * spin_factor;
-						SetDlgItemText(hDlg, IDE_EDIT_VECTOR_X, ToString(value_x).c_str());
-					}
-
-					if (LOWORD(wParam) == IDS_EDIT_VECTOR_Y) {
-						value_y += (float)-delta * spin_factor;
-						SetDlgItemText(hDlg, IDE_EDIT_VECTOR_Y, ToString(value_y).c_str());
-					}
-
-					if (LOWORD(wParam) == IDS_EDIT_VECTOR_Z) {
-						value_z += (float)-delta * spin_factor;
-						SetDlgItemText(hDlg, IDE_EDIT_VECTOR_Z, ToString(value_z).c_str());
-					}
-
-					editor_application->updateEditPropertyVector(LibGens::Vector3(value_x, value_y, value_z));
-				}
-			}
-
-			return true;
-	}
-	
-	return false;
-}
-
-vector<VectorNode*>& EditorApplication::getPropertyVectorNodes()
-{
-	return property_vector_nodes;
-}
-
-vector<LibGens::Vector3>& EditorApplication::getCurrentPropertyVectorList()
-{
-	return temp_property_vector_list;
-}
-
-void EditorApplication::updateVectorListSelection(int index)
-{
-	current_vector_list_selection = index;
-	HWND viewport_edit = GetDlgItem(hEditPropertyDlg, IDC_EDIT_VECTOR_LIST_EDITING);
-	HWND viewport_focus = GetDlgItem(hEditPropertyDlg, IDB_EDIT_VECTOR_LIST_FOCUS);
-	HWND vector_delete = GetDlgItem(hEditPropertyDlg, IDB_EDIT_VECTOR_LIST_DELETE);
-	HWND vector_up = GetDlgItem(hEditPropertyDlg, IDB_EDIT_VECTOR_LIST_MOVE_UP);
-	HWND vector_down = GetDlgItem(hEditPropertyDlg, IDB_EDIT_VECTOR_LIST_MOVE_DOWN);
-
-	if (current_vector_list_selection != last_vector_list_selection)
-	{
-		last_vector_list_selection = current_vector_list_selection;
-		
-		if (isVectorListSelectionValid())
-		{
-			is_update_vector_list = false;
-			LibGens::Vector3 v = temp_property_vector_list[current_vector_list_selection];
-
-			SetDlgItemText(hEditPropertyDlg, IDE_EDIT_VECTOR_LIST_X, ToString<float>(v.x).c_str());
-			SetDlgItemText(hEditPropertyDlg, IDE_EDIT_VECTOR_LIST_Y, ToString<float>(v.y).c_str());
-			SetDlgItemText(hEditPropertyDlg, IDE_EDIT_VECTOR_LIST_Z, ToString<float>(v.z).c_str());
-		}
-	}
-
-	if (isVectorListSelectionValid())
-	{
-		EnableWindow(viewport_edit, true);
-		EnableWindow(viewport_focus, true);
-		EnableWindow(vector_delete, true);
-
-		// Enable or disable buttons based on current selection in the list view
-		if (property_vector_nodes.size() > 1)
-		{
-			if (current_vector_list_selection > 0)
-			{
-				EnableWindow(vector_up, true);
-
-				if (current_vector_list_selection < property_vector_nodes.size() - 1)
-					EnableWindow(vector_down, true);
-				else
-					EnableWindow(vector_down, false);
-			}
-
-			if (current_vector_list_selection == 0)
-			{
-				EnableWindow(vector_up, false);
-
-				if (property_vector_nodes.size() > 1)
-					EnableWindow(vector_down, true);
-			}
-		}
-	}
-	else
-	{
-		EnableWindow(viewport_edit, false);
-		EnableWindow(viewport_focus, false);
-		EnableWindow(vector_delete, false);
-		EnableWindow(vector_up, false);
-		EnableWindow(vector_down, false);
-	}
-
-	is_update_vector_list = true;
-}
-
-void EditorApplication::removeVectorFromList(int index)
-{
-	HWND list_view = GetDlgItem(hEditPropertyDlg, IDL_EDIT_VECTOR_LIST_LIST);
-	ListView_DeleteItem(list_view, index);
-	int count = ListView_GetItemCount(list_view);
-	ListView_SetItemCount(list_view, count - 1);
-
-	for (vector<LibGens::Vector3>::iterator it = temp_property_vector_list.begin(); it != temp_property_vector_list.end(); ++it)
-	{
-		if (*it == temp_property_vector_list[index])
-		{
-			temp_property_vector_list.erase(it);
-			break;
-		}
-	}
-
-	for (vector<VectorNode *>::iterator it = property_vector_nodes.begin(); it != property_vector_nodes.end(); ++it)
-	{
-		if (*it == property_vector_nodes[index])
-		{
-			delete *it;
-			property_vector_nodes.erase(it);
-			break;
-		}
-	}
-
-	if (count)
-		ListView_SetSelectionMark(list_view, index - 1);
-}
-
-void EditorApplication::moveVector(int index, bool up)
-{
-	HWND list_view = GetDlgItem(hEditPropertyDlg, IDL_EDIT_VECTOR_LIST_LIST);
-	char buffer[128];
-
-	LV_ITEM item;
-	item.mask = LVIF_TEXT;
-	item.iItem = index;
-	item.iSubItem = 0;
-	item.pszText = buffer;
-
-	ListView_GetItem(list_view, &item);
-	ListView_DeleteItem(list_view, index);
-
-	if (up)
-	{
-		item.iItem = index - 1;
-		ListView_InsertItem(list_view, &item);
-
-		swap(temp_property_vector_list[index], temp_property_vector_list[index - 1]);
-		swap(property_vector_nodes[index], property_vector_nodes[index - 1]);
-	}
-	else
-	{
-		item.iItem = index + 1;
-		ListView_InsertItem(list_view, &item);
-
-		swap(temp_property_vector_list[index], temp_property_vector_list[index + 1]);
-		swap(property_vector_nodes[index], property_vector_nodes[index + 1]);
-	}
-}
-
-bool EditorApplication::isVectorListSelectionValid()
-{
-	return current_vector_list_selection > -1 && current_vector_list_selection < temp_property_vector_list.size() && temp_property_vector_list.size();
-}
-
-bool EditorApplication::isUpdateVectorList()
-{
-	return is_update_vector_list;
-}
-
-LibGens::Vector3 getVectorCreationPosition()
-{
-	LibGens::Vector3 vector_creation_position = LibGens::Vector3(0, 0, 0);
-
-	// Try to use the position of the first selected object
-	if (!editor_application->getSelectedNodes().empty())
-	{
-		ObjectNode* first_selection = static_cast<ObjectNode*>(*(editor_application->getSelectedNodes().begin()));
-		vector_creation_position = first_selection->getObject()->getPosition();
-	}
-
-	return vector_creation_position;
-}
-
-INT_PTR CALLBACK EditVectorListCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
-	HWND list_view = GetDlgItem(hDlg, IDL_EDIT_VECTOR_LIST_LIST);
-	int list_view_index = list_view == NULL ? -1 : ListView_GetNextItem(list_view, -1, LVIS_SELECTED | LVIS_FOCUSED);
-	editor_application->updateVectorListSelection(list_view_index);
-	
-	switch (msg) {
-	case WM_INITDIALOG:
-		return true;
-
-	case WM_CLOSE:
-		if (IsDlgButtonChecked(hDlg, IDC_EDIT_VECTOR_LIST_EDITING)) {
-			editor_application->updateEditPropertyVectorMode(false);
-		}
-		
-		DestroyWindow(hDlg);
-		editor_application->clearEditPropertyGUI();
-		return true;
-
-	case WM_COMMAND:
-		if (HIWORD(wParam) == EN_CHANGE)
-		{
-			if ((LOWORD(wParam) == IDE_EDIT_VECTOR_LIST_X) || (LOWORD(wParam) == IDE_EDIT_VECTOR_LIST_Y) || (LOWORD(wParam) == IDE_EDIT_VECTOR_LIST_Z)) {
-				if (editor_application->isUpdateVectorList() && editor_application->isVectorListSelectionValid())
-				{
-					float value_x = 0.0f;
-					float value_y = 0.0f;
-					float value_z = 0.0f;
-
-					value_x = GetDlgItemFloat(hDlg, IDE_EDIT_VECTOR_LIST_X);
-					value_y = GetDlgItemFloat(hDlg, IDE_EDIT_VECTOR_LIST_Y);
-					value_z = GetDlgItemFloat(hDlg, IDE_EDIT_VECTOR_LIST_Z);
-
-					char text[128];
-					string newText = ToString<float>(value_x) + ", " + ToString<float>(value_y) + ", " + ToString<float>(value_z);
-					strcpy(text, newText.c_str());
-
-					ListView_SetItemText(list_view, list_view_index, 0, (char*)newText.c_str());
-					editor_application->getCurrentPropertyVectorList()[list_view_index] = LibGens::Vector3(value_x, value_y, value_z);
-					editor_application->getPropertyVectorNodes()[list_view_index]->setPosition(Ogre::Vector3(value_x, value_y, value_z));
-				}
-			}
-		}
-
-		switch ((LPARAM)wParam)
-		{
-		case IDCANCEL:
-			SendMessage(hDlg, WM_CLOSE, 0, 0);
-			editor_application->revertEditProperty();
-			return true;
-
-		case IDOK:
-			editor_application->updateEditPropertyVectorList(editor_application->getCurrentPropertyVectorList());
-			SendMessage(hDlg, WM_CLOSE, 0, 0);
-			editor_application->confirmEditProperty();
-			return true;
-
-		case IDB_EDIT_VECTOR_LIST_CREATE:
-			editor_application->addVectorToList(getVectorCreationPosition());
-			editor_application->updateEditPropertyVectorList(editor_application->getCurrentPropertyVectorList());
-			break;
-
-		case IDB_EDIT_VECTOR_LIST_FOCUS:
-			if (editor_application->isVectorListSelectionValid())
-				editor_application->updateEditPropertyVectorFocus(list_view_index);
-			break;
-
-		case IDB_EDIT_VECTOR_LIST_DELETE:
-			if (editor_application->isVectorListSelectionValid())
-			{
-				editor_application->removeVectorFromList(list_view_index);
-				editor_application->updateEditPropertyVectorList(editor_application->getCurrentPropertyVectorList());
-			}
-			break;
-
-		case IDC_EDIT_VECTOR_LIST_EDITING:
-			if (editor_application->isVectorListSelectionValid())
-				editor_application->updateEditPropertyVectorMode(IsDlgButtonChecked(hDlg, IDC_EDIT_VECTOR_LIST_EDITING), true, list_view_index);
-			break;
-
-		case IDB_EDIT_VECTOR_LIST_MOVE_UP:
-			editor_application->moveVector(list_view_index, true);
-			break;
-
-		case IDB_EDIT_VECTOR_LIST_MOVE_DOWN:
-			editor_application->moveVector(list_view_index, false);
-		}
-		break;
-	}
-
-	return false;
-}
-
-void EditorApplication::addVectorToList(LibGens::Vector3 v3)
-{
-	HWND hVectorList = GetDlgItem(hEditPropertyDlg, IDL_EDIT_VECTOR_LIST_LIST);
-	float x = v3.x;
-	float y = v3.y;
-	float z = v3.z;
-
-	string v3_combined = ToString<float>(x) + ", " + ToString<float>(y) + ", " + ToString<float>(z);
-	char v[256];
-
-	strcpy(v, v3_combined.c_str());
-
-	LV_ITEM item;
-	item.mask = LVIF_TEXT;
-	item.pszText = v;
-	item.cchTextMax = strlen(v);
-	item.state = 0;
-	item.iSubItem = 0;
-	item.lParam = (LPARAM)NULL;
-	item.iItem = temp_property_vector_list.size();
-	ListView_InsertItem(hVectorList, &item);
-	ListView_SetItemText(hVectorList, item.iItem, 0, item.pszText);
-
-	temp_property_vector_list.push_back(v3);
-	VectorNode* vector_node = new VectorNode(scene_manager);
-	vector_node->setPosition(Ogre::Vector3(x, y, z));
-	property_vector_nodes.push_back(vector_node);
-}
-
-void EditorApplication::addIDToList(size_t id)
-{
-	HWND hIDList = GetDlgItem(hEditPropertyDlg, IDL_EDIT_ID_LIST_LIST);
-	
-	string id_string = ToString<size_t>(id);
-	char v[128];
-
-	strcpy(v, id_string.c_str());
-
-	LV_ITEM item;
-	item.mask = LVIF_TEXT;
-	item.pszText = v;
-	item.cchTextMax = strlen(v);
-	item.state = 0;
-	item.iSubItem = 0;
-	item.lParam = (LPARAM)NULL;
-	item.iItem = temp_property_id_list.size();
-	ListView_InsertItem(hIDList, &item);
-	ListView_SetItemText(hIDList, item.iItem, 0, item.pszText);
-
-	temp_property_id_list.push_back(id);
-}
-
-void EditorApplication::removeIDFromList(int index)
-{
-	HWND list_view = GetDlgItem(hEditPropertyDlg, IDL_EDIT_ID_LIST_LIST);
-
-	for (vector<size_t>::iterator it = temp_property_id_list.begin(); it != temp_property_id_list.end(); ++it)
-	{
-		if (*it == temp_property_id_list[index])
-		{
-			temp_property_id_list.erase(it);
-			ListView_DeleteItem(list_view, index);
-			return;
-		}
-	}
-}
-
-void EditorApplication::moveID(int index, bool up)
-{
-	HWND list_view = GetDlgItem(hEditPropertyDlg, IDL_EDIT_ID_LIST_LIST);
-	char item_text[128];
-
-	LV_ITEM item;
-	item.mask = LVIF_TEXT;
-	item.iItem = index;
-	item.iSubItem = 0;
-	item.pszText = item_text;
-	
-	ListView_GetItem(list_view, &item);
-	ListView_DeleteItem(list_view, index);
-
-	if (up)
-	{
-		item.iItem = index - 1;
-		ListView_InsertItem(list_view, &item);
-		ListView_SetItemText(list_view, item.iItem, item.iSubItem, item.pszText);
-
-		swap(temp_property_id_list[index - 1], temp_property_id_list[index]);
-	}
-	else
-	{
-		item.iItem = index + 1;
-		ListView_InsertItem(list_view, &item);
-		ListView_SetItemText(list_view, item.iItem, item.iSubItem, item.pszText);
-
-		swap(temp_property_id_list[index + 1], temp_property_id_list[index]);
-	}
-	
-}
-
-void EditorApplication::setTargetName(size_t id, bool is_list)
-{
-	LibGens::Object* obj = getCurrentLevel()->getLevel()->getObjectByID(id);
-	string object_name = "none";
-	bool enabled = false;
-
-	if (obj)
-	{
-		object_name = obj->getName();
-		enabled = true;
-	}
-
-	string result = "Points to: (" + object_name + ")";
-	HWND button;
-
-	if (!is_list)
-	{
-		SetDlgItemText(hEditPropertyDlg, IDT_EDIT_ID_POINT, result.c_str());
-
-		button = GetDlgItem(hEditPropertyDlg, IDB_EDIT_ID_GO_TO_TARGET);
-		EnableWindow(button, enabled);
-	}
-	else
-	{
-		SetDlgItemText(hEditPropertyDlg, IDT_EDIT_ID_LIST_POINT, result.c_str());
-
-		button = GetDlgItem(hEditPropertyDlg, IDB_EDIT_ID_LIST_GO_TO_TARGET);
-		EnableWindow(button, enabled);
-	}
-}
-
-INT_PTR CALLBACK EditIdCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
-{
-	switch (msg)
-	{
-	case WM_INITDIALOG:
-		return true;
-
-	case WM_CLOSE:
-		DestroyWindow(hDlg);
-		editor_application->openQueryTargetMode(false);
-		editor_application->clearEditPropertyGUI();
-		return true;
-
-	case WM_COMMAND:
-		if (HIWORD(wParam) == CBN_EDITCHANGE)
-		{
-			if (LOWORD(wParam) == IDC_EDIT_ID_VALUE)
-			{
-				size_t id = GetDlgItemFloat(hDlg, IDC_EDIT_ID_VALUE);
-				editor_application->setTargetName(id);
-			}
-		}
-
-		switch (LOWORD(wParam))
-		{
-		case IDC_EDIT_ID_SELECT_FROM_VIEWPORT:
-			editor_application->openQueryTargetMode(IsDlgButtonChecked(hDlg, IDC_EDIT_ID_SELECT_FROM_VIEWPORT));
-			break;
-
-		case IDB_EDIT_ID_GO_TO_TARGET:
-		{
-			size_t id = GetDlgItemFloat(hDlg, IDC_EDIT_ID_VALUE);
-			LibGens::Object* obj = editor_application->getCurrentLevel()->getLevel()->getObjectByID(id);
-			if (obj)
-			{
-				editor_application->clearSelection();
-				ObjectNode *obj_node = editor_application->getObjectNodeManager()->findObjectNode(obj);
-				if (obj_node)
-				{
-					SendMessage(hDlg, WM_CLOSE, 0, 0);
-					editor_application->selectNode(obj_node);
-					editor_application->updateSelection();
-					return true;
-				}
-			}
-			break;
-		}
-		break;
-
-		case IDOK:
-		{
-			size_t value = GetDlgItemFloat(hDlg, IDC_EDIT_ID_VALUE);
-			editor_application->updateEditPropertyID(value);
-			editor_application->confirmEditProperty();
-			SendMessage(hDlg, WM_CLOSE, 0, 0);
-			return true;
-		}
-
-		case IDCANCEL:
-			SendMessage(hDlg, WM_CLOSE, 0, 0);
-			return true;
-
-		}
-
-		break;
-	}
-
-	return false;
-}
-
-void EditorApplication::updateIDListSelection(int index)
-{
-	HWND list_delete = GetDlgItem(hEditPropertyDlg, IDB_EDIT_ID_LIST_DELETE);
-	HWND list_move_up = GetDlgItem(hEditPropertyDlg, IDB_EDIT_ID_LIST_MOVE_UP);
-	HWND list_move_down = GetDlgItem(hEditPropertyDlg, IDB_EDIT_ID_LIST_MOVE_DOWN);
-	HWND list_add = GetDlgItem(hEditPropertyDlg, IDC_EDIT_ID_LIST_ADD_FROM_VIEWPORT);
-	HWND list_text = GetDlgItem(hEditPropertyDlg, IDE_EDIT_ID_LIST_VALUE);
-
-	current_id_list_selection = index;
-	if (current_id_list_selection != last_id_list_selection)
-	{
-		last_id_list_selection = current_id_list_selection;
-		if (isIDListSelectionValid())
-		{
-			size_t id = temp_property_id_list[index];
-			SetDlgItemText(hEditPropertyDlg, IDE_EDIT_ID_LIST_VALUE, ToString<size_t>(id).c_str());
-		}
-	}
-
-	if (isIDListSelectionValid())
-	{
-		EnableWindow(list_delete, true);
-		EnableWindow(list_add, true);
-		EnableWindow(list_text, true);
-
-		// Enable or disable buttons based on current selection in the list view
-		if (temp_property_id_list.size() > 1)
-		{
-			if (current_id_list_selection > 0)
-			{
-				EnableWindow(list_move_up, true);
-
-				if (current_id_list_selection < temp_property_id_list.size() - 1)
-					EnableWindow(list_move_down, true);
-				else
-					EnableWindow(list_move_down, false);
-			}
-
-			if (current_id_list_selection == 0)
-			{
-				EnableWindow(list_move_up, false);
-
-				if (temp_property_id_list.size() > 1)
-					EnableWindow(list_move_down, true);
-			}
-		}
-	}
-	else
-	{
-		EnableWindow(list_delete, false);
-		EnableWindow(list_move_up, false);
-		EnableWindow(list_move_down, false);
-		EnableWindow(list_add, false);
-		EnableWindow(list_text, false);
-	}
-}
-
-vector<size_t>& EditorApplication::getCurrentPropertyIDList()
-{
-	return temp_property_id_list;
-}
-
-bool EditorApplication::isIDListSelectionValid()
-{
-	return current_id_list_selection > -1 && current_id_list_selection < temp_property_id_list.size() && temp_property_id_list.size();
-}
-
-INT_PTR CALLBACK EditIdListCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
-{
-	HWND list_view = GetDlgItem(hDlg, IDL_EDIT_ID_LIST_LIST);
-	int index = ListView_GetNextItem(list_view, -1, LVIS_SELECTED | LVIS_FOCUSED);
-	editor_application->updateIDListSelection(index);
-
-	switch (msg)
-	{
-	case WM_INITDIALOG:
-		return true;
-
-	case WM_CLOSE:
-		DestroyWindow(hDlg);
-		editor_application->openQueryTargetMode(false);
-		editor_application->clearEditPropertyGUI();
-		return true;
-
-	case WM_COMMAND:
-		if (HIWORD(wParam) == EN_CHANGE)
-		{
-			if (LOWORD(wParam) == IDE_EDIT_ID_LIST_VALUE)
-			{
-				if (editor_application->isIDListSelectionValid())
-				{
-					size_t id = GetDlgItemFloat(hDlg, IDE_EDIT_ID_LIST_VALUE);
-					string id_string = ToString<size_t>(id);
-					char buffer[128];
-					strcpy(buffer, id_string.c_str());
-
-					ListView_SetItemText(list_view, index, 0, (char*)buffer);
-					editor_application->getCurrentPropertyIDList()[index] = id;
-					editor_application->setTargetName(id, true);
-				}
-			}
-		}
-
-		switch (LOWORD(wParam))
-		{
-		case IDB_EDIT_ID_LIST_CREATE:
-			editor_application->addIDToList(0);
-			editor_application->updateEditPropertyIDList(editor_application->getCurrentPropertyIDList());
-			break;
-
-		case IDB_EDIT_ID_LIST_DELETE:
-			editor_application->removeIDFromList(index);
-			editor_application->updateEditPropertyIDList(editor_application->getCurrentPropertyIDList());
-			break;
-
-		case IDB_EDIT_ID_LIST_MOVE_UP:
-			editor_application->moveID(index, true);
-			break;
-
-		case IDB_EDIT_ID_LIST_MOVE_DOWN:
-			editor_application->moveID(index, false);
-			break;
-
-		case IDB_EDIT_ID_LIST_GO_TO_TARGET:
-		{
-			size_t id = GetDlgItemFloat(hDlg, IDE_EDIT_ID_LIST_VALUE);
-			LibGens::Object* obj = editor_application->getCurrentLevel()->getLevel()->getObjectByID(id);
-			if (obj)
-			{
-				editor_application->clearSelection();
-				ObjectNode* obj_node = editor_application->getObjectNodeManager()->findObjectNode(obj);
-				if (obj_node)
-				{
-					SendMessage(hDlg, WM_CLOSE, 0, 0);
-					editor_application->selectNode(obj_node);
-					editor_application->updateSelection();
-					return true;
-				}
-			}
-			break;
-		}
-		break;
-
-		case IDC_EDIT_ID_LIST_ADD_FROM_VIEWPORT:
-			editor_application->openQueryTargetMode(IsDlgButtonChecked(hDlg, IDC_EDIT_ID_LIST_ADD_FROM_VIEWPORT));
-			break;
-
-		case IDCANCEL:
-			editor_application->revertEditProperty();
-			SendMessage(hDlg, WM_CLOSE, 0, 0);
-			return true;
-
-		case IDOK:
-			editor_application->openQueryTargetMode(false);
-			editor_application->updateEditPropertyIDList(editor_application->getCurrentPropertyIDList());
-			editor_application->confirmEditProperty();
-			SendMessage(hDlg, WM_CLOSE, 0, 0);
-			return true;
-		}
-		break;
-	}
-
-	return false;
-}
-
-// Subclass the edit control with the main focus to detect when Enter or Escape is pressed
-LRESULT CALLBACK EditControlCallback(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) { 
-    switch (msg) { 
-        case WM_KEYDOWN: 
-            switch (wParam) { 
-                case VK_ESCAPE: 
-					if (editor_application->getEditPropertyDlg()) {
-						PostMessage(editor_application->getEditPropertyDlg(), WM_COMMAND, MAKEWPARAM(IDCANCEL, 0), 0L);
-					}
-                    return 0; 
-                case VK_RETURN: 
-					if (editor_application->getEditPropertyDlg()) {
-						PostMessage(editor_application->getEditPropertyDlg(), WM_COMMAND, MAKEWPARAM(IDOK, 0), 0L); 
-					}
-                    return 0; 
-            } 
-            break; 
- 
-        case WM_CHAR: 
-            switch (wParam) { 
-                case VK_TAB: 
-                case VK_ESCAPE: 
-                case VK_RETURN: 
-                    return 0; 
-            } 
-    } 
- 
-	return CallWindowProc(globalEditControlOldProc, hwnd, msg, wParam, lParam); 
-} 

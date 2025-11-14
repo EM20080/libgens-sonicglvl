@@ -3,6 +3,10 @@
 //============================================================================================================================================
 
 #include "Common.h"
+#include <SDL.h>
+#include "imgui.h"
+#include "imgui_impl_sdl2.h"
+#include "imgui_impl_dx9.h"
 
 #ifndef BASE_APPLICATION_H_INCLUDED
 #define BASE_APPLICATION_H_INCLUDED
@@ -20,8 +24,8 @@ public:
 
     virtual void go(void);
 
-	HWND getHwnd() {
-		return hwnd;
+	SDL_Window* getSDLWindow() {
+		return sdl_window;
 	}
 protected:
 	Ogre::Root *root;
@@ -33,7 +37,7 @@ protected:
     OIS::InputManager* input_manager;
     OIS::Mouse*    mouse;
     OIS::Keyboard* keyboard;
-	HWND hwnd;
+	SDL_Window* sdl_window;
 	string exe_path;
 	int screen_width;
 	int screen_height;
@@ -55,9 +59,12 @@ protected:
     virtual void windowResized(Ogre::RenderWindow* rw);
     virtual void windowClosed(Ogre::RenderWindow* rw);
 	virtual bool renderOneFrame();
+	virtual void handleSDLEvent(const SDL_Event& event);
+	virtual void initializeImGui();
+	virtual void shutdownImGui();
+	virtual void renderImGui();
+	virtual void renderImGuiContent() {}
 
 };
-
-LRESULT APIENTRY SubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 #endif

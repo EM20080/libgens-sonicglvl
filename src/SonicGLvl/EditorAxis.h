@@ -178,6 +178,11 @@ class EditorAxis {
 		bool isTranslationSnap() {
 			return translation_snap;
 		}
+
+		void resetState() {
+			holding = false;
+			current_axis = -1;
+		}
 };
 
-#endif
+#endif#endif

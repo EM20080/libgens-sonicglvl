@@ -29,12 +29,14 @@
 #ifndef COMMON_H_INCLUDED
 #define COMMON_H_INCLUDED
 
+#include <SDL.h>
+
 #define LOG_MSG(x)                 Ogre::LogManager::getSingletonPtr()->logMessage(x)
-#define SHOW_MSG(x)                MessageBox(NULL, x, "Info", MB_OK)
-#define CONFIRM_MSG(x)             MessageBox(NULL, x, "Info", MB_YESNO)
-#define ERROR_MSG(x)               MessageBox(NULL, x, "Error", MB_ICONERROR)
-#define WARNING_MSG(x)             MessageBox(NULL, x, "Warning", MB_ICONWARNING)
-#define INFO_MSG(x)                MessageBox(NULL, x, "Info", MB_ICONINFORMATION)
+#define SHOW_MSG(x)                SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Info", x, NULL)
+#define CONFIRM_MSG(x)             (SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Info", x, NULL), IDYES)
+#define ERROR_MSG(x)               SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", x, NULL)
+#define WARNING_MSG(x)             SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_WARNING, "Warning", x, NULL)
+#define INFO_MSG(x)                SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Info", x, NULL)
 #define GENERAL_MESH_GROUP         "General"
 #define PREVIEW_MESH_GROUP         "Preview"
 #define EDITOR_NODE_BINDING        "EditorNodePtr"
@@ -70,7 +72,5 @@ void quaternionToEulerIntsZXY(Ogre::Quaternion rotation, unsigned int &rot_x_int
 
 void destroyAllAttachedMovableObjects(Ogre::SceneNode* node, bool unload_resource=false);
 void destroySceneNode(Ogre::SceneNode* node, bool unload_resource=false);
-
-float GetDlgItemFloat(HWND hDlg, int idDlgItem);
 
 #endif

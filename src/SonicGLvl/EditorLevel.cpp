@@ -243,13 +243,24 @@ void EditorLevel::unpackTerrain() {
 		main_add_filename = folder + SONICGLVL_LEVEL_ADDITIONAL_FOLDER + "/" + geometry_name + "/" + SONICGLVL_LEVEL_PACKED_STAGE_ADD;
 	}
 
+	if (!LibGens::File::check(main_filename)) {
+		printf("Error: Terrain file not found: %s\n", main_filename.c_str());
+		return;
+	}
+
 	LibGens::ArPack *stage_data_ar_pack=new LibGens::ArPack(main_filename);
 	printf("Opened %s\n", main_filename.c_str());
-	LibGens::ArPack *stage_add_data_ar_pack=new LibGens::ArPack(main_add_filename);
-	has_additional_gi = stage_add_data_ar_pack->getFileCount() != 0;
-	printf("Opened %s\n", main_add_filename.c_str());
-	stage_data_ar_pack->merge(stage_add_data_ar_pack);
-	printf("Merged AR Packs\n");
+	
+	if (LibGens::File::check(main_add_filename)) {
+		LibGens::ArPack *stage_add_data_ar_pack=new LibGens::ArPack(main_add_filename);
+		has_additional_gi = stage_add_data_ar_pack->getFileCount() != 0;
+		printf("Opened %s\n", main_add_filename.c_str());
+		stage_data_ar_pack->merge(stage_add_data_ar_pack);
+		printf("Merged AR Packs\n");
+	} else {
+		printf("Warning: Stage-Add file not found: %s\n", main_add_filename.c_str());
+		has_additional_gi = false;
+	}
 
 	XXH128_hash_t hash = stage_data_ar_pack->computeHash();
 	bool unpack=!XXH128_isEqual(hash, terrain_hash);

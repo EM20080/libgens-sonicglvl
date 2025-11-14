@@ -35,19 +35,17 @@
 #include <SdkCameraMan.h>
 #include <fbxsdk.h>
 #include <fbxsdk/fileio/fbxiosettings.h>
-#include <commdlg.h>
-#include <commctrl.h>
+#include <SDL.h>
+#define IMGUI_DEFINE_MATH_OPERATORS
+#include <imgui.h>
+#include <imgui_impl_sdl2.h>
+#include <imgui_impl_dx9.h>
 #include <thread>
 #include <mutex>
 #include <direct.h>
 #include "Havok.h"
 
-#if defined _M_IX86
-#pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='x86' publicKeyToken='6595b64144ccf1df' language='*'\"")
-#elif defined _M_IA64
-#pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='ia64' publicKeyToken='6595b64144ccf1df' language='*'\"")
-#elif defined _M_X64
-#pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='amd64' publicKeyToken='6595b64144ccf1df' language='*'\"")
-#else
-#pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#ifdef _WIN32
+#include <Windows.h>
+#include <commdlg.h>
 #endif

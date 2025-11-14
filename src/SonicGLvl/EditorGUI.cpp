@@ -18,14 +18,16 @@
 //=========================================================================
 
 #include "EditorApplication.h"
+#include <SDL.h>
+#include <Windows.h>
+#include <commdlg.h>
 
 
 void EditorApplication::copySelection() {
-	if(OpenClipboard(hwnd)) {
-		// Create and populate XML
-		TiXmlDocument doc;
+	// Create and populate XML
+	TiXmlDocument doc;
 
-		TiXmlElement *root=new TiXmlElement(LIBGENS_OBJECT_SET_ROOT);
+	TiXmlElement *root=new TiXmlElement(LIBGENS_OBJECT_SET_ROOT);
 
 		// Retrieve Object pointers from Object Nodes
 		for (list<EditorNode *>::iterator it=selected_nodes.begin(); it!=selected_nodes.end(); it++) {
@@ -46,23 +48,12 @@ void EditorApplication::copySelection() {
 		printer.SetIndent("  ");
 		doc.Accept(&printer);
 
-		// Clipboard Routine
-		HGLOBAL clipbuffer;
-		char * buffer;
-		EmptyClipboard();
-		clipbuffer = GlobalAlloc(GMEM_ZEROINIT, printer.Size()+1);
-		buffer = (char*)GlobalLock(clipbuffer);
-		strcpy(buffer, printer.CStr());
-		GlobalUnlock(clipbuffer);
-		SetClipboardData(CF_TEXT, clipbuffer);
-		CloseClipboard();
-	}
+		SDL_SetClipboardText(printer.CStr());
 }
 
 void EditorApplication::pasteSelection() {
-	char *buffer;
-	if(OpenClipboard(hwnd)) {
-		buffer = (char*)GetClipboardData(CF_TEXT);
+	if(SDL_HasClipboardText()) {
+		char *buffer = SDL_GetClipboardText();
 
 		TiXmlDocument doc;
 		doc.Parse((const char*) buffer, 0, TIXML_ENCODING_UTF8);
@@ -94,9 +85,8 @@ void EditorApplication::pasteSelection() {
 		}
 
 		overrideObjectsPalettePreview(paste_objects);
+		SDL_free(buffer);
 	}
-
-	CloseClipboard(); 
 }
 
 void EditorApplication::openLevelGUI() {
@@ -105,110 +95,79 @@ void EditorApplication::openLevelGUI() {
 		return;
 	}
 
-	char *filename = (char *) malloc(1024);
-	strcpy(filename, "");
-
-	OPENFILENAME    ofn;
-    memset(&ofn, 0, sizeof(ofn));
-	ofn.lStructSize     = sizeof(ofn);
-	ofn.lpstrFilter     = "Level File(#level.ar.00)\0#*.ar.00\0";
-	ofn.nFilterIndex    = 1;
-	ofn.lpstrFile       = filename;
-    ofn.nMaxFile        = 1024;
-    ofn.lpstrTitle      = "Choose the Level Data file";
-    ofn.Flags           = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST |
-                          OFN_LONGNAMES     | OFN_EXPLORER |
-                          OFN_HIDEREADONLY  | OFN_ENABLESIZING;
-
-    if(GetOpenFileName(&ofn)) {
-		chdir(exe_path.c_str());
-		openLevel(ToString(filename));
+	HWND hwnd = NULL;
+	window->getCustomAttribute("WINDOW", &hwnd);
+	
+	OPENFILENAMEA ofn;
+	char szFile[260] = {0};
+	ZeroMemory(&ofn, sizeof(ofn));
+	ofn.lStructSize = sizeof(ofn);
+	ofn.hwndOwner = hwnd;
+	ofn.lpstrFile = szFile;
+	ofn.nMaxFile = sizeof(szFile);
+	ofn.lpstrFilter = "#Level.ar.00\0*.ar.00;\0All Files\0*.*\0";
+	ofn.nFilterIndex = 1;
+	ofn.lpstrFileTitle = NULL;
+	ofn.nMaxFileTitle = 0;
+	ofn.lpstrInitialDir = NULL;
+	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
+	
+	if (GetOpenFileNameA(&ofn) == TRUE) {
+		openLevel(string(ofn.lpstrFile));
 	}
-
-	chdir(exe_path.c_str());
-    free(filename);
 }
 
 
 void EditorApplication::openLostWorldLevelGUI() {
-	char *directory = (char *) malloc(1024);
-	strcpy(directory, "enter in the directory and press Save");
-
-	OPENFILENAME    ofdn;
-	memset(&ofdn, 0, sizeof(ofdn));
-	ofdn.lStructSize     = sizeof(ofdn);
-	ofdn.lpstrFilter     = "*\0";
-	ofdn.nFilterIndex    = 1;
-	ofdn.lpstrFile       = directory;
-	ofdn.nMaxFile        = 1024;
-	ofdn.lpstrTitle      = "Choose the Sonic Lost World level Directory";
-	ofdn.Flags           = OFN_PATHMUSTEXIST |
-						OFN_LONGNAMES     | OFN_EXPLORER |
-						OFN_HIDEREADONLY  | OFN_ENABLESIZING;
-
-	if (GetSaveFileName(&ofdn)) {
-		int last_slash=0;
-        for (size_t i=0; i<strlen(directory); i++) {
-			if (directory[i] == '\\') last_slash = i;
-        }
-        directory[last_slash] = '\0';
-		chdir(exe_path.c_str());
-
-		openLostWorldLevel(ToString(directory));
-	}
-	free(directory);
-
-	chdir(exe_path.c_str());
+	// TODO: Implement native folder dialog with SDL2
+	LOG_MSG("Open Lost World level dialog - to be implemented with ImGui file browser");
 }
 
 void EditorApplication::exportSceneFBXGUI() {
-	char *filename = (char *) malloc(1024);
-	strcpy(filename, "");
-
-	OPENFILENAME    ofn;
-    memset(&ofn, 0, sizeof(ofn));
-	ofn.lStructSize     = sizeof(ofn);
-	ofn.lpstrFilter     = "FBX File(*.fbx)\0*.fbx\0";
-	ofn.nFilterIndex    = 1;
-	ofn.lpstrFile       = filename;
-    ofn.nMaxFile        = 1024;
-    ofn.lpstrTitle      = "Save FBX file to...";
-    ofn.Flags           = OFN_PATHMUSTEXIST |
-                          OFN_LONGNAMES     | OFN_EXPLORER |
-                          OFN_HIDEREADONLY  | OFN_ENABLESIZING;
-
-    if(GetOpenFileName(&ofn)) {
-		chdir(exe_path.c_str());
-		exportSceneFBX(ToString(filename));
+	HWND hwnd = NULL;
+	window->getCustomAttribute("WINDOW", &hwnd);
+	
+	OPENFILENAMEA ofn;
+	char szFile[260] = {0};
+	ZeroMemory(&ofn, sizeof(ofn));
+	ofn.lStructSize = sizeof(ofn);
+	ofn.hwndOwner = hwnd;
+	ofn.lpstrFile = szFile;
+	ofn.nMaxFile = sizeof(szFile);
+	ofn.lpstrFilter = "FBX Files\0*.fbx\0All Files\0*.*\0";
+	ofn.nFilterIndex = 1;
+	ofn.lpstrFileTitle = NULL;
+	ofn.nMaxFileTitle = 0;
+	ofn.lpstrInitialDir = NULL;
+	ofn.lpstrDefExt = "fbx";
+	ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT | OFN_NOCHANGEDIR;
+	
+	if (GetSaveFileNameA(&ofn) == TRUE) {
+		exportSceneFBX(string(ofn.lpstrFile));
 	}
-
-	chdir(exe_path.c_str());
-    free(filename);
 }
 
 void EditorApplication::importLevelTerrainFBXGUI() {
-	char *filename = (char *) malloc(1024);
-	strcpy(filename, "");
-
-	OPENFILENAME    ofn;
-    memset(&ofn, 0, sizeof(ofn));
-	ofn.lStructSize     = sizeof(ofn);
-	ofn.lpstrFilter     = "FBX(.fbx)\0*.fbx\0";
-	ofn.nFilterIndex    = 1;
-	ofn.lpstrFile       = filename;
-    ofn.nMaxFile        = 1024;
-    ofn.lpstrTitle      = "Choose the FBX file";
-    ofn.Flags           = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST |
-                          OFN_LONGNAMES     | OFN_EXPLORER |
-                          OFN_HIDEREADONLY  | OFN_ENABLESIZING;
-
-    if(GetOpenFileName(&ofn)) {
-		chdir(exe_path.c_str());
-		importLevelTerrainFBX(ToString(filename));
+	HWND hwnd = NULL;
+	window->getCustomAttribute("WINDOW", &hwnd);
+	
+	OPENFILENAMEA ofn;
+	char szFile[260] = {0};
+	ZeroMemory(&ofn, sizeof(ofn));
+	ofn.lStructSize = sizeof(ofn);
+	ofn.hwndOwner = hwnd;
+	ofn.lpstrFile = szFile;
+	ofn.nMaxFile = sizeof(szFile);
+	ofn.lpstrFilter = "FBX Files\0*.fbx\0All Files\0*.*\0";
+	ofn.nFilterIndex = 1;
+	ofn.lpstrFileTitle = NULL;
+	ofn.nMaxFileTitle = 0;
+	ofn.lpstrInitialDir = NULL;
+	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
+	
+	if (GetOpenFileNameA(&ofn) == TRUE) {
+		importLevelTerrainFBX(string(ofn.lpstrFile));
 	}
-
-	chdir(exe_path.c_str());
-    free(filename);
 }
 
 void EditorApplication::loadAllTerrain() {

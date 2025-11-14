@@ -288,6 +288,12 @@ bool EditorViewport::isMouseInLocalScreen(const OIS::MouseEvent &arg) {
 	return false;
 }
 
+bool EditorViewport::isMouseInViewport() {
+	// Simple check - assumes viewport fills window for now
+	// Could be enhanced to check actual viewport bounds
+	return true;
+}
+
 
 Ogre::Entity *EditorViewport::raycast(float raycast_x, float raycast_y, Ogre::RaySceneQuery *query, Ogre::Vector3 *output_point, Ogre::uint32 flags) {
 	Ogre::Ray ray = camera->getCameraToViewportRay(raycast_x, raycast_y);
@@ -388,21 +394,20 @@ void EditorViewport::onFocusLoss() {
 void EditorViewport::update(float delta_time) {
 	Ogre::Vector3 camera_panning_movement(0,0,0);
 
-	if (moving) {
-		float movement = panning_multiplier * delta_time;
-		if (speeding_up) movement *= 4.0f;
-		if (slowing_down) movement *= 0.25f;
-		
-		if (panning_left) camera_panning_movement.x = -movement;
-		if (panning_right) camera_panning_movement.x = movement;
-		if (panning_up) camera_panning_movement.y = movement / 1.5f;
-		if (panning_down) camera_panning_movement.y = -movement / 1.5f;
-		if (panning_backward) camera_panning_movement.z = movement;
-		if (panning_forward) camera_panning_movement.z = -movement;
-		
-		camera->moveRelative(camera_panning_movement);
-		camera_overlay->moveRelative(camera_panning_movement);
-	}
+	// WASD camera movement 
+	float movement = panning_multiplier * delta_time;
+	if (speeding_up) movement *= 4.0f;
+	if (slowing_down) movement *= 0.25f;
+	
+	if (panning_left) camera_panning_movement.x = -movement;
+	if (panning_right) camera_panning_movement.x = movement;
+	if (panning_up) camera_panning_movement.y = movement / 1.5f;
+	if (panning_down) camera_panning_movement.y = -movement / 1.5f;
+	if (panning_backward) camera_panning_movement.z = movement;
+	if (panning_forward) camera_panning_movement.z = -movement;
+	
+	camera->moveRelative(camera_panning_movement);
+	camera_overlay->moveRelative(camera_panning_movement);
 }
 
 
@@ -411,11 +416,20 @@ bool EditorViewport::mouseMoved(const OIS::MouseEvent &arg) {
 	float mouse_movement_y=arg.state.Y.rel;
 	float mouse_movement_z=arg.state.Z.rel;
 
-	if (dragging && zooming) {
+	// Right mouse button: rotate camera
+	if (moving) {
+		camera->yaw(Ogre::Degree(-mouse_movement_x * rotation_multiplier));
+		camera->pitch(Ogre::Degree(-mouse_movement_y * rotation_multiplier));
+	
+		camera_overlay->yaw(Ogre::Degree(-mouse_movement_x * rotation_multiplier));
+		camera_overlay->pitch(Ogre::Degree(-mouse_movement_y * rotation_multiplier));
+	}
+	// Middle mouse button drag functionality
+	else if (dragging && zooming) {
 		camera->moveRelative(Ogre::Vector3(0, 0, mouse_movement_y * zooming_multiplier));
 		camera_overlay->moveRelative(Ogre::Vector3(0, 0, mouse_movement_y * zooming_multiplier));
 	}
-	else if (moving || (dragging && rotating)) {
+	else if (dragging && rotating) {
 		camera->yaw(Ogre::Degree(-mouse_movement_x * rotation_multiplier));
 		camera->pitch(Ogre::Degree(-mouse_movement_y * rotation_multiplier));
 	

@@ -24,15 +24,6 @@
 #include "ObjectSet.h"
 
 void EditorApplication::updateObjectCategoriesGUI() {
-	SendDlgItemMessage(hLeftDlg, IDC_PALETTE_CATEGORY, CB_RESETCONTENT, (WPARAM)0, (LPARAM)0);
-
-	vector<LibGens::ObjectCategory *> categories=library->getCategories();
-
-	for (size_t i=0; i<categories.size(); i++) {
-		SendDlgItemMessage(hLeftDlg, IDC_PALETTE_CATEGORY, (UINT)CB_ADDSTRING, (WPARAM)0, (LPARAM)categories[i]->getName().c_str());
-	}
-
-	SendDlgItemMessage(hLeftDlg, IDC_PALETTE_CATEGORY, CB_SETCURSEL, (WPARAM)0, (LPARAM)0);
 }
 
 
@@ -40,48 +31,45 @@ void EditorApplication::updateObjectsPaletteGUI(int index) {
 	if (!library) return;
 
 	current_category_index = index;
+	current_category_search = "";
+	palette_search_results.clear();
+}
 
-	HWND hPaletteList=GetDlgItem(hLeftDlg, IDL_PALETTE_LIST);
+void EditorApplication::searchObjectsPalette(string search_name) {
+	if (!library) return;
+	if (current_category_search == search_name) return;
 
-	// Cleanup old palette
-	if(ListView_GetItemCount(hPaletteList)!=0) {
-		ListView_DeleteAllItems(hPaletteList);
-		while(ListView_DeleteColumn(hPaletteList,0) > 0);
-		ListView_SetItemCount(hPaletteList,0);
+	current_category_search = search_name;
+	if (search_name.empty())
+	{
+		updateObjectsPaletteGUI(current_category_index);
+		return;
 	}
 
-	// Create new palette
-	LibGens::ObjectCategory *object_category=library->getCategoryByIndex(current_category_index);
-	if (object_category) {
-		vector<LibGens::Object *> objects=object_category->getTemplates();
+	palette_search_results.clear();
 
-		char temp[128];
-		for (size_t i=0; i<objects.size(); i++) {
-			LV_ITEM Item;
-			Item.mask = LVIF_TEXT;
-			strcpy(temp, objects[i]->getName().c_str());
-			Item.pszText = temp;
-			Item.cchTextMax = strlen(temp);            
-			Item.iSubItem = 0;                           
-			Item.lParam = (LPARAM) NULL;                   
-			Item.iItem = ListView_GetItemCount(hPaletteList); 
-			ListView_InsertItem(hPaletteList, &Item);
+	for (auto object_category : library->getCategories())
+	{
+		for (auto object : object_category->getTemplates())
+		{
+			string object_name = object->getName();
+			string search_lower = search_name;
+			std::transform(object_name.begin(), object_name.end(), object_name.begin(), [](unsigned char c) { return std::tolower(c); });
+			std::transform(search_lower.begin(), search_lower.end(), search_lower.begin(), [](unsigned char c) { return std::tolower(c); });
+
+			if (object_name.find(search_lower) != string::npos)
+			{
+				palette_search_results.push_back(object);
+			}
 		}
 	}
+
+	sort(palette_search_results.begin(), palette_search_results.end(), 
+		[](LibGens::Object* a, LibGens::Object* b) { return a->getName() < b->getName(); });
 }
 
 
 void EditorApplication::updateHelpWithObjectGUI(LibGens::Object *object) {
-	string help_name="";
-	string help_description="";
-
-	if (object) {
-		help_name = object->getName();
-		help_description = object->queryExtraName(OBJECT_NODE_EXTRA_DESCRIPTION);
-	}
-
-	SetDlgItemText(hLeftDlg, IDG_HELP_GROUP, help_name.c_str());
-	SetDlgItemText(hLeftDlg, IDT_HELP_DESCRIPTION, help_description.c_str());
 }
 
 void EditorApplication::updateObjectsPaletteSelection(int index) {
@@ -89,14 +77,20 @@ void EditorApplication::updateObjectsPaletteSelection(int index) {
 
 	if (index < 0) {
 		current_palette_selection = NULL;
+		return;
 	}
-	else {
-		LibGens::ObjectCategory *object_category=library->getCategoryByIndex(current_category_index);
-	
-		if (object_category) {
-			LibGens::Object *target_selection=object_category->getTemplateByIndex(index);
-			current_palette_selection = target_selection;
+
+	if (!current_category_search.empty()) {
+		if (index >= 0 && index < (int)palette_search_results.size()) {
+			current_palette_selection = palette_search_results[index];
 		}
+		return;
+	}
+
+	LibGens::ObjectCategory *object_category=library->getCategoryByIndex(current_category_index);
+	if (object_category) {
+		LibGens::Object *target_selection=object_category->getTemplateByIndex(index);
+		current_palette_selection = target_selection;
 	}
 }
 
@@ -106,7 +100,6 @@ void EditorApplication::updateObjectsPalettePreview() {
 		closeEditPropertyGUI();
 		clearObjectsPalettePreview();
 
-		// Create Object Previewing Node
 		if (current_palette_selection) {
 			current_palette_selection->setPosition(LibGens::Vector3(LIBGENS_AABB_MAX_START, LIBGENS_AABB_MAX_START, LIBGENS_AABB_MAX_START));
 
@@ -163,14 +156,12 @@ void EditorApplication::mouseMovedObjectsPalettePreview(const OIS::MouseEvent &a
 		else raycast_point.z += placement_grid_snap - grid_offset;
 	}
 
-	// Calculate current preview's center
 	Ogre::Vector3 center=Ogre::Vector3::ZERO;
 	for (list<ObjectNode *>::iterator it=current_palette_nodes.begin(); it!=current_palette_nodes.end(); it++) {
 		center += (*it)->getPosition();
 	}
 	center /= current_palette_nodes.size();
 
-	// Translate all nodes from center of the list
 	Ogre::Vector3 translate = raycast_point - center;
 	for (list<ObjectNode *>::iterator it=current_palette_nodes.begin(); it!=current_palette_nodes.end(); it++) {
 		(*it)->translate(translate);
@@ -180,7 +171,6 @@ void EditorApplication::mouseMovedObjectsPalettePreview(const OIS::MouseEvent &a
 
 void EditorApplication::mousePressedObjectsPalettePreview(const OIS::MouseEvent &arg, OIS::MouseButtonID id) {
 	if (id == OIS::MB_Left) {
-		// Update nodes to be under the mouse
 		mouseMovedObjectsPalettePreview(arg);
 		clearSelection();
 
@@ -250,9 +240,7 @@ void EditorApplication::clearObjectsPalettePreview() {
 
 void EditorApplication::clearObjectsPalettePreviewGUI() {
 	clearObjectsPalettePreview();
-	ListView_SetItemState(GetDlgItem(hLeftDlg, IDL_PALETTE_LIST), -1, 0, LVIS_SELECTED | LVIS_FOCUSED);
-
-	// Refresh selection so the help text gets fixed up when quitting placement mode
+	current_palette_selection = NULL;
 	current_object_list_properties.clear();
 	updateSelection();
 }
@@ -268,53 +256,204 @@ bool EditorApplication::isRegularMode() {
 	return regular_mode;
 }
 
-
-INT_PTR CALLBACK LeftBarCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
-	int list_view_index = ListView_GetNextItem(GetDlgItem(hDlg, IDL_PALETTE_LIST), -1, LVIS_SELECTED | LVIS_FOCUSED);
-	editor_application->updateObjectsPaletteSelection(list_view_index);
-	int selection_index=0;
-
-	switch(msg) {
-		case WM_INITDIALOG:
-			return true;
-
-		case WM_ACTIVATE:
-			return false;
-
-		case WM_DESTROY:
-			return true;
-
-		case WM_CLOSE:
-			return false;
-
-		case WM_NOTIFY:
-			switch(LOWORD(wParam)) {
-				case IDL_PROPERTIES_LIST:
-					if (((LPNMHDR)lParam)->code == NM_CLICK) {
-						selection_index = SendMessage(GetDlgItem(hDlg, IDL_PROPERTIES_LIST), LVM_GETNEXTITEM, -1, LVNI_SELECTED);
-						editor_application->updateObjectPropertyIndex(selection_index);
-						return true;
-					}
-
-					if (((LPNMHDR)lParam)->code == NM_DBLCLK) {
-						selection_index = SendMessage(GetDlgItem(hDlg, IDL_PROPERTIES_LIST), LVM_GETNEXTITEM, -1, LVNI_SELECTED);
-						editor_application->editObjectPropertyIndex(selection_index);
-						return true;
-					}
-					break;
+void EditorApplication::renderLeftPanel() {
+	float menu_bar_height = ImGui::GetFrameHeight();
+	float panel_height = (float)screen_height - menu_bar_height;
+	if (show_bottom_panel) {
+		panel_height -= 99.0f;
+	}
+	
+	ImGui::SetNextWindowPos(ImVec2(0, menu_bar_height), ImGuiCond_Always);
+	ImGui::SetNextWindowSize(ImVec2(SONICGLVL_GUI_LEFT_WIDTH + 1, panel_height), ImGuiCond_Always);
+	ImGui::SetNextWindowBgAlpha(0.95f);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+	if (ImGui::Begin("Objects & Properties", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse)) {
+		if (ImGui::CollapsingHeader("Object Palette", ImGuiTreeNodeFlags_DefaultOpen)) {
+			static char search_buffer[256] = "";
+			if (ImGui::InputTextWithHint("##Search", "Search objects...", search_buffer, 256)) {
+				searchObjectsPalette(search_buffer);
 			}
-
-		case WM_COMMAND:
-			if(HIWORD(wParam) == CBN_SELCHANGE) { 
-				int item_index = SendMessage((HWND) lParam, (UINT) CB_GETCURSEL, (WPARAM) 0, (LPARAM) 0);
-				if (LOWORD(wParam)==IDC_PALETTE_CATEGORY) {
-					editor_application->updateObjectsPaletteGUI(item_index);
-					break;
+            
+			if (library) {
+				vector<LibGens::ObjectCategory*> categories = library->getCategories();
+				if (!categories.empty()) {
+					const char* current_category_name = current_category_search.empty() ? 
+						categories[current_category_index]->getName().c_str() : "Search Results";
+                    
+					if (ImGui::BeginCombo("Category", current_category_name)) {
+						for (size_t i = 0; i < categories.size(); i++) {
+							bool is_selected = (current_category_index == i && current_category_search.empty());
+							if (ImGui::Selectable(categories[i]->getName().c_str(), is_selected)) {
+								search_buffer[0] = '\0';
+								updateObjectsPaletteGUI((int)i);
+							}
+							if (is_selected) {
+								ImGui::SetItemDefaultFocus();
+							}
+						}
+						ImGui::EndCombo();
+					}
+                    
+					if (ImGui::BeginListBox("##PaletteList", ImVec2(-FLT_MIN, 200))) {
+						if (!current_category_search.empty() && !palette_search_results.empty()) {
+							for (size_t i = 0; i < palette_search_results.size(); i++) {
+								bool is_selected = (current_palette_selection == palette_search_results[i]);
+								if (ImGui::Selectable(palette_search_results[i]->getName().c_str(), is_selected)) {
+									current_palette_selection = palette_search_results[i];
+									updateObjectsPalettePreview();
+								}
+								if (is_selected) {
+									ImGui::SetItemDefaultFocus();
+								}
+							}
+						} else {
+							LibGens::ObjectCategory* object_category = library->getCategoryByIndex(current_category_index);
+							if (object_category) {
+								vector<LibGens::Object*> objects = object_category->getTemplates();
+								for (size_t i = 0; i < objects.size(); i++) {
+									bool is_selected = (current_palette_selection == objects[i]);
+									if (ImGui::Selectable(objects[i]->getName().c_str(), is_selected)) {
+										updateObjectsPaletteSelection((int)i);
+										updateObjectsPalettePreview();
+									}
+									if (is_selected) {
+										ImGui::SetItemDefaultFocus();
+									}
+								}
+							}
+						}
+						ImGui::EndListBox();
+					}
 				}
 			}
-
-			break;
+            
+			ImGui::Checkbox("Cloning Mode", &palette_cloning_mode); // This is gonna be where if you place an object, put params, then place the same object again it will copy parameters off the other.
+		}
+        
+		if (ImGui::CollapsingHeader("Object Properties", ImGuiTreeNodeFlags_DefaultOpen)) {
+			float item_height = ImGui::GetTextLineHeightWithSpacing();
+			float list_height = std::min((float)current_properties_names.size() * item_height + 4.0f, 200.0f);
+			if (ImGui::BeginListBox("##PropertiesList", ImVec2(-FLT_MIN, list_height))) {
+				for (size_t i = 0; i < current_properties_names.size(); i++) {
+					string property_name = current_properties_names[i];
+					string display_name = property_name;
+					LibGens::ObjectElementType type = LibGens::OBJECT_ELEMENT_BOOL;
+					
+					if (i < current_properties_types.size()) {
+						type = current_properties_types[i];
+						if (!current_object_list_properties.empty() && type != LibGens::OBJECT_ELEMENT_BOOL) {
+							LibGens::Object* first_obj = current_object_list_properties.front();
+							LibGens::ObjectElement* element = first_obj->getElement(property_name);
+							if (element) {
+								switch(type) {
+									case LibGens::OBJECT_ELEMENT_INTEGER: {
+										LibGens::ObjectElementInteger* int_elem = (LibGens::ObjectElementInteger*)element;
+										display_name += ": " + ToString(int_elem->value);
+										break;
+									}
+									case LibGens::OBJECT_ELEMENT_FLOAT: {
+										LibGens::ObjectElementFloat* float_elem = (LibGens::ObjectElementFloat*)element;
+										char buf[32];
+										snprintf(buf, sizeof(buf), ": %.2f", float_elem->value);
+										display_name += buf;
+										break;
+									}
+									case LibGens::OBJECT_ELEMENT_STRING: {
+										LibGens::ObjectElementString* str_elem = (LibGens::ObjectElementString*)element;
+										display_name += ": " + str_elem->value;
+										break;
+									}
+									case LibGens::OBJECT_ELEMENT_VECTOR: {
+										LibGens::ObjectElementVector* vec_elem = (LibGens::ObjectElementVector*)element;
+										char buf[64];
+										snprintf(buf, sizeof(buf), ": (%.1f, %.1f, %.1f)", vec_elem->value.x, vec_elem->value.y, vec_elem->value.z);
+										display_name += buf;
+										break;
+									}
+									default: break;
+								}
+							}
+						}
+					}
+					
+					bool is_selected = (current_property_index == (int)i);
+					
+					if (type == LibGens::OBJECT_ELEMENT_BOOL && !current_object_list_properties.empty()) {
+						LibGens::Object* first_obj = current_object_list_properties.front();
+						LibGens::ObjectElement* element = first_obj->getElement(property_name);
+						if (element) {
+							LibGens::ObjectElementBool* bool_elem = (LibGens::ObjectElementBool*)element;
+							bool value = bool_elem->value;
+							
+							if (ImGui::Selectable(property_name.c_str(), is_selected, 0, ImVec2(ImGui::GetContentRegionAvail().x - 30, 0))) {
+								current_property_index = (int)i;
+							}
+							
+							ImGui::SameLine(ImGui::GetContentRegionAvail().x - 10);
+							ImGui::PushID(i);
+							ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.15f, 0.15f, 0.15f, 1.0f));
+							ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.20f, 0.20f, 0.20f, 1.0f));
+							ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImVec4(0.25f, 0.25f, 0.25f, 1.0f));
+							ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0.70f, 0.70f, 0.70f, 1.0f));
+							if (ImGui::Checkbox("##boolval", &value)) {
+								if (!history_edit_property_wrapper) history_edit_property_wrapper = new HistoryActionWrapper();
+								current_property_index = (int)i;
+								updateEditPropertyBool(value);
+							}
+							ImGui::PopStyleColor(4);
+							ImGui::PopID();
+						} else {
+							if (ImGui::Selectable(display_name.c_str(), is_selected)) {
+								current_property_index = (int)i;
+							}
+						}
+					} else {
+						if (ImGui::Selectable(display_name.c_str(), is_selected)) {
+							current_property_index = (int)i;
+						}
+						if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) { // im not done yet.
+							show_properties_editor = true;
+							if (!history_edit_property_wrapper) history_edit_property_wrapper = new HistoryActionWrapper();
+						}
+					}
+					
+					if (is_selected) {
+						ImGui::SetItemDefaultFocus();
+					}
+				}
+				ImGui::EndListBox();
+			}
+            
+			if (!current_properties_names.empty() && current_property_index >= 0 && current_property_index < (int)current_properties_names.size()) {
+				if (ImGui::Button("Edit Property", ImVec2(-FLT_MIN, 0))) {
+					show_properties_editor = true;
+					if (!history_edit_property_wrapper) history_edit_property_wrapper = new HistoryActionWrapper();
+				}
+				
+				if (ImGui::BeginPopupContextWindow("PropertyContextMenu", ImGuiPopupFlags_MouseButtonRight | ImGuiPopupFlags_NoOpenOverItems)) {
+					ImGui::Text("Property: %s", current_properties_names[current_property_index].c_str());
+					ImGui::Separator();
+					if (ImGui::MenuItem("Edit...")) {
+						show_properties_editor = true;
+						if (!history_edit_property_wrapper) history_edit_property_wrapper = new HistoryActionWrapper();
+					}
+					if (current_properties_types[current_property_index] == LibGens::OBJECT_ELEMENT_VECTOR_LIST) {
+						if (ImGui::MenuItem("Add Vector")) {
+							addVectorToList();
+						}
+					}
+					if (current_properties_types[current_property_index] == LibGens::OBJECT_ELEMENT_ID_LIST) {
+						if (ImGui::MenuItem("Pick Target...")) {
+							openQueryTargetMode(true);
+						}
+					}
+					ImGui::EndPopup();
+				}
+			}
+		}
+		ImGui::TextWrapped("Help: Select objects from palette and place in level. Use properties panel to edit.");
 	}
-
-	return false;
+	ImGui::PopStyleVar(2);
+	ImGui::End();
 }

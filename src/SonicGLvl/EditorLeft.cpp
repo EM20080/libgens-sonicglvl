@@ -24,15 +24,6 @@
 #include "ObjectSet.h"
 
 void EditorApplication::updateObjectCategoriesGUI() {
-	SendDlgItemMessage(hLeftDlg, IDC_PALETTE_CATEGORY, CB_RESETCONTENT, (WPARAM)0, (LPARAM)0);
-
-	vector<LibGens::ObjectCategory *> categories=library->getCategories();
-
-	for (size_t i=0; i<categories.size(); i++) {
-		SendDlgItemMessage(hLeftDlg, IDC_PALETTE_CATEGORY, (UINT)CB_ADDSTRING, (WPARAM)0, (LPARAM)categories[i]->getName().c_str());
-	}
-
-	SendDlgItemMessage(hLeftDlg, IDC_PALETTE_CATEGORY, CB_SETCURSEL, (WPARAM)0, (LPARAM)0);
 }
 
 void EditorApplication::searchObjectsPalette(string search_name) {
@@ -46,84 +37,34 @@ void EditorApplication::searchObjectsPalette(string search_name) {
 		return;
 	}
 
-	HWND hPaletteList = GetDlgItem(hLeftDlg, IDL_PALETTE_LIST);
+	palette_search_results.clear();
 
-	// Cleanup old palette
-	if (ListView_GetItemCount(hPaletteList) != 0) {
-		ListView_DeleteAllItems(hPaletteList);
-		while (ListView_DeleteColumn(hPaletteList, 0) > 0);
-		ListView_SetItemCount(hPaletteList, 0);
-	}
-
-	vector<string> found_object_names;
-
-	// search palette with matching name
 	for (auto object_category : library->getCategories())
 	{
 		for (auto object : object_category->getTemplates())
 		{
 			string object_name = object->getName();
+			string search_lower = search_name;
 			std::transform(object_name.begin(), object_name.end(), object_name.begin(), [](unsigned char c) { return std::tolower(c); });
-			std::transform(search_name.begin(), search_name.end(), search_name.begin(), [](unsigned char c) { return std::tolower(c); });
+			std::transform(search_lower.begin(), search_lower.end(), search_lower.begin(), [](unsigned char c) { return std::tolower(c); });
 
-			if (object_name.find(search_name) != string::npos)
+			if (object_name.find(search_lower) != string::npos)
 			{
-				found_object_names.push_back(object->getName());
+				palette_search_results.push_back(object);
 			}
 		}
 	}
 
-	char temp[128];
-	sort(found_object_names.begin(), found_object_names.end());
-	for (string const& name : found_object_names)
-	{
-		LV_ITEM Item;
-		Item.mask = LVIF_TEXT;
-		strcpy(temp, name.c_str());
-		Item.pszText = temp;
-		Item.cchTextMax = strlen(temp);
-		Item.iSubItem = 0;
-		Item.lParam = (LPARAM)NULL;
-		Item.iItem = ListView_GetItemCount(hPaletteList);
-		ListView_InsertItem(hPaletteList, &Item);
-	}
-
-	// make combo box show blank
-	SendDlgItemMessage(hLeftDlg, IDC_PALETTE_CATEGORY, CB_SETCURSEL, -1, 0);
+	sort(palette_search_results.begin(), palette_search_results.end(), 
+		[](LibGens::Object* a, LibGens::Object* b) { return a->getName() < b->getName(); });
 }
 
 void EditorApplication::updateObjectsPaletteGUI(int index) {
 	if (!library) return;
 
 	current_category_index = index;
-
-	HWND hPaletteList=GetDlgItem(hLeftDlg, IDL_PALETTE_LIST);
-
-	// Cleanup old palette
-	if(ListView_GetItemCount(hPaletteList)!=0) {
-		ListView_DeleteAllItems(hPaletteList);
-		while(ListView_DeleteColumn(hPaletteList,0) > 0);
-		ListView_SetItemCount(hPaletteList,0);
-	}
-
-	// Create new palette
-	LibGens::ObjectCategory *object_category=library->getCategoryByIndex(current_category_index);
-	if (object_category) {
-		vector<LibGens::Object *> objects=object_category->getTemplates();
-
-		char temp[128];
-		for (size_t i=0; i<objects.size(); i++) {
-			LV_ITEM Item;
-			Item.mask = LVIF_TEXT;
-			strcpy(temp, objects[i]->getName().c_str());
-			Item.pszText = temp;
-			Item.cchTextMax = strlen(temp);            
-			Item.iSubItem = 0;                           
-			Item.lParam = (LPARAM) NULL;                   
-			Item.iItem = ListView_GetItemCount(hPaletteList); 
-			ListView_InsertItem(hPaletteList, &Item);
-		}
-	}
+	current_category_search = "";
+	palette_search_results.clear();
 
 	// Clear search text
 	SetDlgItemText(hLeftDlg, IDE_PALETTE_SEARCH, "");
@@ -668,3 +609,6 @@ INT_PTR CALLBACK LeftBarCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPar
 
 	return false;
 }
+
+// Legacy replaced with EditorObjectsPallete
+void EditorApplication::renderLeftPanel() {}

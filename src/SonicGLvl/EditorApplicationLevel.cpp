@@ -258,11 +258,12 @@ void EditorApplication::openLevel(string filename) {
 
 	current_level->loadTerrain(scene_manager);
 
-	Ogre::ResourceGroupManager::getSingleton().addResourceLocation(current_level->getTerrain()->getResourcesFolder(), "FileSystem");
+	if (current_level->getTerrain()) {
+		Ogre::ResourceGroupManager::getSingleton().addResourceLocation(current_level->getTerrain()->getResourcesFolder(), "FileSystem");
 
-	// Add Terrain Resources to the UV Animation Library
-	uv_animation_library->addFolder(current_level->getTerrain()->getResourcesFolder());
-	havok_enviroment->addFolder(current_level->getTerrain()->getResourcesFolder());
+		uv_animation_library->addFolder(current_level->getTerrain()->getResourcesFolder());
+		havok_enviroment->addFolder(current_level->getTerrain()->getResourcesFolder());
+	}
 
 	// Create the scene lights
 	LibGens::Light *direct_light=current_level->getDirectLight();

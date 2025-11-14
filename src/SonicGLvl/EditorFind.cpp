@@ -1,7 +1,5 @@
 #include "EditorApplication.h"
 
-INT_PTR CALLBACK findCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam);
-
 bool matchesQuery(string str1, string str2, bool exactly)
 {
 	// convert search query string and current object's name to lowercase
@@ -131,25 +129,22 @@ bool valueMatches(LibGens::Object *object, string element_name, string value_str
 
 void EditorApplication::openFindGUI()
 {
-	if (!hFindObjectDlg)
+	if (!show_find_dialog)
 	{
 		find_position = object_node_manager->getObjectNodes().begin();
-
-		hFindObjectDlg = CreateDialog(NULL, MAKEINTRESOURCE(IDD_FIND_DIALOG), hwnd, findCallback);
-		HWND main_control = GetDlgItem(hFindObjectDlg, IDE_FIND_VALUE);
-		HWND property_text = GetDlgItem(hFindObjectDlg, IDE_FIND_PROPERTY_VALUE);
-		HWND value_text = GetDlgItem(hFindObjectDlg, IDE_FIND_VALUE_VALUE);
-
-		EnableWindow(property_text, false);
-		EnableWindow(value_text, false);
-		SetFocus(main_control);
+		find_object_name[0] = '\0';
+		find_property_name[0] = '\0';
+		find_property_value[0] = '\0';
+		find_match_exactly = false;
+		find_with_filter = false;
+		find_select_all = false;
 	}
+	show_find_dialog = true;
 }
 
 void EditorApplication::closeFindGUI()
 {
-	if (hFindObjectDlg)
-		hFindObjectDlg = NULL;
+	show_find_dialog = false;
 }
 
 void EditorApplication::findNext(string obj_name, string param, string value)
@@ -157,7 +152,7 @@ void EditorApplication::findNext(string obj_name, string param, string value)
 	if (!obj_name.size()) return;
 
 	bool found = false;
-	bool exact = IsDlgButtonChecked(hFindObjectDlg, IDC_FIND_EXACTLY) ? true : false;
+	bool exact = find_match_exactly;
 
 	for (list<ObjectNode*>::iterator it = find_position; it != object_node_manager->getObjectNodes().end(); ++it)
 	{
@@ -203,7 +198,7 @@ void EditorApplication::findAll(string obj_name, string param, string value)
 	list<ObjectNode*> object_nodes = object_node_manager->getObjectNodes();
 	clearSelection();
 
-	bool exact = IsDlgButtonChecked(hFindObjectDlg, IDC_FIND_EXACTLY) ? true : false;
+	bool exact = find_match_exactly;
 
 	for (list<ObjectNode*>::iterator it = object_nodes.begin(); it != object_nodes.end(); ++it)
 	{
@@ -227,60 +222,44 @@ void EditorApplication::findAll(string obj_name, string param, string value)
 	updateSelection();
 }
 
-INT_PTR CALLBACK findCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
-{
-	switch (msg)
-	{
-	case WM_INITDIALOG:
-		return true;
+void EditorApplication::renderFindDialog() {
+	if (!show_find_dialog) return;
 
-	case WM_CLOSE:
-		DestroyWindow(hDlg);
-		editor_application->closeFindGUI();
-		return true;
-
-	case WM_COMMAND:
-		switch (LOWORD(wParam))
-		{
-		case IDB_FIND:
-		{
-			char name[1024] = "";
-			char property[1024] = "";
-			char value[1024] = "";
-			GetDlgItemText(hDlg, IDE_FIND_VALUE, name, 1024);
-
-			bool filtered = IsDlgButtonChecked(hDlg, IDC_FIND_FILTERED);
-			if (filtered)
-			{
-				GetDlgItemText(hDlg, IDE_FIND_PROPERTY_VALUE, property, 1024);
-				GetDlgItemText(hDlg, IDE_FIND_VALUE_VALUE, value, 1024);
+	ImVec2 center = ImVec2(ImGui::GetIO().DisplaySize.x * 0.5f, ImGui::GetIO().DisplaySize.y * 0.5f);
+	ImGui::SetNextWindowPos(center, ImGuiCond_FirstUseEver, ImVec2(0.5f, 0.5f));
+	ImGui::SetNextWindowSize(ImVec2(400, 300), ImGuiCond_FirstUseEver);
+	
+	if (ImGui::Begin("Find Object", &show_find_dialog, ImGuiWindowFlags_NoResize)) {
+		ImGui::InputTextWithHint("Object Name", "Enter object name...", find_object_name, 256);
+		
+		ImGui::Checkbox("Match Exactly", &find_match_exactly);
+		ImGui::Checkbox("Filter by Property", &find_with_filter);
+		
+		if (find_with_filter) {
+			ImGui::InputTextWithHint("Property Name", "Enter property name...", find_property_name, 256);
+			ImGui::InputTextWithHint("Property Value", "Enter property value...", find_property_value, 256);
+		}
+		
+		ImGui::Checkbox("Select All", &find_select_all);
+		
+		ImGui::Separator();
+		
+		if (ImGui::Button("Find")) {
+			string obj_name = find_object_name;
+			string property = find_with_filter ? find_property_name : "";
+			string value = find_with_filter ? find_property_value : "";
+			
+			if (find_select_all) {
+				findAll(obj_name, property, value);
+			} else {
+				findNext(obj_name, property, value);
 			}
-
-			if (!IsDlgButtonChecked(hDlg, IDC_FIND_ALL))
-				editor_application->findNext(name, property, value);
-			else
-				editor_application->findAll(name, property, value);
-
-			break;
 		}
-
-		case IDC_FIND_FILTERED:
-		{
-			bool enabled = IsDlgButtonChecked(hDlg, IDC_FIND_FILTERED);
-			HWND property_text = GetDlgItem(hDlg, IDE_FIND_PROPERTY_VALUE);
-			HWND value_text = GetDlgItem(hDlg, IDE_FIND_VALUE_VALUE);
-
-			EnableWindow(property_text, enabled);
-			EnableWindow(value_text, enabled);
-			break;
+		
+		ImGui::SameLine();
+		if (ImGui::Button("Close")) {
+			closeFindGUI();
 		}
-
-		case IDCLOSE:
-			SendMessage(hDlg, WM_CLOSE, 0, 0);
-			break;
-		}
-		break;
 	}
-
-	return false;
+	ImGui::End();
 }

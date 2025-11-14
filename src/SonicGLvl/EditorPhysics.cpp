@@ -19,66 +19,14 @@
 
 #include "EditorApplication.h"
 
-INT_PTR CALLBACK PhysicsEditorCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam);
-
 void EditorApplication::openPhysicsEditorGUI() {
-	if (!current_level) {
-		return;
-	}
-
-	if (!current_level->getLevel()) {
-		return;
-	}
-
-	if (!hPhysicsEditorDlg) {
-		hPhysicsEditorDlg = CreateDialog(NULL, MAKEINTRESOURCE(IDD_PHYSICS_EDITOR), hwnd, PhysicsEditorCallback);
-
-		// Create Collision List
-		HWND hCollisionList = GetDlgItem(hPhysicsEditorDlg, IDL_COLLISION_LIST);
-
-		LVCOLUMN Col;                                   
-		Col.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM;
-		Col.cx = 151;
-		Col.pszText = "Filename";
-		Col.cchTextMax = strlen(Col.pszText);
-		ListView_InsertColumn(hCollisionList, 0, &Col);
-
-		Col.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM;
-		Col.cx = 90;
-		Col.pszText = "Rigid Bodies";
-		Col.cchTextMax = strlen(Col.pszText);
-		ListView_InsertColumn(hCollisionList, 1, &Col);
-
-		ListView_SetExtendedListViewStyleEx(hCollisionList, LVS_EX_FULLROWSELECT | LVS_EX_CHECKBOXES, LVS_EX_FULLROWSELECT | LVS_EX_CHECKBOXES);
-
-		// Insert items into Collision List
-		list<LibGens::LevelCollisionEntry *> entries = current_level->getLevel()->getCollisionEntries();
-		for (list<LibGens::LevelCollisionEntry *>::iterator it=entries.begin(); it!=entries.end(); it++) {
-			addPhysicsEditorEntryGUI(*it);
-		}
-
-	}
-	SetFocus(hPhysicsEditorDlg);
+	if (!current_level) return;
+	if (!current_level->getLevel()) return;
+	show_physics_editor = true;
 }
 
 void EditorApplication::addPhysicsEditorEntryGUI(LibGens::LevelCollisionEntry *entry) {
-	char name_str[256];
-	char body_str[256];
-	HWND hCollisionList = GetDlgItem(hPhysicsEditorDlg, IDL_COLLISION_LIST);
-
-	LV_ITEM Item;
-	Item.mask = LVIF_TEXT;
-	strcpy(name_str, entry->name.c_str());
-	strcpy(body_str, "");
-
-	Item.pszText = name_str;
-	Item.cchTextMax = strlen(name_str);            
-	Item.iSubItem = 0;                           
-	Item.lParam = (LPARAM) NULL;                   
-	Item.iItem = ListView_GetItemCount(hCollisionList); 
-	ListView_InsertItem(hCollisionList, &Item);
-	ListView_SetItemText(hCollisionList, Item.iItem, 1, body_str);
-	ListView_SetCheckState(hCollisionList, Item.iItem, entry->rendering);
+	// No-op in ImGui path; rendering happens in renderPhysicsEditor()
 }
 
 void EditorApplication::importPhysicsEditorGUI() {
@@ -152,41 +100,38 @@ void EditorApplication::detectAndTagHavokPhysics(LibGens::HavokPhysicsCache *phy
 }
 
 void EditorApplication::clearPhysicsEditorGUI() {
-	hPhysicsEditorDlg = NULL;
+	show_physics_editor = false;
 }
+void EditorApplication::renderPhysicsEditor() {
+	if (!show_physics_editor) return;
+	if (!current_level || !current_level->getLevel()) return;
 
+	if (ImGui::Begin("Physics Editor", &show_physics_editor, ImGuiWindowFlags_NoResize)) {
+		if (ImGui::Button("Import Havok Physics")) {
+			importPhysicsEditorGUI();
+		}
+		ImGui::Separator();
 
-INT_PTR CALLBACK PhysicsEditorCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
-	int list_view_index = ListView_GetNextItem(GetDlgItem(hDlg, IDL_COLLISION_LIST), -1, LVIS_SELECTED | LVIS_FOCUSED);
-	//editor_application->updatePhysicsEditorIndex(list_view_index);
+		if (ImGui::BeginTable("CollisionEntries", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable)) {
+			ImGui::TableSetupColumn("Filename");
+			ImGui::TableSetupColumn("Visible");
+			ImGui::TableHeadersRow();
 
-	switch(msg) {
-		case WM_INITDIALOG:
-			return true;
-
-		case WM_CLOSE:
-			DestroyWindow(hDlg);
-			editor_application->clearPhysicsEditorGUI();
-			return true;
-
-		case WM_COMMAND:
-			switch(LOWORD(wParam)) {
-				case IDCANCEL:
-					SendMessage(hDlg, WM_CLOSE, 0, 0);
-					return true;
-
-				case IDB_IMPORT_PHYSICS:
-					editor_application->importPhysicsEditorGUI();
-					return true;
+			auto entries = current_level->getLevel()->getCollisionEntries();
+			for (auto* entry : entries) {
+				ImGui::TableNextRow();
+				ImGui::TableSetColumnIndex(0);
+				ImGui::TextUnformatted(entry->name.c_str());
+				ImGui::TableSetColumnIndex(1);
+				bool render = entry->rendering;
+				if (ImGui::Checkbox(("##vis_" + entry->name).c_str(), &render)) {
+					entry->rendering = render;
+				}
 			}
-
-			break;
-
-		case WM_NOTIFY:
-			return true;
+			ImGui::EndTable();
+		}
 	}
-	
-	return false;
+	ImGui::End();
 }
 
 

@@ -2,8 +2,6 @@
 #include "EditorNodeHistory.h"
 #include "ObjectNodeHistory.h"
 
-INT_PTR CALLBACK LookAtPointCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam);
-
 void EditorApplication::lookAt(EditorNode* node, int axis, Ogre::Vector3 direction)
 {
 	Ogre::Quaternion node_rotation = node->getRotation();
@@ -115,7 +113,7 @@ void EditorApplication::lookAtPoint(int axis, Ogre::Vector3 v)
 
 void EditorApplication::openLookAtPointGUI()
 {
-	if (!hLookAtPointDlg)
+	if (!show_look_at_dialog)
 	{
 		if (!selected_nodes.size()) return;
 		list<EditorNode*>::iterator it = selected_nodes.begin();
@@ -124,37 +122,28 @@ void EditorApplication::openLookAtPointGUI()
 		vector_node = new VectorNode(scene_manager);
 		vector_node->setPosition(position);
 
-		hLookAtPointDlg = CreateDialog(NULL, MAKEINTRESOURCE(IDD_LOOK_AT_POINT), hwnd, LookAtPointCallback);
-		SetDlgItemText(hLookAtPointDlg, IDE_LOOK_AT_X, ToString<float>(position.x).c_str());
-		SetDlgItemText(hLookAtPointDlg, IDE_LOOK_AT_Y, ToString<float>(position.y).c_str());
-		SetDlgItemText(hLookAtPointDlg, IDE_LOOK_AT_Z, ToString<float>(position.z).c_str());
-		SendDlgItemMessage(hLookAtPointDlg, IDR_LOOK_AT_AXIS_Z, BM_SETCHECK, (WPARAM)1, 0);
-		SetFocus(hLookAtPointDlg);
+		look_at_x = position.x;
+		look_at_y = position.y;
+		look_at_z = position.z;
+		look_at_axis = LIBGENS_MATH_AXIS_Z;
 
 		is_update_look_at_vector = true;
+		show_look_at_dialog = true;
 	}
 }
 
 void EditorApplication::closeLookAtPointGUI()
 {
-	if (hLookAtPointDlg)
+	if (show_look_at_dialog)
 	{
 		queryLookAtObject(false);
-		hLookAtPointDlg = NULL;
+		show_look_at_dialog = false;
 	}
 	delete vector_node;
 }
 
 void EditorApplication::updateLookAtVectorMode(bool mode_state) {
-	SendDlgItemMessage(hLookAtPointDlg, IDC_LOOK_AT_VIEWPORT, BM_SETCHECK, (WPARAM)mode_state, 0);
-
-	EnableWindow(GetDlgItem(hLookAtPointDlg, IDE_LOOK_AT_X), !mode_state);
-	EnableWindow(GetDlgItem(hLookAtPointDlg, IDE_LOOK_AT_Y), !mode_state);
-	EnableWindow(GetDlgItem(hLookAtPointDlg, IDE_LOOK_AT_Z), !mode_state);
-
-	EnableWindow(GetDlgItem(hLookAtPointDlg, IDS_LOOK_AT_X), !mode_state);
-	EnableWindow(GetDlgItem(hLookAtPointDlg, IDS_LOOK_AT_Y), !mode_state);
-	EnableWindow(GetDlgItem(hLookAtPointDlg, IDS_LOOK_AT_Z), !mode_state);
+	is_update_look_at_vector = mode_state;
 
 	if (mode_state) {
 		previous_selected_nodes = selected_nodes;
@@ -164,7 +153,6 @@ void EditorApplication::updateLookAtVectorMode(bool mode_state) {
 		selected_nodes.clear();
 
 		setEditorMode(EDITOR_NODE_QUERY_VECTOR);
-		SetFocus(hwnd);
 
 		look_at_vector_history->clear();
 
@@ -173,15 +161,6 @@ void EditorApplication::updateLookAtVectorMode(bool mode_state) {
 
 		updateSelection();
 		focusLookAtPointVector();
-
-		// Move window to the bottom right corner of the main window
-		RECT main_window_rect;
-		GetWindowRect(hwnd, &main_window_rect);
-		GetWindowRect(hLookAtPointDlg, &hLookAtPointDlg_old_rect);
-
-		LONG dlg_w = hLookAtPointDlg_old_rect.right - hLookAtPointDlg_old_rect.left;
-		LONG dlg_h = hLookAtPointDlg_old_rect.bottom - hLookAtPointDlg_old_rect.top;
-		MoveWindow(hLookAtPointDlg, main_window_rect.right - dlg_w - 15, main_window_rect.bottom - dlg_h - SONICGLVL_GUI_BOTTOM_HEIGHT - 15, dlg_w, dlg_h, true);
 	}
 	else {
 		for (list<EditorNode*>::iterator it = selected_nodes.begin(); it != selected_nodes.end(); it++) {
@@ -194,27 +173,21 @@ void EditorApplication::updateLookAtVectorMode(bool mode_state) {
 		}
 
 		setEditorMode(EDITOR_NODE_QUERY_OBJECT);
-		SetFocus(hLookAtPointDlg);
 
 		look_at_vector_history->clear();
 		updateSelection();
-
-		// Restore Window to old position
-		LONG dlg_w = hLookAtPointDlg_old_rect.right - hLookAtPointDlg_old_rect.left;
-		LONG dlg_h = hLookAtPointDlg_old_rect.bottom - hLookAtPointDlg_old_rect.top;
-		MoveWindow(hLookAtPointDlg, hLookAtPointDlg_old_rect.left, hLookAtPointDlg_old_rect.top, dlg_w, dlg_h, true);
 	}
 }
 
 void EditorApplication::updateLookAtVectorGUI()
 {
 	is_update_look_at_vector = false;
-	if (!vector_node || !hLookAtPointDlg) return;
+	if (!vector_node || !show_look_at_dialog) return;
 
 	Ogre::Vector3 position = vector_node->getPosition();
-	SetDlgItemText(hLookAtPointDlg, IDE_LOOK_AT_X, ToString<float>(position.x).c_str());
-	SetDlgItemText(hLookAtPointDlg, IDE_LOOK_AT_Y, ToString<float>(position.y).c_str());
-	SetDlgItemText(hLookAtPointDlg, IDE_LOOK_AT_Z, ToString<float>(position.z).c_str());
+	look_at_x = position.x;
+	look_at_y = position.y;
+	look_at_z = position.z;
 
 	is_update_look_at_vector = true;
 }
@@ -237,158 +210,57 @@ bool EditorApplication::isUpdateLookAtVector()
 
 void EditorApplication::queryLookAtObject(bool mode)
 {
-	SendDlgItemMessage(hLookAtPointDlg, IDC_LOOK_AT_OBJECT, BM_SETCHECK, (WPARAM)mode, 0);
-
-	if (mode)
-	{
-		is_pick_target_position = true;
-		SetFocus(hwnd);
-
-		RECT main_window_rect;
-		GetWindowRect(hwnd, &main_window_rect);
-		GetWindowRect(hLookAtPointDlg, &hLookAtPointDlg_old_rect);
-
-		LONG dlg_w = hLookAtPointDlg_old_rect.right - hLookAtPointDlg_old_rect.left;
-		LONG dlg_h = hLookAtPointDlg_old_rect.bottom - hLookAtPointDlg_old_rect.top;
-		MoveWindow(hLookAtPointDlg, main_window_rect.right - dlg_w - 15, main_window_rect.bottom - dlg_h - SONICGLVL_GUI_BOTTOM_HEIGHT - 15, dlg_w, dlg_h, true);
-	}
-	else
-	{
-		is_pick_target_position = false;
-		LONG dlg_w = hLookAtPointDlg_old_rect.right - hLookAtPointDlg_old_rect.left;
-		LONG dlg_h = hLookAtPointDlg_old_rect.bottom - hLookAtPointDlg_old_rect.top;
-		MoveWindow(hLookAtPointDlg, hLookAtPointDlg_old_rect.left, hLookAtPointDlg_old_rect.top, dlg_w, dlg_h, true);
-	}
+	is_pick_target_position = mode;
 }
 
-INT_PTR CALLBACK LookAtPointCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
-{
-	switch (msg)
-	{
-	case WM_INITDIALOG:
-		return true;
+void EditorApplication::renderLookAtDialog() {
+	if (!show_look_at_dialog) return;
 
-	case WM_CLOSE:
-		DestroyWindow(hDlg);
-		editor_application->closeLookAtPointGUI();
-		return true;
-
-	case WM_COMMAND:
-		if (HIWORD(wParam) == EN_CHANGE) {
-			if ((LOWORD(wParam) == IDE_LOOK_AT_X) || (LOWORD(wParam) == IDE_LOOK_AT_Y) || (LOWORD(wParam) == IDE_LOOK_AT_Z)) {
-				if (editor_application->isUpdateLookAtVector())
-				{
-					float value_x = 0.0f;
-					float value_y = 0.0f;
-					float value_z = 0.0f;
-
-					value_x = GetDlgItemFloat(hDlg, IDE_LOOK_AT_X);
-					value_y = GetDlgItemFloat(hDlg, IDE_LOOK_AT_Y);
-					value_z = GetDlgItemFloat(hDlg, IDE_LOOK_AT_Z);
-
-					editor_application->updateLookAtPointVectorNode(Ogre::Vector3(value_x, value_y, value_z));
-				}
+	if (ImGui::Begin("Look At Point", &show_look_at_dialog, ImGuiWindowFlags_NoResize)) {
+		ImGui::Text("Target Position:");
+		
+		if (ImGui::InputFloat("X##lookat", &look_at_x)) {
+			if (is_update_look_at_vector) {
+				updateLookAtPointVectorNode(Ogre::Vector3(look_at_x, look_at_y, look_at_z));
 			}
 		}
-
-		switch (LPARAM(wParam))
-		{
-		case IDC_LOOK_AT_VIEWPORT:
-		{
-			if (IsDlgButtonChecked(hDlg, IDC_LOOK_AT_OBJECT))
-				editor_application->queryLookAtObject(false);
-			
-			editor_application->updateLookAtVectorMode(IsDlgButtonChecked(hDlg, IDC_LOOK_AT_VIEWPORT));
-		}
-		break;
-
-		case IDC_LOOK_AT_OBJECT:
-		{
-			if (IsDlgButtonChecked(hDlg, IDC_LOOK_AT_VIEWPORT))
-				editor_application->updateLookAtVectorMode(false);
-
-			editor_application->queryLookAtObject(IsDlgButtonChecked(hDlg, IDC_LOOK_AT_OBJECT));
-		}
-		break;
-
-		case IDB_LOOK_AT_FOCUS:
-		{
-			if (IsDlgButtonChecked(hDlg, IDC_LOOK_AT_OBJECT))
-				editor_application->queryLookAtObject(IsDlgButtonChecked(hDlg, IDC_LOOK_AT_OBJECT));
-
-			editor_application->focusLookAtPointVector();
-		}
-		break;
-
-		case IDOK:
-		{
-			int axis;
-			if (IsDlgButtonChecked(hDlg, IDR_LOOK_AT_AXIS_X))
-				axis = LIBGENS_MATH_AXIS_X;
-			else if (IsDlgButtonChecked(hDlg, IDR_LOOK_AT_AXIS_Y))
-				axis = LIBGENS_MATH_AXIS_Y;
-			else
-				axis = LIBGENS_MATH_AXIS_Z;
-
-			float value_x = GetDlgItemFloat(hDlg, IDE_LOOK_AT_X);
-			float value_y = GetDlgItemFloat(hDlg, IDE_LOOK_AT_Y);
-			float value_z = GetDlgItemFloat(hDlg, IDE_LOOK_AT_Z);
-			Ogre::Vector3 position(value_x, value_y, value_z);
-
-			if (IsDlgButtonChecked(hDlg, IDC_LOOK_AT_VIEWPORT))
-				editor_application->updateLookAtVectorMode(false);
-
-			editor_application->lookAtPoint(axis, position);
-			editor_application->updateSelection();
-			SendMessage(hDlg, WM_CLOSE, NULL, NULL);
-		}
-		break;
-
-		case IDCANCEL:
-			SendMessage(hDlg, WM_CLOSE, NULL, NULL);
-			break;
-		}
-
-		break;
-
-	case WM_NOTIFY:
-		if ((LOWORD(wParam) == IDS_LOOK_AT_X) || (LOWORD(wParam) == IDS_LOOK_AT_Y) || (LOWORD(wParam) == IDS_LOOK_AT_Z)) {
-			if (((LPNMUPDOWN)lParam)->hdr.code == UDN_DELTAPOS) {
-				int delta = ((LPNMUPDOWN)lParam)->iDelta;
-
-				float value_x = 0.0f;
-				float value_y = 0.0f;
-				float value_z = 0.0f;
-
-				float spin_factor = 1.0;
-
-				value_x = GetDlgItemFloat(hDlg, IDE_LOOK_AT_X);
-				value_y = GetDlgItemFloat(hDlg, IDE_LOOK_AT_Y);
-				value_z = GetDlgItemFloat(hDlg, IDE_LOOK_AT_Z);
-
-				if (delta > 1)  delta = 1;
-				if (delta < -1) delta = -1;
-
-				if (LOWORD(wParam) == IDS_LOOK_AT_X) {
-					value_x += (float)-delta * spin_factor;
-					SetDlgItemText(hDlg, IDE_LOOK_AT_X, ToString(value_x).c_str());
-				}
-
-				if (LOWORD(wParam) == IDS_LOOK_AT_Y) {
-					value_y += (float)-delta * spin_factor;
-					SetDlgItemText(hDlg, IDE_LOOK_AT_Y, ToString(value_y).c_str());
-				}
-
-				if (LOWORD(wParam) == IDS_LOOK_AT_Z) {
-					value_z += (float)-delta * spin_factor;
-					SetDlgItemText(hDlg, IDE_LOOK_AT_Z, ToString(value_z).c_str());
-				}
-
-				editor_application->updateLookAtPointVectorNode(Ogre::Vector3(value_x, value_y, value_z));
+		
+		if (ImGui::InputFloat("Y##lookat", &look_at_y)) {
+			if (is_update_look_at_vector) {
+				updateLookAtPointVectorNode(Ogre::Vector3(look_at_x, look_at_y, look_at_z));
 			}
 		}
-		break;
+		
+		if (ImGui::InputFloat("Z##lookat", &look_at_z)) {
+			if (is_update_look_at_vector) {
+				updateLookAtPointVectorNode(Ogre::Vector3(look_at_x, look_at_y, look_at_z));
+			}
+		}
+		
+		ImGui::Separator();
+		
+		ImGui::Text("Forward Axis:");
+		ImGui::RadioButton("X Axis", &look_at_axis, LIBGENS_MATH_AXIS_X); ImGui::SameLine();
+		ImGui::RadioButton("Y Axis", &look_at_axis, LIBGENS_MATH_AXIS_Y); ImGui::SameLine();
+		ImGui::RadioButton("Z Axis", &look_at_axis, LIBGENS_MATH_AXIS_Z);
+		
+		ImGui::Separator();
+		
+		if (ImGui::Button("Focus on Point")) {
+			focusLookAtPointVector();
+		}
+		
+		if (ImGui::Button("Apply")) {
+			Ogre::Vector3 position(look_at_x, look_at_y, look_at_z);
+			lookAtPoint(look_at_axis, position);
+			updateSelection();
+			closeLookAtPointGUI();
+		}
+		
+		ImGui::SameLine();
+		if (ImGui::Button("Cancel")) {
+			closeLookAtPointGUI();
+		}
 	}
-
-	return false;
+	ImGui::End();
 }

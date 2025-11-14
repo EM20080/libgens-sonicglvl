@@ -56,19 +56,5 @@ void EditorApplication::toggleNodeVisibility(unsigned int flag) {
 
 
 void EditorApplication::updateVisibilityGUI() {
-	const int viewMenuPos=2;
-	HMENU hViewSubMenu=GetSubMenu(hMenu, viewMenuPos);
 
-	if (hViewSubMenu) {
-		const int showMenuPos=0;
-		HMENU hShowSubMenu=GetSubMenu(hViewSubMenu, showMenuPos);
-
-		if (hShowSubMenu) {
-			CheckMenuItem(hShowSubMenu, IMD_SHOW_OBJECTS, (configuration->checkVisibilityFlag(EDITOR_NODE_OBJECT) ? MF_CHECKED : MF_UNCHECKED));
-			CheckMenuItem(hShowSubMenu, IMD_SHOW_TERRAIN, (configuration->checkVisibilityFlag(EDITOR_NODE_TERRAIN) ? MF_CHECKED : MF_UNCHECKED));
-			CheckMenuItem(hShowSubMenu, IMD_SHOW_COLLISION, (configuration->checkVisibilityFlag(EDITOR_NODE_HAVOK) ? MF_CHECKED : MF_UNCHECKED));
-			CheckMenuItem(hShowSubMenu, IMD_SHOW_PATHS, (configuration->checkVisibilityFlag(EDITOR_NODE_PATH) ? MF_CHECKED : MF_UNCHECKED));
-			CheckMenuItem(hShowSubMenu, IMD_SHOW_GHOST, (configuration->checkVisibilityFlag(EDITOR_NODE_GHOST) ? MF_CHECKED : MF_UNCHECKED));
-		}
-	}
 }

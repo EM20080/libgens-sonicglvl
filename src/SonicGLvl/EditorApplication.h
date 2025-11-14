@@ -49,7 +49,8 @@
 #include "ObjectSet.h"
 #include "PipeClient.h"
 #include "TrajectoryNode.h"
-#include <shobjidl.h> 
+#include <SDL.h>
+#include <imgui.h>
 
 #ifndef EDITOR_APPLICATION_H_INCLUDED
 #define EDITOR_APPLICATION_H_INCLUDED
@@ -96,6 +97,7 @@
 #define SONICGLVL_MULTISETPARAM_MODE_MSP_ADD	 2
 
 extern int global_cursor_state;
+extern class EditorApplication *editor_application;
 
 extern Ogre::SceneNode *camera_marker_node;
 extern Ogre::SceneNode *camera_marker_tangent;
@@ -150,6 +152,7 @@ class EditorApplication : public BaseApplication {
 		EditorLevelDatabase *level_database;
 		EditorLevel *current_level;
 		string current_level_filename;
+		string exe_path;
 		map<LibGens::ObjectSet *, int> set_indices;
 		map<LibGens::ObjectSet *, bool> set_visibility;
 
@@ -234,40 +237,85 @@ class EditorApplication : public BaseApplication {
 		// Configuration
 		EditorConfiguration *configuration;
 		
-		// WinAPI
-		HMENU hMenu;
-		HWND hLeftDlg;
-		HWND hBottomDlg;
-		HWND hEditPropertyDlg;
-
-		// Add new dialog handle for terrain info
-		HWND hTerrainInfoDlg;
-
-		RECT hEditPropertyDlg_old_rect;
-		RECT hLookAtPointDlg_old_rect;
-
-		HWND hMaterialEditorDlg;
-		HWND hPhysicsEditorDlg;
-		HWND hMaterialEditorPreviewDlg;
-		HWND hMultiSetParamDlg;
-		HWND hFindObjectDlg;
-		HWND hLookAtPointDlg;
+		// ImGui State
+		bool show_left_panel;
+		bool show_bottom_panel;
+		bool show_properties_editor;
+		bool show_material_editor;
+		bool show_physics_editor;
+		bool show_find_dialog;
+		bool show_look_at_dialog;
+		bool show_multiset_dialog;
+		bool show_terrain_info;
+		bool show_quick_overview;
+		
+		ImVec2 left_panel_size;
+		ImVec2 bottom_panel_size;
+		
+		char find_object_name[256];
+		char find_property_name[256];
+		char find_property_value[256];
+		bool find_match_exactly;
+		bool find_with_filter;
+		bool find_select_all;
+		
+		SDL_Cursor* cursor_arrow;
+		SDL_Cursor* cursor_hand;
+		SDL_Cursor* cursor_sizeall;
+		SDL_Cursor* cursor_cross;
+		
+		float edit_vector_x, edit_vector_y, edit_vector_z;
+		size_t edit_id_value;
+		float look_at_x, look_at_y, look_at_z;
+		int look_at_axis;
+		float bottom_pos_x, bottom_pos_y, bottom_pos_z;
+		float bottom_rot_x, bottom_rot_y, bottom_rot_z;
+		float multiset_vec_x, multiset_vec_y, multiset_vec_z;
+		float multiset_spacing;
+		int multiset_count;
+		
+		unsigned int node_visibility_flags;
+		bool game_shaders_enabled;
+		bool framebuffer_enabled;
+		bool uv_animations_enabled;
+		bool skybox_enabled;
+		
 		// Object Palette
 		int current_category_index;
+		string current_category_search;
 		LibGens::Object *last_palette_selection;
 		LibGens::Object *current_palette_selection;
 		list<ObjectNode *> current_palette_nodes;
 		LibGens::ObjectSet *current_set;
 		bool palette_cloning_mode;
+		vector<LibGens::Object*> palette_search_results;
 
 		// Object Properties
 		list<LibGens::Object *> current_object_list_properties;
 		vector<string> current_properties_names;
+		vector<string> current_properties_values;
 		vector<LibGens::ObjectElementType> current_properties_types;
 		vector<LibGens::Vector3> temp_property_vector_list;
 		vector<unsigned int> temp_property_id_list;
 		int current_property_index;
 		LibGens::Object *current_single_property_object;
+       
+		// Cancel Button for Properties Editor
+		string backup_property_string;
+		int backup_property_int;
+		float backup_property_float;
+		bool backup_property_bool;
+		LibGens::Vector3 backup_property_vector;
+		string properties_group_text;
+		string help_property_name;
+		string help_property_description;
+		string target_object_name;
+
+		// ImGui transform panel state
+		float transform_pos[3] = {0, 0, 0};
+		float transform_rot[3] = {0, 0, 0};
+		string help_object_name;
+		string help_object_description;
 
 		HistoryActionWrapper *history_edit_property_wrapper;
 		int ignore_mouse_clicks_frames;
@@ -289,6 +337,16 @@ class EditorApplication : public BaseApplication {
 		string material_editor_model_filename;
 		string material_editor_library_folder;
 		vector<LibGens::Material *> material_editor_materials;
+		// ImGui state for Material Editor
+		bool material_editor_defaults_on_shader_change;
+		vector<string> material_editor_shader_names;
+		vector<string> material_editor_slot_names;
+		char material_name_buf[128];
+		char texture_filename_buf[256];
+		char texture_unit_name_buf[128];
+		int texture_slot_index;
+		char material_param_name_buf[10][64];
+		float material_param_rgba[10][4];
 		Ogre::RenderWindow *material_editor_preview_window;
 		Ogre::Viewport *material_editor_preview_viewport;
 		Ogre::Camera *material_editor_preview_camera;
@@ -345,7 +403,7 @@ class EditorApplication : public BaseApplication {
 		void windowResized(Ogre::RenderWindow* rw);
 		void createScene(void);
 
-		// Editor Node Methods
+		// Editor Node Methods		
 		void updateSelection();
 		void deleteSelection();
 		void clearSelection();
@@ -406,7 +464,25 @@ class EditorApplication : public BaseApplication {
 		// GUI Methods
 		void focus();
 		bool inFocus();
-
+		void updateCursor();
+		void initializeImGui();
+		void shutdownImGui();
+		void renderImGui();
+		void renderImGuiContent();
+		void renderLeftPanel();
+		void renderBottomPanel();
+		void renderPropertyEditor();
+		void renderMaterialEditor();
+		void renderRightPanel();
+		void handleImGuiEvent(SDL_Event* event);
+		void renderMainMenuBar();
+		void renderQuickOverviewDialog();
+		void renderFindDialog();
+		void renderLookAtDialog();
+		void renderMultiSetDialog();
+		void renderTerrainInfoDialog();
+		void handleSDLEvent(const SDL_Event& event);
+		
 		void setEditorMode(Ogre::uint32 v) {
 			editor_mode = v;
 		}
@@ -414,20 +490,96 @@ class EditorApplication : public BaseApplication {
 		Ogre::uint32 getEditorMode() {
 			return editor_mode;
 		}
-
+		
+		void updateObjectCategoriesGUI();
+		void updateObjectsPaletteGUI(int index = 0);
+		void searchObjectsPalette(string search_text = "");
+		void updateHelpWithObjectGUI(LibGens::Object* object);
+		void updateObjectsPaletteSelection(int index);
+		void updateObjectsPalettePreview();
+		void overrideObjectsPalettePreview(list<LibGens::Object*> override_objects);
+		void mouseMovedObjectsPalettePreview(const OIS::MouseEvent &arg);
+		void mousePressedObjectsPalettePreview(const OIS::MouseEvent &arg, OIS::MouseButtonID id);
+		
 		void openLevelGUI();
 		void openLostWorldLevelGUI();
-
 		void saveLevelDataGUI();
 		void saveLevelResourcesGUI();
 		void saveLevelTerrainGUI();
-		void importLevelTerrainFBXGUI();
-		void loadAllTerrain();
 		void exportSceneFBXGUI();
 		void exportSceneFBX(string filename);
+		void importLevelTerrainFBXGUI();
+		void loadAllTerrain();
+		void openTerrainInfoDialog();
+		void updateTerrainInfoDialog();
+		void closeTerrainInfoDialog();
+		
+		void convertMaterialsToUnleashed();
+		void convertMaterialsToUnleashedShaders();
+		void convertMaterialsToGenerations();
+		void convertMaterialsToLostWorld();
+		void openMaterialEditorGUI();
+		
+		// Material Editor Methods
+		void closePreviewMaterialEditorGUI();
+		void createPreviewMaterialEditorGUI();
+		void enableMaterialEditorGUI(bool enable);
+		void enableMaterialEditorListGUI();
+		void updateMaterialEditorTextureList();
+		void updateMaterialTextureInfo();
+		void updateMaterialEditorInfo();
+		void loadMaterialDefaultParams();
+		void removeMaterialEditorTexture();
+		void materialEditorTerrainMode();
+		void materialEditorModelMode();
+		void clearMaterialEditorGUI();
+		void cleanMaterialEditorModelGUI();
+		void clearSelectionMaterialEditorGUI();
+		void clearTextureInfo();
+		void rebuildMaterialPreviewNodes();
+		void rebuildListMaterialEditorGUI();
+		void saveMaterialEditorModelGUI();
+		void saveMaterialEditorMaterial();
+		void saveAllMaterialEditorMaterials();
+		void loadMaterialEditorModelGUI();
+		void copyMaterialEditorTexture(const string& file) const;
+		void pickMaterialEditorTextureGUI();
+		void addMaterialEditorTextureGUI();
+		void loadMaterialEditorSkeletonGUI();
+		void loadMaterialEditorAnimationGUI();
+		void updateMaterialEditorIndex(int selection_index);
+		void updateMaterialEditorTextureIndex(int selection_index);
+		void updateEditParameterMaterialEditor(size_t i, LibGens::Color parameter_color);
+		void updateEditShaderMaterialEditor(string shader_name);
+		void updateEditTextureMaterialEditor(string texture_name, bool update_ui = false);
+		void updateEditTextureUnitMaterialEditor(string unit_name);
 
-		void saveXNAnimation();
-
+		void reloadTemplatesDatabase();
+		void saveTemplatesDatabase();
+		
+		bool checkGameConnection();
+		bool connectGame();
+		void launchGame();
+		void sendMessageGame(int msg);
+		
+		void setupGhost();
+		void loadGhostRecording();
+		void saveGhostRecording();
+		void saveGhostRecordingFbx();
+		void loadGhostAnimations();
+		
+		// Physics
+		void openPhysicsEditorGUI();
+		void addPhysicsEditorEntryGUI(LibGens::LevelCollisionEntry *entry);
+		void importPhysicsEditorGUI();
+		void detectAndTagHavokPhysics(LibGens::HavokPhysicsCache *physics_cache);
+		void clearPhysicsEditorGUI();
+		void renderPhysicsEditor();
+		
+		// Path 
+		void loadLevelPaths();
+		
+		// Sets GUI
 		void updateBottomSelectionGUI();
 		void updateMenu();
 		void updateSetsGUI();
@@ -437,88 +589,18 @@ class EditorApplication : public BaseApplication {
 		void updateCurrentSetVisible(bool v);
 		void changeCurrentSet(string change_set);
 		void renameCurrentSet(string rename_set);
-
-		void openPhysicsEditorGUI();
-		void clearPhysicsEditorGUI();
-		void addPhysicsEditorEntryGUI(LibGens::LevelCollisionEntry *entry);
-		void importPhysicsEditorGUI();
-		void detectAndTagHavokPhysics(LibGens::HavokPhysicsCache *physics_cache);
-
-		void openLookAtPointGUI();
-		void closeLookAtPointGUI();
-		void updateLookAtPointVectorNode(Ogre::Vector3);
-		void focusLookAtPointVector();
-		void queryLookAtObject(bool);
-		void updateLookAtVectorMode(bool);
-		void updateLookAtVectorGUI();
-		bool isUpdateLookAtVector();
-
-		void openTerrainInfoDialog();
-		void updateTerrainInfoDialog();
-		void closeTerrainInfoDialog();
-
-		void openMaterialEditorGUI();
-		void clearMaterialEditorGUI();
-		void enableMaterialEditorGUI(bool enable);
-		void enableMaterialEditorListGUI();
-		void loadMaterialEditorModelGUI();
-		void loadMaterialEditorSkeletonGUI();
-		void loadMaterialEditorAnimationGUI();
-		void rebuildMaterialPreviewNodes();
-		void materialEditorTerrainMode();
-		void materialEditorModelMode();
-		void saveMaterialEditorModelGUI();
-		void saveMaterialEditorMaterial();
-		void saveAllMaterialEditorMaterials();
-		void convertMaterialsToV1(); // Temp
-		void convertMaterialsToUnleashed();
-		void convertMaterialsToGenerations();
-		void convertMaterialsToLostWorld();
-		void convertMaterialsToUnleashedShaders();
-		void pickMaterialEditorTextureGUI();
-		void addMaterialEditorTextureGUI();
-
-		void cleanMaterialEditorModelGUI();
-		void clearSelectionMaterialEditorGUI();
-		void clearTextureInfo();
-		void rebuildListMaterialEditorGUI();
-		void createPreviewMaterialEditorGUI();
-		void closePreviewMaterialEditorGUI();
-		void updateMaterialEditorIndex(int selection_index);
-		void updateMaterialEditorTextureIndex(int selection_index);
-		void updateMaterialEditorInfo();
-		void updateMaterialEditorTextureList();
-		void updateMaterialTextureInfo();
-		void updateEditParameterMaterialEditor(size_t i, LibGens::Color parameter_color);
-		void updateEditShaderMaterialEditor(string shader_name);
-		void updateEditTextureUnitMaterialEditor(string unit_name);
-		void updateEditTextureMaterialEditor(string texture_name, bool update_ui = false);
-		void removeMaterialEditorTexture();
-		void loadMaterialDefaultParams();
-
-		void copyMaterialEditorTexture(const string& file) const;
-
+		
+		// Object property 
+		void closeVectorQueryMode();
+		void closeEditPropertyGUI();
+		void clearObjectsPalettePreview();
+		void clearObjectsPalettePreviewGUI();
+		void updateObjectPropertyIndex(int index);
+		void editObjectPropertyIndex(int index);
 		void createObjectsPropertiesGUI();
 		void updateObjectsPropertiesGUI();
 		void updateObjectsPropertiesValuesGUI(LibGens::Object *object);
-		void updateObjectPropertyIndex(int selection_index);
-		void editObjectPropertyIndex(int selection_index);
-		void updateHelpWithObjectGUI(LibGens::Object *object);
 		void updateHelpWithPropertyGUI(LibGens::ObjectElement *element);
-
-		void openMultiSetParamDlg();
-		void closeMultiSetParamDlg();
-		void clearMultiSetParamDlg();
-		void createMultiSetParamObjects();
-		void getVectorFromObject();
-		void setCloningMode(size_t mode);
-		void setVectorAndSpacing();
-		void deleteTemporaryNodes();
-
-		void clearEditPropertyGUI();
-		void closeEditPropertyGUI();
-		HWND getEditPropertyDlg();
-
 		void updateEditPropertyBool(bool v);
 		void updateEditPropertyInteger(unsigned int v);
 		void updateEditPropertyFloat(float v);
@@ -530,6 +612,7 @@ class EditorApplication : public BaseApplication {
 		void updateEditPropertyVectorGUI(int index = 0, bool is_list = false);
 		void updateEditPropertyVectorMode(bool mode_state, bool is_list = false, int index = 0);
 		void updateEditPropertyVectorList(vector<LibGens::Vector3> v);
+		void updateEditPropertyVectorListGUI(vector<LibGens::Vector3> v);
 		void selectNode(EditorNode* node);
 		void openQueryTargetMode(bool mode);
 		void setTargetName(size_t id, bool is_list = false);
@@ -547,82 +630,43 @@ class EditorApplication : public BaseApplication {
 		vector<size_t>& getCurrentPropertyIDList();
 		vector<LibGens::Vector3>& getCurrentPropertyVectorList();
 		vector<VectorNode*>& getPropertyVectorNodes();
-		ObjectNodeManager* getObjectNodeManager();
-
-
-		void closeVectorQueryMode();
 		void closeTargetQueryMode();
-
 		void verifySonicSpawnChange();
 		void confirmEditProperty();
 		void revertEditProperty();
 		
+		void openLookAtPointGUI();
+		void closeLookAtPointGUI();
+		void updateLookAtPointVectorNode(Ogre::Vector3);
+		void focusLookAtPointVector();
+		void queryLookAtObject(bool);
+		void updateLookAtVectorMode(bool);
+		void updateLookAtVectorGUI();
+		bool isUpdateLookAtVector();
+		
+		void openMultiSetParamDlg();
+		void closeMultiSetParamDlg();
+		void clearMultiSetParamDlg();
+		void createMultiSetParamObjects();
+		void getVectorFromObject();
+		void setCloningMode(size_t mode);
+		void setVectorAndSpacing();
+		void deleteTemporaryNodes();
 
-		void updateObjectCategoriesGUI();
-		void updateObjectsPaletteGUI(int index=0);
-		void updateObjectsPaletteSelection(int index);
-		void updateObjectsPalettePreview();
-		void overrideObjectsPalettePreview(list<LibGens::Object *> override_objects);
-		void mouseMovedObjectsPalettePreview(const OIS::MouseEvent &arg);
-		void mousePressedObjectsPalettePreview(const OIS::MouseEvent &arg, OIS::MouseButtonID id);
-		void clearObjectsPalettePreview();
-		void clearObjectsPalettePreviewGUI();
 		bool isPalettePreviewActive();
 		bool isRegularMode();
 
+		// Accessor methods
+		LibGens::ShaderLibrary* getShaderLibrary();
+		LibGens::UVAnimationLibrary* getUVAnimationLibrary();
+		LibGens::HavokEnviroment* getHavokEnviroment();
+		EditorLevel* getCurrentLevel();
+		EditorAnimationsList* getAnimationsList();
+		ObjectNodeManager* getObjectNodeManager();
+		Ogre::SceneManager* getSceneManager();
 		void checkShaderLibrary(size_t game_mode);
-
-		// LibGens Methods
-		void openLevel(string filename);
-		void openLostWorldLevel(string filename);
-
-		void createDirectionalLight(LibGens::Light *direct_light);
-		void createSkybox(string skybox_name);
-
-		void saveLevelData(string filename);
-		void saveLevelResources();
-		void saveLevelTerrain();
-		void cleanLevelTerrain();
-		void importLevelTerrainFBX(string filename);
-		void generateTerrainGroups();
-		void reloadTemplatesDatabase();
-		void saveTemplatesDatabase();
-
-		void loadLevelPaths();
-
-		// Havok method
-		void loadGhostAnimations();
-		void setupGhost();
-
-			// Ghost methods
-		void loadGhostRecording();
-		void saveGhostRecording();
-		void saveGhostRecordingFbx();
-
-		// Game methods
-		void processGameMessage(PipeClient* client, PipeMessage* msg);
-		void launchGame();
-		bool connectGame();
-		DWORD sendMessageGame(const PipeMessage& msg, size_t size);
-
-		void createLevel(string name);
-		void createLibrary();
-		void createCategory(LibGens::ObjectCategory *category, string folder);
-		void createNodesFromSet(LibGens::ObjectSet *set);
-		void createNodesFromTerrain(LibGens::Terrain *terrain, LibGens::GITextureGroupInfo *gi_group_info);
-		void createNodesFromTerrainGroup(LibGens::TerrainGroup *terrain_group);
-		void createNodesFromHavokEnviroment(LibGens::HavokEnviroment *havok_enviroment);
-
-		//bool renderOneFrame();
-
-		bool checkGameConnection() {
-			return game_client->checkConnection();
-		}
-
-		GhostNode *getGhostNode() {
-			return ghost_node;
-		}
-
+		GhostNode* getGhostNode();
+		
 		void setGhost(LibGens::Ghost* ghost_p) {
 			if (!ghost_p)
 				return;
@@ -639,37 +683,8 @@ class EditorApplication : public BaseApplication {
 			return axis;
 		}
 
-		EditorLevel *getCurrentLevel() {
-			return current_level;
-		}
-
 		LibGens::ObjectSet *getCurrentSet() {
 			return current_set;
-		}
-
-		EditorAnimationsList *getAnimationsList() {
-			return animations_list;
-		}
-
-		LibGens::ShaderLibrary *getShaderLibrary() {
-			if (current_level != NULL && current_level->getGameMode() == LIBGENS_LEVEL_GAME_UNLEASHED) {
-				return unleashed_shader_library;
-			}
-			else {
-				return generations_shader_library;
-			}
-		}
-
-		LibGens::UVAnimationLibrary *getUVAnimationLibrary() {
-			return uv_animation_library;
-		}
-
-		Ogre::SceneManager *getSceneManager() {
-			return scene_manager;
-		}
-
-		LibGens::HavokEnviroment *getHavokEnviroment() {
-			return havok_enviroment;
 		}
 
 		EditorConfiguration *getConfiguration() {
@@ -679,9 +694,32 @@ class EditorApplication : public BaseApplication {
 		void updateBottomSelectionPosition(float value_x, float value_y, float value_z);
 		void updateBottomSelectionRotation(float value_x, float value_y, float value_z);
 
+		// LibGens Methods
+		void openLevel(string filename);
+		void openLostWorldLevel(string filename);
+
+		void createDirectionalLight(LibGens::Light *direct_light);
+		void createSkybox(string skybox_name);
+
+		void saveLevelData(string filename);
+		void saveLevelResources();
+		void saveLevelTerrain();
+		void cleanLevelTerrain();
+		void importLevelTerrainFBX(string filename);
+		void generateTerrainGroups();
+
+		void createLevel(string name);
+		void createLibrary();
+		void createCategory(LibGens::ObjectCategory *category, string folder);
+		void createNodesFromSet(LibGens::ObjectSet *set);
+		void createNodesFromTerrain(LibGens::Terrain *terrain, LibGens::GITextureGroupInfo *gi_group_info);
+		void createNodesFromTerrainGroup(LibGens::TerrainGroup *terrain_group);
+		void createNodesFromHavokEnviroment(LibGens::HavokEnviroment *havok_enviroment);
+
+		void processGameMessage(PipeClient* client, PipeMessage* msg);
+		DWORD sendMessageGame(const PipeMessage& msg, size_t size);
+		
 		static std::string SelectFolderWithIFileDialog(const wchar_t* title = L"Select Folder");
 };
-
-extern EditorApplication *editor_application;
 
 #endif
