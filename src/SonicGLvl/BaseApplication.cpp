@@ -5,7 +5,12 @@
 #include "BaseApplication.h"
 #include "EmbeddedConfig.h"
 #include <d3d9.h>
+#ifdef _WIN32
 #include <Windows.h>
+#include <dwmapi.h>
+#include "Resource.h"
+#pragma comment(lib, "dwmapi.lib")
+#endif
 
 // Forward declare Ogre D3D9 classes to get the device
 namespace Ogre {
@@ -402,6 +407,16 @@ void BaseApplication::initializeImGui() {
 
 	HWND hwnd = NULL;
 	window->getCustomAttribute("WINDOW", &hwnd);
+
+#ifdef _WIN32
+	BOOL useDarkMode = TRUE;
+	DwmSetWindowAttribute(hwnd, 20, &useDarkMode, sizeof(useDarkMode));
+	HICON hIcon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(SONICGLVL_ICON));
+	if (hIcon) {
+	SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+	SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+	}
+#endif
 
 	sdl_window = SDL_CreateWindowFrom(hwnd);
 	ImGui_ImplSDL2_InitForD3D(sdl_window);

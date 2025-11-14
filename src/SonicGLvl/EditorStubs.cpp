@@ -252,14 +252,12 @@ void EditorApplication::renderPropertyEditor(void) {
 				}
 				ImGui::SameLine();
 				if (ImGui::Button("Close", ImVec2(100, 0))) {
-					// Just close without applying changes (same as Cancel)
 					initialized = false;
 					show_properties_editor = false;
 				}
 			}
 		}
 	} else {
-		// Window is closing, reset initialization flag
 		initialized = false;
 	}
 	ImGui::End();
@@ -339,7 +337,6 @@ void EditorApplication::shutdownImGui(void) {
 	BaseApplication::shutdownImGui();
 }
 
-// Getter stubs
 Ogre::SceneManager* EditorApplication::getSceneManager(void) {
 	return scene_manager;
 }
@@ -355,8 +352,7 @@ LibGens::HavokEnviroment* EditorApplication::getHavokEnviroment(void) {
 }
 
 EditorAnimationsList* EditorApplication::getAnimationsList(void) {
-	// TODO: Return animations list
-	return nullptr;
+	return animations_list;
 }
 
 LibGens::ShaderLibrary* EditorApplication::getShaderLibrary(void) {
@@ -385,11 +381,10 @@ void EditorApplication::closeEditPropertyGUI(void) {
 }
 
 bool EditorApplication::checkGameConnection(void) {
-	// TODO: Implement proper pipe client check when needed
+	// TODO: Dont really feel like having it connect to Generations if no one is going to use it, i might remove it.
 	return false;
 }
 
-// Property update functions
 void EditorApplication::updateEditPropertyBool(bool v) {
 	if (!history_edit_property_wrapper) history_edit_property_wrapper = new HistoryActionWrapper();
 
