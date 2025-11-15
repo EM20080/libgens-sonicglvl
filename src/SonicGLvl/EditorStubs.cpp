@@ -332,6 +332,10 @@ void EditorApplication::renderImGuiContent(void) {
 	if (show_quick_overview) {
 		renderQuickOverviewDialog();
 	}
+
+	if (show_material_editor && material_editor_preview_window && !material_editor_preview_window->isClosed()) {
+		material_editor_preview_window->update();
+	}
 }
 
 // Initialization - call base class implementations

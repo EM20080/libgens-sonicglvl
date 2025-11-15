@@ -11,7 +11,7 @@
 #ifndef BASE_APPLICATION_H_INCLUDED
 #define BASE_APPLICATION_H_INCLUDED
 
-#define SONICGLVL_WINDOW_NAME         "SonicGLvl v0.9.0"
+#define SONICGLVL_WINDOW_NAME         "SonicGLvl v1.0.0"
 #define SONICGLVL_LOG_NAME            "sonicglvl.log"
 #define SONICGLVL_PLUGINS_NAME        "plugins.cfg"
 #define SONICGLVL_RESOURCES_NAME      "resources.cfg"

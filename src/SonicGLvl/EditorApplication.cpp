@@ -75,6 +75,13 @@ EditorApplication::EditorApplication(void)
 	isGhostRecording = false;
 	checked_shader_library = false;
 	current_level = NULL;
+	
+	material_editor_preview_window = NULL;
+	material_editor_preview_listener = NULL;
+	material_editor_viewport = NULL;
+	material_editor_input_manager = NULL;
+	material_editor_keyboard = NULL;
+	material_editor_mouse = NULL;
 }
 
 EditorApplication::~EditorApplication(void) {

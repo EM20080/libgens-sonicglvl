@@ -53,12 +53,14 @@ class MaterialEditorPreviewListener : public Ogre::FrameListener, public Ogre::W
 		}
 
 		bool frameRenderingQueued(const Ogre::FrameEvent& evt) {
-			keyboard->capture();
-			mouse->capture();
+			if (keyboard && mouse) {
+				keyboard->capture();
+				mouse->capture();
+			}
 
 			editor_viewport->update(evt.timeSinceLastFrame);
 
-			if (animation_state) {
+			if (animation_state && animation_state->getEnabled()) {
 				animation_state->addTime(evt.timeSinceLastFrame);
 			}
 

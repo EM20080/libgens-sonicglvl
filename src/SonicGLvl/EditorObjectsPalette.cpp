@@ -332,6 +332,15 @@ void EditorApplication::renderLeftPanel() {
 		}
         
 		if (ImGui::CollapsingHeader("Object Properties", ImGuiTreeNodeFlags_DefaultOpen)) {
+			if (!current_object_list_properties.empty()) {
+				LibGens::Object* obj = current_object_list_properties.front();
+				ImGui::Text("Name: %s", obj->getName().c_str());
+				ImGui::Text("SetObjectID: %u", obj->getID());
+				LibGens::ObjectSet* parent_set = obj->getParentSet();
+				ImGui::Text("Layer: %s", parent_set ? parent_set->getName().c_str() : "None");
+				ImGui::Separator();
+			}
+			
 			float item_height = ImGui::GetTextLineHeightWithSpacing();
 			float list_height = std::min((float)current_properties_names.size() * item_height + 4.0f, 200.0f);
 			if (ImGui::BeginListBox("##PropertiesList", ImVec2(-FLT_MIN, list_height))) {

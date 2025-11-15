@@ -95,7 +95,15 @@ void EditorApplication::createPreviewMaterialEditorGUI() {
 		material_editor_preview_listener->setEditorViewport(material_editor_viewport);
 		material_editor_preview_listener->setEditorWindow(material_editor_preview_window);
 		OIS::ParamList pl;
-		size_t windowHnd = 0; std::ostringstream windowHndStr; material_editor_preview_window->getCustomAttribute("WINDOW", &windowHnd); windowHndStr << windowHnd; pl.insert(std::make_pair(std::string("WINDOW"), windowHndStr.str())); pl.insert(std::make_pair(std::string("w32_mouse"), std::string("DISCL_FOREGROUND"))); pl.insert(std::make_pair(std::string("w32_mouse"), std::string("DISCL_NONEXCLUSIVE"))); pl.insert(std::make_pair(std::string("w32_keyboard"), std::string("DISCL_FOREGROUND"))); pl.insert(std::make_pair(std::string("w32_keyboard"), std::string("DISCL_NONEXCLUSIVE")));
+		size_t windowHnd = 0;
+		std::ostringstream windowHndStr;
+		material_editor_preview_window->getCustomAttribute("WINDOW", &windowHnd);
+		windowHndStr << windowHnd;
+		pl.insert(std::make_pair(std::string("WINDOW"), windowHndStr.str()));
+		pl.insert(std::make_pair(std::string("w32_mouse"), std::string("DISCL_BACKGROUND")));
+		pl.insert(std::make_pair(std::string("w32_mouse"), std::string("DISCL_NONEXCLUSIVE")));
+		pl.insert(std::make_pair(std::string("w32_keyboard"), std::string("DISCL_BACKGROUND")));
+		pl.insert(std::make_pair(std::string("w32_keyboard"), std::string("DISCL_NONEXCLUSIVE")));
 		material_editor_input_manager = OIS::InputManager::createInputSystem(pl);
 		material_editor_keyboard = static_cast<OIS::Keyboard*>(material_editor_input_manager->createInputObject(OIS::OISKeyboard, true));
 		material_editor_mouse = static_cast<OIS::Mouse*>(material_editor_input_manager->createInputObject(OIS::OISMouse, true));
@@ -348,12 +356,16 @@ void EditorApplication::rebuildMaterialPreviewNodes() {
 				material_editor_animation_state = entity->getAnimationState(material_editor_animation_name);
 				material_editor_animation_state->setLoop(true);
 				material_editor_animation_state->setEnabled(true);
+				material_editor_animation_state->setTimePosition(0.0);  // Start from beginning
+				material_editor_animation_state->setWeight(1.0);  // Full weight
 				break;
 			}
 		}
 	}
 
-	material_editor_preview_listener->setAnimationState(material_editor_animation_state);
+	if (material_editor_preview_listener) {
+		material_editor_preview_listener->setAnimationState(material_editor_animation_state);
+	}
 }
 
 
@@ -731,15 +743,29 @@ void EditorApplication::updateEditShaderMaterialEditor(string shader_name) {
 
 	material_editor_material->setShader(shader_name);
 	
-	Ogre::Material* ogre_material = Ogre::MaterialManager::getSingleton().getByName(material_editor_material->getExtra(), material_editor_mesh_group).getPointer();
+	if (material_editor_scene_node && material_editor_model) {
+		Ogre::Vector3 cam_pos = material_editor_viewport->getCamera()->getPosition();
+		Ogre::Quaternion cam_rot = material_editor_viewport->getCamera()->getOrientation();
+		
+		rebuildMaterialPreviewNodes();
+		
+		material_editor_viewport->getCamera()->setPosition(cam_pos);
+		material_editor_viewport->getCamera()->setOrientation(cam_rot);
+	}
+	else {
+		Ogre::Material* ogre_material = Ogre::MaterialManager::getSingleton().getByName(material_editor_material->getExtra(), material_editor_mesh_group).getPointer();
 
-	if (ogre_material && material_editor_shader_library) {
-		try {
-			updateMaterialShaderParameters(ogre_material, material_editor_material, !material_editor_material->hasExtraGI(), NULL, material_editor_shader_library);
+		if (ogre_material && material_editor_shader_library) {
+			try {
+				updateMaterialShaderParameters(ogre_material, material_editor_material, !material_editor_material->hasExtraGI(), NULL, material_editor_shader_library);
+			}
+			catch (...) {
+			}
 		}
-		catch (...) {
-			// Silently catch shader update errors
-		}
+	}
+	
+	if (material_editor_preview_window) {
+		material_editor_preview_window->update();
 	}
 }
 
