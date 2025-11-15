@@ -392,6 +392,10 @@ namespace LibGens {
 		}
 
 		ArFile* ar_data_file = ar_pack->getFile(id + LIBGENS_VERTEX_SHADER_PARAMS_EXTENSION);
+		if (!ar_data_file) {
+			return NULL;
+		}
+		
 		File file(ar_data_file->getData(), ar_data_file->getSize());
 		
 		ShaderParams *vertex_shader_param=new ShaderParams(id);
@@ -412,6 +416,10 @@ namespace LibGens {
 		}
 
 		ArFile* ar_data_file = ar_pack->getFile(id + LIBGENS_PIXEL_SHADER_PARAMS_EXTENSION);
+		if (!ar_data_file) {
+			return NULL;
+		}
+		
 		File file(ar_data_file->getData(), ar_data_file->getSize());
 		
 		ShaderParams *pixel_shader_param=new ShaderParams();
