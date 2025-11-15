@@ -53,6 +53,10 @@ void BaseApplication::createFrameListener(void) {
 	window->getCustomAttribute("WINDOW", &windowHnd);
 	windowHndStr << windowHnd;
 	pl.insert(std::make_pair(std::string("WINDOW"), windowHndStr.str()));
+	pl.insert(std::make_pair(std::string("w32_mouse"), std::string("DISCL_FOREGROUND")));
+	pl.insert(std::make_pair(std::string("w32_mouse"), std::string("DISCL_NONEXCLUSIVE")));
+	pl.insert(std::make_pair(std::string("w32_keyboard"), std::string("DISCL_FOREGROUND")));
+	pl.insert(std::make_pair(std::string("w32_keyboard"), std::string("DISCL_NONEXCLUSIVE")));
 	input_manager = OIS::InputManager::createInputSystem(pl);
 	keyboard = static_cast<OIS::Keyboard*>(input_manager->createInputObject(OIS::OISKeyboard, true));
 	mouse = static_cast<OIS::Mouse*>(input_manager->createInputObject(OIS::OISMouse, true));
@@ -119,8 +123,16 @@ void BaseApplication::go(void) {
 
 		if (window->isClosed() || shut_down) break;
 
-		keyboard->capture();
-		mouse->capture();
+		// Only capture input if main window has focus
+		size_t mainWindowHnd = 0;
+		window->getCustomAttribute("WINDOW", &mainWindowHnd);
+		HWND mainHwnd = (HWND)mainWindowHnd;
+		HWND focusedWindow = GetFocus();
+		
+		if (mainHwnd == focusedWindow || focusedWindow == NULL) {
+			keyboard->capture();
+			mouse->capture();
+		}
 
 		ImGuiIO& io = ImGui::GetIO();
 		io.DisplaySize = ImVec2((float)screen_width, (float)screen_height);
@@ -296,7 +308,7 @@ void BaseApplication::handleSDLEvent(const SDL_Event& event) {
 		bool isSystemShortcut = false;
 		bool isCtrlPressed = (event.key.keysym.mod & KMOD_CTRL) != 0;
 
-		if (isCtrlPressed) {
+		if (isCtrlPressed && !io.WantTextInput) {
 			switch (event.key.keysym.scancode) {
 			case SDL_SCANCODE_C:  // Ctrl+C (Copy)
 			case SDL_SCANCODE_V:  // Ctrl+V (Paste)
@@ -314,7 +326,7 @@ void BaseApplication::handleSDLEvent(const SDL_Event& event) {
 		}
 
 
-		if ((!io.WantCaptureKeyboard && !io.WantTextInput) || isSystemShortcut) {
+		if ((!io.WantCaptureKeyboard && !io.WantTextInput) || (isSystemShortcut && !io.WantTextInput)) {
 			OIS::KeyCode oisKey = SDLScancodeToOIS(event.key.keysym.scancode);
 			if (oisKey != OIS::KC_UNASSIGNED) {
 				OIS::KeyEvent keyEvent(nullptr, oisKey, event.key.keysym.sym);
@@ -478,7 +490,16 @@ bool BaseApplication::frameRenderingQueued(const Ogre::FrameEvent& evt) {
 	if (window->isClosed()) return false;
 	if (shut_down) return false;
 
-	mouse->capture();
+	// Only capture mouse if main window has focus (not preview window)
+	size_t windowHnd = 0;
+	window->getCustomAttribute("WINDOW", &windowHnd);
+	HWND hwnd = (HWND)windowHnd;
+	HWND focusedWindow = GetFocus();
+	
+	if (hwnd == focusedWindow || focusedWindow == NULL) {
+		mouse->capture();
+	}
+	
 	return true;
 }
 

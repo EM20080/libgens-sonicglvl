@@ -110,10 +110,8 @@ void EditorApplication::renderPropertyEditor(void) {
 	static float temp_vector[3] = { 0, 0, 0 };
 	static bool initialized = false;
 	
-	ImVec2 center = ImVec2((float)screen_width * 0.5f, (float)screen_height * 0.5f);
-	ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-	ImGui::SetNextWindowSize(ImVec2(450, 200), ImGuiCond_Always);
-	if (ImGui::Begin("Edit Property", &show_properties_editor, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse)) {
+	ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
+	if (ImGui::Begin("Edit Property", &show_properties_editor, ImGuiWindowFlags_AlwaysAutoResize)) {
 		if (!current_object_list_properties.empty() && current_property_index >= 0) {
 			string property_name = current_properties_names[current_property_index];
 			LibGens::ObjectElementType property_type = current_properties_types[current_property_index];
@@ -126,27 +124,35 @@ void EditorApplication::renderPropertyEditor(void) {
 			LibGens::ObjectElement* element = first_obj->getElement(property_name);
 
 			if (element) {
-				// shows objectphysics dropdown for objectproduction on Type param
-				if (property_type == LibGens::OBJECT_ELEMENT_STRING && property_name == "ObjectPhysics" && object_production) {
+				if (property_type == LibGens::OBJECT_ELEMENT_STRING && property_name == "Type" && object_production) {
 					LibGens::ObjectElementString* str_elem = (LibGens::ObjectElementString*)element;
-					static char buffer[512];
-					strncpy(buffer, str_elem->value.c_str(), sizeof(buffer));
-					buffer[sizeof(buffer) - 1] = '\0';
+					if (!initialized) {
+						strncpy(temp_string, str_elem->value.c_str(), sizeof(temp_string));
+						temp_string[sizeof(temp_string) - 1] = '\0';
+						initialized = true;
+					}
 
-					ImGui::Text("Select ObjectPhysics:");
+					ImGui::Text("Current: %s", str_elem->value.c_str());
 					ImGui::Spacing();
-					if (ImGui::BeginCombo("##ObjectPhysicsCombo", buffer)) {
+					ImGui::Text("New Value:");
+					if (ImGui::BeginCombo("##ObjectPhysicsCombo", temp_string)) {
+						ImGui::SetKeyboardFocusHere();
+						ImGui::InputText("##ObjectPhysicsFilter", temp_string, sizeof(temp_string));
 						object_production->readySortedEntries();
 						string entry_name;
+						size_t filter_len = strlen(temp_string);
 						while (object_production->getNextEntryName(entry_name)) {
-							bool is_selected = (strcmp(buffer, entry_name.c_str()) == 0);
-							if (ImGui::Selectable(entry_name.c_str(), is_selected)) {
-								strncpy(buffer, entry_name.c_str(), sizeof(buffer));
-								buffer[sizeof(buffer) - 1] = '\0';
-								updateEditPropertyString(string(buffer));
-							}
-							if (is_selected) {
-								ImGui::SetItemDefaultFocus();
+							if (filter_len == 0 || strncmp(temp_string, entry_name.c_str(), filter_len) == 0 || 
+								entry_name.find(temp_string) != string::npos) {
+								bool is_selected = (strcmp(temp_string, entry_name.c_str()) == 0);
+								if (ImGui::Selectable(entry_name.c_str(), is_selected)) {
+									strncpy(temp_string, entry_name.c_str(), sizeof(temp_string));
+									temp_string[sizeof(temp_string) - 1] = '\0';
+									ImGui::CloseCurrentPopup();
+								}
+								if (is_selected) {
+									ImGui::SetItemDefaultFocus();
+								}
 							}
 						}
 						ImGui::EndCombo();
@@ -175,7 +181,7 @@ void EditorApplication::renderPropertyEditor(void) {
 						}
 						ImGui::Text("Current: %d", int_elem->value);
 						ImGui::Spacing();
-						ImGui::InputInt("New Value", &temp_int, 1, 10);
+						ImGui::InputInt("New Number", &temp_int, 1, 10);
 						break;
 					}
 					case LibGens::OBJECT_ELEMENT_FLOAT: {
@@ -187,7 +193,7 @@ void EditorApplication::renderPropertyEditor(void) {
 						}
 						ImGui::Text("Current: %.3f", float_elem->value);
 						ImGui::Spacing();
-						ImGui::InputFloat("New Value", &temp_float, 0.1f, 1.0f, "%.3f");
+						ImGui::InputFloat("New Number", &temp_float, 0.1f, 1.0f, "%.3f");
 						break;
 					}
 					case LibGens::OBJECT_ELEMENT_STRING: {
@@ -200,7 +206,7 @@ void EditorApplication::renderPropertyEditor(void) {
 						}
 						ImGui::Text("Current: %s", str_elem->value.c_str());
 						ImGui::Spacing();
-						ImGui::InputText("New Value", temp_string, sizeof(temp_string));
+						ImGui::InputText("New Text", temp_string, sizeof(temp_string));
 						break;
 					}
 					case LibGens::OBJECT_ELEMENT_VECTOR: {

@@ -84,6 +84,7 @@ void EditorApplication::createPreviewMaterialEditorGUI() {
 		material_editor_preview_window = root->createRenderWindow("Preview Window", 640, 480, false, &misc);
 		material_editor_preview_window->setDeactivateOnFocusChange(false);
 		material_editor_preview_window->setAutoUpdated(true);
+		material_editor_preview_window->setVisible(true);
 		material_editor_viewport = new EditorViewport(material_editor_preview_scene_manager, material_editor_preview_bogus_scene_manager, material_editor_preview_window, SONICGLVL_CAMERA_PREVIEW_NAME);
 		material_editor_viewport->setPanningMultiplier(3);
 		material_editor_viewport->setZoomingMultiplier(0.04);
@@ -103,7 +104,7 @@ void EditorApplication::createPreviewMaterialEditorGUI() {
 		root->addFrameListener(material_editor_preview_listener);
 		material_editor_preview_listener->setMouse(material_editor_mouse);
 		material_editor_preview_listener->setKeyboard(material_editor_keyboard);
-		unsigned int width, height, depth; int left, top; material_editor_preview_window->getMetrics(width, height, depth, left, top); const OIS::MouseState& ms = material_editor_mouse->getMouseState(); ms.width = width; ms.height = height; 
+		unsigned int width, height, depth; int left, top; material_editor_preview_window->getMetrics(width, height, depth, left, top); const OIS::MouseState& ms = material_editor_mouse->getMouseState(); ms.width = width; ms.height = height;
 	}
 	rebuildMaterialPreviewNodes();
 	material_editor_model->buildAABB();
@@ -116,6 +117,7 @@ void EditorApplication::createPreviewMaterialEditorGUI() {
 	camera->setDirection(Ogre::Vector3(0, 0, -1).normalisedCopy());
 	camera->moveRelative(Ogre::Vector3::UNIT_Z * size_max * 1.5f);
 	hasScene = true;
+	material_editor_preview_window->update();
 }
 
 
@@ -149,12 +151,12 @@ void EditorApplication::updateMaterialEditorTextureList() {
 void EditorApplication::updateMaterialTextureInfo() {
 	if (!material_editor_texture) return;
 	strncpy(texture_filename_buf, material_editor_texture->getName().c_str(), sizeof(texture_filename_buf));
-	texture_filename_buf[sizeof(texture_filename_buf)-1] = '\0';
+	texture_filename_buf[sizeof(texture_filename_buf) - 1] = '\0';
 	strncpy(texture_unit_name_buf, material_editor_texture->getTexset().c_str(), sizeof(texture_unit_name_buf));
-	texture_unit_name_buf[sizeof(texture_unit_name_buf)-1] = '\0';
+	texture_unit_name_buf[sizeof(texture_unit_name_buf) - 1] = '\0';
 	// Update slot index to match unit name if possible
 	texture_slot_index = 0;
-	for (size_t i=0;i<material_editor_slot_names.size();++i) {
+	for (size_t i = 0; i < material_editor_slot_names.size(); ++i) {
 		if (material_editor_slot_names[i] == material_editor_texture->getUnit()) {
 			texture_slot_index = (int)i;
 			break;
@@ -165,20 +167,21 @@ void EditorApplication::updateMaterialTextureInfo() {
 void EditorApplication::updateMaterialEditorInfo() {
 	if (!material_editor_material) return;
 	strncpy(material_name_buf, material_editor_material->getName().c_str(), sizeof(material_name_buf));
-	material_name_buf[sizeof(material_name_buf)-1] = '\0';
+	material_name_buf[sizeof(material_name_buf) - 1] = '\0';
 	vector<LibGens::Parameter*> parameters = material_editor_material->getParameters();
-	for (size_t i=0;i<10;i++) {
+	for (size_t i = 0; i < 10; i++) {
 		if (i < parameters.size()) {
 			strncpy(material_param_name_buf[i], parameters[i]->getName().c_str(), sizeof(material_param_name_buf[i]));
-			material_param_name_buf[i][sizeof(material_param_name_buf[i])-1] = '\0';
+			material_param_name_buf[i][sizeof(material_param_name_buf[i]) - 1] = '\0';
 			LibGens::Color c = parameters[i]->getColor();
-			material_param_rgba[i][0]=c.r;
-			material_param_rgba[i][1]=c.g;
-			material_param_rgba[i][2]=c.b;
-			material_param_rgba[i][3]=c.a;
-		} else {
-			material_param_name_buf[i][0]='\0';
-			material_param_rgba[i][0]=material_param_rgba[i][1]=material_param_rgba[i][2]=material_param_rgba[i][3]=0.0f;
+			material_param_rgba[i][0] = c.r;
+			material_param_rgba[i][1] = c.g;
+			material_param_rgba[i][2] = c.b;
+			material_param_rgba[i][3] = c.a;
+		}
+		else {
+			material_param_name_buf[i][0] = '\0';
+			material_param_rgba[i][0] = material_param_rgba[i][1] = material_param_rgba[i][2] = material_param_rgba[i][3] = 0.0f;
 		}
 	}
 	// Build texture unit slot names from shader library
@@ -433,7 +436,8 @@ void EditorApplication::saveAllMaterialEditorMaterials() {
 	bool save_unleashed = false;
 	if (material_editor_mode == SONICGLVL_MATERIAL_EDITOR_MODE_TERRAIN && current_level != NULL) {
 		save_unleashed = (current_level->getGameMode() == LIBGENS_LEVEL_GAME_UNLEASHED);
-	} else {
+	}
+	else {
 		save_unleashed = material_editor_unleashed;
 	}
 	for (LibGens::Material* mat : material_editor_materials) {
@@ -680,7 +684,8 @@ void EditorApplication::updateMaterialEditorIndex(int selection_index) {
 			material_editor_material = material_editor_materials[material_editor_list_selection];
 			updateMaterialEditorInfo();
 			enableMaterialEditorGUI(true);
-		} else {
+		}
+		else {
 			enableMaterialEditorGUI(false);
 			material_editor_material = NULL;
 		}
@@ -695,7 +700,8 @@ void EditorApplication::updateMaterialEditorTextureIndex(int selection_index) {
 		if (texture_list_selection != -1 && material_editor_material) {
 			material_editor_texture = material_editor_material->getTextureByIndex(texture_list_selection);
 			updateMaterialTextureInfo();
-		} else {
+		}
+		else {
 			clearTextureInfo();
 		}
 	}
@@ -758,5 +764,3 @@ void EditorApplication::updateEditTextureUnitMaterialEditor(string unit_name) {
 		updateMaterialShaderParameters(ogre_material, material_editor_material, !material_editor_material->hasExtraGI(), NULL, material_editor_shader_library);
 	}
 }
-// Legacy Win32 callback implementations removed; ImGui-based rendering will handle
-// all material editor interactions.

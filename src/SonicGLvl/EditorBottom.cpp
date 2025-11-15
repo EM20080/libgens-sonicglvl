@@ -105,97 +105,122 @@ void EditorApplication::renderBottomPanel() {
 	
 	bool objects_selected = selected_nodes.size() > 0;
 	
-	// Object Set at top left
+	string current_set_name_str = "None";
 	if (current_level && current_level->getLevel()) {
 		list<LibGens::ObjectSet*> sets = current_level->getLevel()->getSets();
 		if (!sets.empty()) {
-		string current_set_name_str = (current_set && current_set->getName().size() > 0) ? current_set->getName() : "None";
-		const char* current_set_name = current_set_name_str.c_str();
-		ImGui::Text("Object Set:");
-		ImGui::SameLine();
-		ImGui::PushItemWidth(150);
-			if (ImGui::BeginCombo("##ObjectSet", current_set_name)) {
-				for (list<LibGens::ObjectSet*>::iterator it = sets.begin(); it != sets.end(); it++) {
-					bool is_selected = (current_set == *it);
-					if (ImGui::Selectable((*it)->getName().c_str(), is_selected)) {
-						changeCurrentSet((*it)->getName());
-					}
-					if (is_selected) {
-						ImGui::SetItemDefaultFocus();
-					}
-				}
-				if (ImGui::Selectable(NEW_SET_OPTION)) {
-					newCurrentSet();
-				}
-				if (ImGui::Selectable(DELETE_SET_OPTION)) {
-					deleteCurrentSet();
-				}
-				ImGui::EndCombo();
-			}
-			ImGui::PopItemWidth();
-			ImGui::SameLine();
-			bool current_set_visible = (current_set && set_visibility[current_set]);
-			if (ImGui::Checkbox("Visible", &current_set_visible)) {
-				updateCurrentSetVisible(current_set_visible);
+			if (current_set && current_set->getName().size() > 0) {
+				current_set_name_str = current_set->getName();
 			}
 		}
 	}
 	
-	if (objects_selected) {
-		ImGui::SameLine(400);
-		ImGui::Text("Current Selection's Transform");
-	} else {
-		ImGui::SameLine(400);
-		ImGui::TextDisabled("No Selection");
+	const char* current_set_name = current_set_name_str.c_str();
+	ImGui::Text("Object Set:");
+	ImGui::SameLine();
+	ImGui::PushItemWidth(150);
+	
+	bool has_level = (current_level && current_level->getLevel());
+	if (!has_level) {
+		ImGui::BeginDisabled();
 	}
+	
+	if (ImGui::BeginCombo("##ObjectSet", current_set_name)) {
+		if (has_level) {
+			list<LibGens::ObjectSet*> sets = current_level->getLevel()->getSets();
+			for (list<LibGens::ObjectSet*>::iterator it = sets.begin(); it != sets.end(); it++) {
+				bool is_selected = (current_set == *it);
+				if (ImGui::Selectable((*it)->getName().c_str(), is_selected)) {
+					changeCurrentSet((*it)->getName());
+				}
+				if (is_selected) {
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+			if (ImGui::Selectable(NEW_SET_OPTION)) {
+				newCurrentSet();
+			}
+			if (ImGui::Selectable(DELETE_SET_OPTION)) {
+				deleteCurrentSet();
+			}
+		}
+		ImGui::EndCombo();
+	}
+	
+	if (!has_level) {
+		ImGui::EndDisabled();
+	}
+	
+	ImGui::PopItemWidth();
+	ImGui::SameLine();
+	
+	if (current_level && current_level->getLevel()) {
+		bool current_set_visible = (current_set && set_visibility[current_set]);
+		if (ImGui::Checkbox("Visible", &current_set_visible)) {
+			updateCurrentSetVisible(current_set_visible);
+		}
+	} else {
+		ImGui::BeginDisabled();
+		bool dummy_visible = false;
+		ImGui::Checkbox("Visible", &dummy_visible);
+		ImGui::EndDisabled();
+	}
+	
+	ImGui::SameLine(400);
+	ImGui::Text("Current Selection's Transform");
 	
 	if (objects_selected) {
 		updateBottomSelectionGUI();
-		
-		ImGui::SetCursorPosX(400);
-		ImGui::PushItemWidth(100);
-		ImGui::Text("Rotation:"); ImGui::SameLine();
-		ImGui::Text("X:"); ImGui::SameLine();
-		ImGui::InputFloat("##RotX", &bottom_rot_x, 0.5f, 5.0f, "%.1f");
-		if (ImGui::IsItemDeactivatedAfterEdit() && !axis->isHolding()) {
-			updateBottomSelectionRotation(bottom_rot_x, bottom_rot_y, bottom_rot_z);
-		}
-		ImGui::SameLine();
-		ImGui::Text("Y:"); ImGui::SameLine();
-		ImGui::InputFloat("##RotY", &bottom_rot_y, 0.5f, 5.0f, "%.1f");
-		if (ImGui::IsItemDeactivatedAfterEdit() && !axis->isHolding()) {
-			updateBottomSelectionRotation(bottom_rot_x, bottom_rot_y, bottom_rot_z);
-		}
-		ImGui::SameLine();
-		ImGui::Text("Z:"); ImGui::SameLine();
-		ImGui::InputFloat("##RotZ", &bottom_rot_z, 0.5f, 5.0f, "%.1f");
-		if (ImGui::IsItemDeactivatedAfterEdit() && !axis->isHolding()) {
-			updateBottomSelectionRotation(bottom_rot_x, bottom_rot_y, bottom_rot_z);
-		}
-		
-		ImGui::SetCursorPosX(400);
-		ImGui::Text("Position:"); ImGui::SameLine();
-		ImGui::Text("X:"); ImGui::SameLine();
-		ImGui::InputFloat("##PosX", &bottom_pos_x, 0.1f, 1.0f, "%.2f");
-		if (ImGui::IsItemDeactivatedAfterEdit() && !axis->isHolding()) {
-			updateBottomSelectionPosition(bottom_pos_x, bottom_pos_y, bottom_pos_z);
-		}
-		ImGui::SameLine();
-		ImGui::Text("Y:"); ImGui::SameLine();
-		ImGui::InputFloat("##PosY", &bottom_pos_y, 0.1f, 1.0f, "%.2f");
-		if (ImGui::IsItemDeactivatedAfterEdit() && !axis->isHolding()) {
-			updateBottomSelectionPosition(bottom_pos_x, bottom_pos_y, bottom_pos_z);
-		}
-		ImGui::SameLine();
-		ImGui::Text("Z:"); ImGui::SameLine();
-		ImGui::InputFloat("##PosZ", &bottom_pos_z, 0.1f, 1.0f, "%.2f");
-		if (ImGui::IsItemDeactivatedAfterEdit() && !axis->isHolding()) {
-			updateBottomSelectionPosition(bottom_pos_x, bottom_pos_y, bottom_pos_z);
-		}
-		ImGui::PopItemWidth();
-	} else {
-		ImGui::SetCursorPosX(400);
-		ImGui::Text("No selection");
+	}
+	
+	if (!objects_selected) {
+		ImGui::BeginDisabled();
+	}
+	
+	ImGui::SetCursorPosX(400);
+	ImGui::PushItemWidth(100);
+	ImGui::Text("Rotation:"); ImGui::SameLine();
+	ImGui::Text("X:"); ImGui::SameLine();
+	ImGui::InputFloat("##RotX", &bottom_rot_x, 0.5f, 5.0f, "%.1f");
+	if (ImGui::IsItemDeactivatedAfterEdit() && !axis->isHolding()) {
+		updateBottomSelectionRotation(bottom_rot_x, bottom_rot_y, bottom_rot_z);
+	}
+	ImGui::SameLine();
+	ImGui::Text("Y:"); ImGui::SameLine();
+	ImGui::InputFloat("##RotY", &bottom_rot_y, 0.5f, 5.0f, "%.1f");
+	if (ImGui::IsItemDeactivatedAfterEdit() && !axis->isHolding()) {
+		updateBottomSelectionRotation(bottom_rot_x, bottom_rot_y, bottom_rot_z);
+	}
+	ImGui::SameLine();
+	ImGui::Text("Z:"); ImGui::SameLine();
+	ImGui::InputFloat("##RotZ", &bottom_rot_z, 0.5f, 5.0f, "%.1f");
+	if (ImGui::IsItemDeactivatedAfterEdit() && !axis->isHolding()) {
+		updateBottomSelectionRotation(bottom_rot_x, bottom_rot_y, bottom_rot_z);
+	}
+	
+	ImGui::SetCursorPosX(400);
+	ImGui::Text("Position:"); ImGui::SameLine();
+	ImGui::Text("X:"); ImGui::SameLine();
+	ImGui::InputFloat("##PosX", &bottom_pos_x, 0.1f, 1.0f, "%.2f");
+	if (ImGui::IsItemDeactivatedAfterEdit() && !axis->isHolding()) {
+		updateBottomSelectionPosition(bottom_pos_x, bottom_pos_y, bottom_pos_z);
+	}
+	ImGui::SameLine();
+	ImGui::Text("Y:"); ImGui::SameLine();
+	ImGui::InputFloat("##PosY", &bottom_pos_y, 0.1f, 1.0f, "%.2f");
+	if (ImGui::IsItemDeactivatedAfterEdit() && !axis->isHolding()) {
+		updateBottomSelectionPosition(bottom_pos_x, bottom_pos_y, bottom_pos_z);
+	}
+	ImGui::SameLine();
+	ImGui::Text("Z:"); ImGui::SameLine();
+	ImGui::InputFloat("##PosZ", &bottom_pos_z, 0.1f, 1.0f, "%.2f");
+	if (ImGui::IsItemDeactivatedAfterEdit() && !axis->isHolding()) {
+		updateBottomSelectionPosition(bottom_pos_x, bottom_pos_y, bottom_pos_z);
+	}
+	ImGui::PopItemWidth();
+	
+	if (!objects_selected) {
+		ImGui::EndDisabled();
 	}
 	
 	if (getGhostNode()) {

@@ -28,9 +28,18 @@
 #include "Parameter.h"
 
 #ifdef _WIN32
+#include <d3d9.h>
 #include <ShObjIdl.h>
 #include <ShlObj.h>
 #endif
+
+// Forward declare Ogre D3D9 classes to get the device
+namespace Ogre {
+	class D3D9RenderSystem {
+	public:
+		static IDirect3DDevice9* getActiveD3D9Device();
+	};
+}
 
 Ogre::Rectangle2D* mMiniScreen=NULL;
 
@@ -747,7 +756,9 @@ bool EditorApplication::keyPressed(const OIS::KeyEvent &arg) {
 	
 	if (axis->isHolding()) return true;
 	
-	viewport->keyPressed(arg);
+	if (!io.WantCaptureKeyboard) {
+		viewport->keyPressed(arg);
+	}
 
 	bool regular_mode = isRegularMode();
 
@@ -2161,10 +2172,10 @@ void EditorApplication::renderImGui() {
 
 void EditorApplication::renderMaterialEditor() {
 	ImVec2 center = ImVec2(ImGui::GetIO().DisplaySize.x * 0.5f, ImGui::GetIO().DisplaySize.y * 0.5f);
-	ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-	ImGui::SetNextWindowSize(ImVec2(700, 600), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowPos(center, ImGuiCond_FirstUseEver, ImVec2(0.5f, 0.5f));
+	ImGui::SetNextWindowSize(ImVec2(800, 700), ImGuiCond_FirstUseEver);
 	
-	ImGui::Begin("Material Editor", &show_material_editor, ImGuiWindowFlags_NoCollapse);
+	ImGui::Begin("Material Editor", &show_material_editor, ImGuiWindowFlags_None);
 
 	// Mode and info on same line
 	const char* mode_labels[] = { "Model", "Material", "Terrain" };
@@ -2180,6 +2191,16 @@ void EditorApplication::renderMaterialEditor() {
 	ImGui::Text("Skeleton: %s  Animation: %s", 
 		material_editor_skeleton_name.size()? material_editor_skeleton_name.c_str():"None",
 		material_editor_animation_name.size()? material_editor_animation_name.c_str():"None");
+
+	if (ImGui::Button("Load Model")) loadMaterialEditorModelGUI();
+	ImGui::SameLine();
+	if (ImGui::Button("Load Skeleton")) loadMaterialEditorSkeletonGUI();
+	ImGui::SameLine();
+	if (ImGui::Button("Load Animation")) loadMaterialEditorAnimationGUI();
+	ImGui::SameLine();
+	if (ImGui::Button("Save")) saveMaterialEditorMaterial();
+	ImGui::SameLine();
+	if (ImGui::Button("Save All")) saveAllMaterialEditorMaterials();
 
 	ImGui::Separator();
 	
@@ -2199,22 +2220,61 @@ void EditorApplication::renderMaterialEditor() {
 	ImGui::SameLine();
 	ImGui::BeginGroup();
 	ImGui::Text("Shader");
-	ImGui::SetNextItemWidth(250);
-	const char* current_shader = material_editor_material ? material_editor_material->getShader().c_str() : "";
-	if (ImGui::BeginCombo("##ShaderCombo", current_shader)) {
-		for (size_t i=0;i<material_editor_shader_names.size();++i) {
-			bool is_selected = (material_editor_material && material_editor_material->getShader()==material_editor_shader_names[i]);
-			if (ImGui::Selectable(material_editor_shader_names[i].c_str(), is_selected)) {
-				updateEditShaderMaterialEditor(material_editor_shader_names[i]);
-				if (material_editor_defaults_on_shader_change) {
-					loadMaterialDefaultParams();
-				}
-				updateMaterialEditorInfo();
-			}
-			if (is_selected) ImGui::SetItemDefaultFocus();
+	static char shader_input[512] = "";
+	static int last_material_index = -1;
+	
+	if (material_editor_material) {
+		if (material_editor_list_selection != last_material_index) {
+			last_material_index = material_editor_list_selection;
+			strncpy(shader_input, material_editor_material->getShader().c_str(), sizeof(shader_input));
+			shader_input[sizeof(shader_input) - 1] = '\0';
 		}
-		ImGui::EndCombo();
+		
+		ImGui::SetNextItemWidth(250);
+		if (ImGui::InputText("##ShaderInput", shader_input, sizeof(shader_input), ImGuiInputTextFlags_EnterReturnsTrue)) {
+			updateEditShaderMaterialEditor(string(shader_input));
+			if (material_editor_defaults_on_shader_change) {
+				loadMaterialDefaultParams();
+			}
+			updateMaterialEditorInfo();
+		}
+		
+		ImGui::SameLine();
+		if (ImGui::Button("...##ShaderBrowse")) {
+			ImGui::OpenPopup("ShaderListPopup");
+		}
+		
+		if (ImGui::BeginPopup("ShaderListPopup")) {
+			static char shader_filter[512] = "";
+			ImGui::SetKeyboardFocusHere();
+			ImGui::InputText("Filter", shader_filter, sizeof(shader_filter));
+			ImGui::Separator();
+			string filter_lower = string(shader_filter);
+			std::transform(filter_lower.begin(), filter_lower.end(), filter_lower.begin(), ::tolower);
+			ImGui::BeginChild("ShaderList", ImVec2(300, 400), true);
+			for (size_t i=0;i<material_editor_shader_names.size();++i) {
+				string shader_lower = material_editor_shader_names[i];
+				std::transform(shader_lower.begin(), shader_lower.end(), shader_lower.begin(), ::tolower);
+				if (filter_lower.empty() || shader_lower.find(filter_lower) != string::npos) {
+					bool is_selected = (material_editor_material->getShader()==material_editor_shader_names[i]);
+					if (ImGui::Selectable(material_editor_shader_names[i].c_str(), is_selected)) {
+						strncpy(shader_input, material_editor_shader_names[i].c_str(), sizeof(shader_input));
+						shader_input[sizeof(shader_input) - 1] = '\0';
+						updateEditShaderMaterialEditor(material_editor_shader_names[i]);
+						if (material_editor_defaults_on_shader_change) {
+							loadMaterialDefaultParams();
+						}
+						updateMaterialEditorInfo();
+						ImGui::CloseCurrentPopup();
+					}
+					if (is_selected) ImGui::SetItemDefaultFocus();
+				}
+			}
+			ImGui::EndChild();
+			ImGui::EndPopup();
+		}
 	}
+	
 	ImGui::Checkbox("Defaults on Shader Change", &material_editor_defaults_on_shader_change);
 	ImGui::EndGroup();
 
