@@ -363,7 +363,10 @@ EditorAnimationsList* EditorApplication::getAnimationsList(void) {
 
 LibGens::ShaderLibrary* EditorApplication::getShaderLibrary(void) {
 	if (checked_shader_library) {
-		return generations_shader_library ? generations_shader_library : unleashed_shader_library;
+		if (current_level && current_level->getGameMode() == LIBGENS_LEVEL_GAME_UNLEASHED) {
+			return unleashed_shader_library;
+		}
+		return generations_shader_library;
 	}
 	return nullptr;
 }
@@ -400,6 +403,7 @@ void EditorApplication::updateEditPropertyBool(bool v) {
 			(LibGens::ObjectElementBool*)(*it)->getElement(current_properties_names[current_property_index]);
 		if (element) {
 			element->value = v;
+			object_node_manager->reloadObjectNode(*it);
 		}
 	}
 }
@@ -413,6 +417,7 @@ void EditorApplication::updateEditPropertyInteger(unsigned int v) {
 			(LibGens::ObjectElementInteger*)(*it)->getElement(current_properties_names[current_property_index]);
 		if (element) {
 			element->value = v;
+			object_node_manager->reloadObjectNode(*it);
 		}
 	}
 }
@@ -426,6 +431,7 @@ void EditorApplication::updateEditPropertyFloat(float v) {
 			(LibGens::ObjectElementFloat*)(*it)->getElement(current_properties_names[current_property_index]);
 		if (element) {
 			element->value = v;
+			object_node_manager->reloadObjectNode(*it);
 		}
 	}
 }
@@ -439,6 +445,7 @@ void EditorApplication::updateEditPropertyString(string v) {
 			(LibGens::ObjectElementString*)(*it)->getElement(current_properties_names[current_property_index]);
 		if (element) {
 			element->value = v;
+			object_node_manager->reloadObjectNode(*it);
 		}
 	}
 }
@@ -452,6 +459,7 @@ void EditorApplication::updateEditPropertyVector(LibGens::Vector3 v) {
 			(LibGens::ObjectElementVector*)(*it)->getElement(current_properties_names[current_property_index]);
 		if (element) {
 			element->value = v;
+			object_node_manager->reloadObjectNode(*it);
 		}
 	}
 }

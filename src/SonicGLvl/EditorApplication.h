@@ -71,6 +71,8 @@
 #define SONICGLVL_HAVOK_PROPERTY_DATABASE_PATH      "../database/HavokPropertyDatabase.xml"
 #define SONICGLVL_LIBRARY_PATH                      "../database/objects/"
 #define SONICGLVL_RESOURCES_PATH                    "../database/resources/"
+#define SONICGLVL_RESOURCES_UNLEASHED_PATH          "../database/objects/Resources_Unleashed/"
+#define SONICGLVL_RESOURCES_GENERATIONS_PATH        "../database/objects/Resources_Generations/"
 #define SONICGLVL_SHADERS_PATH                      "../database/shaders/"
 
 #define SONICGLVL_FBX_SCENE_NAME               "FBXTerrainImport"
@@ -199,6 +201,12 @@ class EditorApplication : public BaseApplication {
 
 		// Material
 		LibGens::MaterialLibrary *material_library;
+		
+		// Game-specific resource libraries
+		LibGens::MaterialLibrary *unleashed_material_library;
+		LibGens::ModelLibrary *unleashed_model_library;
+		LibGens::MaterialLibrary *generations_material_library;
+		LibGens::ModelLibrary *generations_model_library;
 
 		LibGens::ShaderLibrary *generations_shader_library;
 		LibGens::ShaderLibrary *unleashed_shader_library;

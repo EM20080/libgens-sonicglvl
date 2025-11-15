@@ -121,9 +121,6 @@ bool EditorViewport::keyPressed(const OIS::KeyEvent &arg) {
 		panning_up = true;
 	}
 	
-	if (arg.key == OIS::KC_LCONTROL) {
-		panning_down = true;
-	}
 	
 	if (arg.key == OIS::KC_LSHIFT) {
 		speeding_up = true;
@@ -172,9 +169,6 @@ bool EditorViewport::keyReleased(const OIS::KeyEvent &arg) {
 		panning_up = false;
 	}
 	
-	if (arg.key == OIS::KC_LCONTROL) {
-		panning_down = false;
-	}
 	
 	if (arg.key == OIS::KC_LSHIFT) {
 		speeding_up = false;
@@ -394,17 +388,19 @@ void EditorViewport::onFocusLoss() {
 void EditorViewport::update(float delta_time) {
 	Ogre::Vector3 camera_panning_movement(0,0,0);
 
-	// WASD camera movement 
-	float movement = panning_multiplier * delta_time;
-	if (speeding_up) movement *= 4.0f;
-	if (slowing_down) movement *= 0.25f;
-	
-	if (panning_left) camera_panning_movement.x = -movement;
-	if (panning_right) camera_panning_movement.x = movement;
-	if (panning_up) camera_panning_movement.y = movement / 1.5f;
-	if (panning_down) camera_panning_movement.y = -movement / 1.5f;
-	if (panning_backward) camera_panning_movement.z = movement;
-	if (panning_forward) camera_panning_movement.z = -movement;
+	// WASD camera movement - only when right-click is held
+	if (moving) {
+		float movement = panning_multiplier * delta_time;
+		if (speeding_up) movement *= 4.0f;
+		if (slowing_down) movement *= 0.25f;
+		
+		if (panning_left) camera_panning_movement.x = -movement;
+		if (panning_right) camera_panning_movement.x = movement;
+		if (panning_up) camera_panning_movement.y = movement / 1.5f;
+		if (panning_down) camera_panning_movement.y = -movement / 1.5f;
+		if (panning_backward) camera_panning_movement.z = movement;
+		if (panning_forward) camera_panning_movement.z = -movement;
+	}
 	
 	camera->moveRelative(camera_panning_movement);
 	camera_overlay->moveRelative(camera_panning_movement);

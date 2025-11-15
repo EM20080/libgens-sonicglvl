@@ -167,6 +167,7 @@ void BaseApplication::go(void) {
 		if (io.WantCaptureMouse) {
 			ms.X.rel = 0;
 			ms.Y.rel = 0;
+			ms.Z.rel = 0;  
 		}
 
 		Ogre::FrameEvent evt;
@@ -308,7 +309,7 @@ void BaseApplication::handleSDLEvent(const SDL_Event& event) {
 		bool isSystemShortcut = false;
 		bool isCtrlPressed = (event.key.keysym.mod & KMOD_CTRL) != 0;
 
-		if (isCtrlPressed && !io.WantTextInput) {
+		if (isCtrlPressed && !io.WantTextInput && !io.WantCaptureKeyboard) {
 			switch (event.key.keysym.scancode) {
 			case SDL_SCANCODE_C:  // Ctrl+C (Copy)
 			case SDL_SCANCODE_V:  // Ctrl+V (Paste)
@@ -326,7 +327,7 @@ void BaseApplication::handleSDLEvent(const SDL_Event& event) {
 		}
 
 
-		if ((!io.WantCaptureKeyboard && !io.WantTextInput) || (isSystemShortcut && !io.WantTextInput)) {
+		if ((!io.WantCaptureKeyboard && !io.WantTextInput) || (isSystemShortcut && !io.WantTextInput && !io.WantCaptureKeyboard)) {
 			OIS::KeyCode oisKey = SDLScancodeToOIS(event.key.keysym.scancode);
 			if (oisKey != OIS::KC_UNASSIGNED) {
 				OIS::KeyEvent keyEvent(nullptr, oisKey, event.key.keysym.sym);

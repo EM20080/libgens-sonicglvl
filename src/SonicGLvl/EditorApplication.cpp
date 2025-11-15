@@ -600,7 +600,6 @@ void EditorApplication::createScene(void) {
 	havok_enviroment = new LibGens::HavokEnviroment(100 * 1024 * 1024);
 	fbx_manager      = new LibGens::FBXManager();
 
-	// Initialize Editor Managers
 	havok_property_database    = new LibGens::HavokPropertyDatabase(SONICGLVL_HAVOK_PROPERTY_DATABASE_PATH);
 	history                    = new History();
 	property_vector_history    = new History();
@@ -988,7 +987,7 @@ bool EditorApplication::mouseMoved(const OIS::MouseEvent &arg) {
 	
 	viewport->setQueryFlags(editor_mode);
 
-	if (!axis->isHolding()) {
+	if (!axis->isHolding() && !io.WantCaptureMouse) {
 		viewport->mouseMoved(arg);
 	}
 
@@ -2221,7 +2220,9 @@ void EditorApplication::renderMaterialEditor() {
 	ImGui::BeginGroup();
 	ImGui::Text("Shader");
 	static char shader_input[512] = "";
+	static char shader_filter[512] = "";
 	static int last_material_index = -1;
+	static bool combo_just_opened = false;
 	
 	if (material_editor_material) {
 		if (material_editor_list_selection != last_material_index) {
@@ -2231,30 +2232,26 @@ void EditorApplication::renderMaterialEditor() {
 		}
 		
 		ImGui::SetNextItemWidth(250);
-		if (ImGui::InputText("##ShaderInput", shader_input, sizeof(shader_input), ImGuiInputTextFlags_EnterReturnsTrue)) {
-			updateEditShaderMaterialEditor(string(shader_input));
-			if (material_editor_defaults_on_shader_change) {
-				loadMaterialDefaultParams();
+		if (ImGui::BeginCombo("##ShaderCombo", shader_input)) {
+			if (combo_just_opened) {
+				shader_filter[0] = '\0';
+				combo_just_opened = false;
+				ImGui::SetKeyboardFocusHere();
 			}
-			updateMaterialEditorInfo();
-		}
-		
-		ImGui::SameLine();
-		if (ImGui::Button("...##ShaderBrowse")) {
-			ImGui::OpenPopup("ShaderListPopup");
-		}
-		
-		if (ImGui::BeginPopup("ShaderListPopup")) {
-			static char shader_filter[512] = "";
-			ImGui::SetKeyboardFocusHere();
-			ImGui::InputText("Filter", shader_filter, sizeof(shader_filter));
+			
+			// Filter input at the top
+			ImGui::InputText("##ShaderFilter", shader_filter, sizeof(shader_filter));
 			ImGui::Separator();
+			
+			// Create filtered list
 			string filter_lower = string(shader_filter);
 			std::transform(filter_lower.begin(), filter_lower.end(), filter_lower.begin(), ::tolower);
-			ImGui::BeginChild("ShaderList", ImVec2(300, 400), true);
+			
 			for (size_t i=0;i<material_editor_shader_names.size();++i) {
 				string shader_lower = material_editor_shader_names[i];
 				std::transform(shader_lower.begin(), shader_lower.end(), shader_lower.begin(), ::tolower);
+				
+				// Show if filter is empty or matches
 				if (filter_lower.empty() || shader_lower.find(filter_lower) != string::npos) {
 					bool is_selected = (material_editor_material->getShader()==material_editor_shader_names[i]);
 					if (ImGui::Selectable(material_editor_shader_names[i].c_str(), is_selected)) {
@@ -2265,13 +2262,15 @@ void EditorApplication::renderMaterialEditor() {
 							loadMaterialDefaultParams();
 						}
 						updateMaterialEditorInfo();
-						ImGui::CloseCurrentPopup();
 					}
-					if (is_selected) ImGui::SetItemDefaultFocus();
+					if (is_selected) {
+						ImGui::SetItemDefaultFocus();
+					}
 				}
 			}
-			ImGui::EndChild();
-			ImGui::EndPopup();
+			ImGui::EndCombo();
+		} else {
+			combo_just_opened = true;
 		}
 	}
 	

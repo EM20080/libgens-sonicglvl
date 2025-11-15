@@ -582,7 +582,7 @@ void setShaderParameters(Ogre::Pass* pass, Ogre::GpuProgramParametersSharedPtr p
 						sky_follow_y_ratio = current_level->getSceneEffect().sky_follow_up_ratio_y;
 					}
 
-					program_params->setConstant((size_t)index, Ogre::Vector4(1, sky_follow_y_ratio, 1, 1));
+					program_params->setConstant((size_t)index, Ogre::Vector4(1, 1, 1, 1));
 				}
 				else if (shader_parameter_name == "g_ViewZAlphaFade") {
 					program_params->setConstant((size_t)index, Ogre::Vector4(0, 0, 0, 0));
