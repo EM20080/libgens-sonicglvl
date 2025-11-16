@@ -523,9 +523,9 @@ void setShaderParameters(Ogre::Pass* pass, Ogre::GpuProgramParametersSharedPtr p
 						lsfn.b = scene_effect.light_scattering_depth_scale;
 						lsfn.a = scene_effect.light_scattering_in_scattering_scale;
 					}
-
-					// Apply the same fog distance calculation for both Generations and Unleashed
-					lsfn.r = 1.0f / (lsfn.r - lsfn.g);
+					if (editor_application->getCurrentLevel() != NULL && editor_application->getCurrentLevel()->getGameMode() != LIBGENS_LEVEL_GAME_UNLEASHED) {
+						lsfn.r = 1.0f / (lsfn.r - lsfn.g);
+					}
 
 					program_params->setConstant((size_t)index, Ogre::Vector4(lsfn.r, lsfn.g, lsfn.b, lsfn.a));
 				}

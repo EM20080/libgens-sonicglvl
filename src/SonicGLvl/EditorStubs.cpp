@@ -135,19 +135,21 @@ void EditorApplication::renderPropertyEditor(void) {
 					ImGui::Text("Current: %s", str_elem->value.c_str());
 					ImGui::Spacing();
 					ImGui::Text("New Value:");
+					
+					static char filter_string[256] = "";
 					if (ImGui::BeginCombo("##ObjectPhysicsCombo", temp_string)) {
-						ImGui::SetKeyboardFocusHere();
-						ImGui::InputText("##ObjectPhysicsFilter", temp_string, sizeof(temp_string));
+						ImGui::InputText("##ObjectPhysicsFilter", filter_string, sizeof(filter_string));
 						object_production->readySortedEntries();
 						string entry_name;
-						size_t filter_len = strlen(temp_string);
+						size_t filter_len = strlen(filter_string);
 						while (object_production->getNextEntryName(entry_name)) {
-							if (filter_len == 0 || strncmp(temp_string, entry_name.c_str(), filter_len) == 0 || 
-								entry_name.find(temp_string) != string::npos) {
+							if (filter_len == 0 || strncmp(filter_string, entry_name.c_str(), filter_len) == 0 || 
+								entry_name.find(filter_string) != string::npos) {
 								bool is_selected = (strcmp(temp_string, entry_name.c_str()) == 0);
 								if (ImGui::Selectable(entry_name.c_str(), is_selected)) {
 									strncpy(temp_string, entry_name.c_str(), sizeof(temp_string));
 									temp_string[sizeof(temp_string) - 1] = '\0';
+									filter_string[0] = '\0';
 									ImGui::CloseCurrentPopup();
 								}
 								if (is_selected) {

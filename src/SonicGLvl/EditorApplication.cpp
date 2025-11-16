@@ -727,34 +727,7 @@ void EditorApplication::createScene(void) {
 	material_editor_material_library = NULL;
 }
 
-void EditorApplication::windowResized(Ogre::RenderWindow* rw) {
-	BaseApplication::windowResized(rw);
 
-	// Calculate viewport dimensions based on ImGui panel visibility
-	float left = 0.0f;
-	float top = 0.0f;
-	float width = 1.0f;
-	float height = 1.0f;
-	
-	// Account for main menu bar (approximately 20 pixels)
-	float menu_bar_height = 20.0f;
-	top = menu_bar_height / (float)screen_height;
-	height -= top;
-	
-	// Account for left panel if visible
-	if (show_left_panel) {
-		left = (float)SONICGLVL_GUI_LEFT_WIDTH / (float)screen_width;
-		width -= left;
-	}
-	
-	// Account for bottom panel if visible
-	if (show_bottom_panel) {
-		float bottom_height = (float)SONICGLVL_GUI_BOTTOM_HEIGHT / (float)screen_height;
-		height -= bottom_height;
-	}
-
-	viewport->resize(left, top, width, height);
-}
 
 
 bool EditorApplication::keyPressed(const OIS::KeyEvent &arg) {

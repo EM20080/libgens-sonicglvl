@@ -24,6 +24,11 @@ int global_cursor_state=0;
 
 void EditorApplication::focus() {
 	SDL_RaiseWindow(sdl_window);
+	HWND hwnd = NULL;
+	window->getCustomAttribute("WINDOW", &hwnd);
+	if (hwnd && GetFocus() != hwnd) {
+		SetFocus(hwnd);
+	}
 }
 
 bool EditorApplication::inFocus() {
