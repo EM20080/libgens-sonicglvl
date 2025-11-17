@@ -165,8 +165,14 @@ void BaseApplication::go(void) {
 		if (io.MouseDown[1]) {
 			HWND hwnd = NULL;
 			window->getCustomAttribute("WINDOW", &hwnd);
-			if (hwnd && GetFocus() != hwnd) {
-				SetFocus(hwnd);
+			HWND focusedWindow = GetFocus();
+			if (hwnd && focusedWindow != hwnd) {
+				POINT cursorPos;
+				GetCursorPos(&cursorPos);
+				HWND windowUnderCursor = WindowFromPoint(cursorPos);
+				if (windowUnderCursor == hwnd || IsChild(hwnd, windowUnderCursor)) {
+					SetFocus(hwnd);
+				}
 			}
 		}
 

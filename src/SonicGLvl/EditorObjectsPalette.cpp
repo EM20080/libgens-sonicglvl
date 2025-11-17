@@ -265,7 +265,7 @@ void EditorApplication::renderLeftPanel() {
 	
 	ImGui::SetNextWindowPos(ImVec2(0, menu_bar_height), ImGuiCond_Always);
 	ImGui::SetNextWindowSize(ImVec2(SONICGLVL_GUI_LEFT_WIDTH + 1, panel_height), ImGuiCond_Always);
-	ImGui::SetNextWindowBgAlpha(0.95f);
+		ImGui::SetNextWindowBgAlpha(1.0f);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
 	if (ImGui::Begin("Objects & Properties", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse)) {

@@ -147,6 +147,14 @@ void EditorApplication::openMaterialEditorGUI() {
 }
 
 void EditorApplication::enableMaterialEditorGUI(bool enable) {
+	if (!enable) {
+		material_name_buf[0] = '\0';
+		for (size_t i = 0; i < 10; i++) {
+			material_param_name_buf[i][0] = '\0';
+			material_param_rgba[i][0] = material_param_rgba[i][1] = material_param_rgba[i][2] = material_param_rgba[i][3] = 0.0f;
+		}
+		clearTextureInfo();
+	}
 }
 
 
@@ -559,6 +567,11 @@ void EditorApplication::pickMaterialEditorTextureGUI() {
 		chdir(exe_path.c_str());
 		string file = ToString(ofn.lpstrFile);
 		copyMaterialEditorTexture(file);
+		if (!material_editor_library_folder.empty()) {
+			Ogre::ResourceGroupManager::getSingleton().removeResourceLocation(material_editor_library_folder);
+			Ogre::ResourceGroupManager::getSingleton().addResourceLocation(material_editor_library_folder, "FileSystem");
+			Ogre::ResourceGroupManager::getSingleton().initialiseAllResourceGroups();
+		}
 		updateEditTextureMaterialEditor(LibGens::File::nameFromFilenameNoExtension(file), true);
 	}
 	chdir(exe_path.c_str());
@@ -609,6 +622,11 @@ void EditorApplication::addMaterialEditorTextureGUI() {
 		material_editor_material->addTextureUnit(tex);
 
 		copyMaterialEditorTexture(file);
+		if (!material_editor_library_folder.empty()) {
+			Ogre::ResourceGroupManager::getSingleton().removeResourceLocation(material_editor_library_folder);
+			Ogre::ResourceGroupManager::getSingleton().addResourceLocation(material_editor_library_folder, "FileSystem");
+			Ogre::ResourceGroupManager::getSingleton().initialiseAllResourceGroups();
+		}
 
 		Ogre::Material* ogre_material = Ogre::MaterialManager::getSingleton().getByName(material_editor_material->getExtra(), material_editor_mesh_group).getPointer();
 

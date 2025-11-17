@@ -256,7 +256,7 @@ void EditorApplication::openLevel(string filename) {
 		current_level->loadCollision(havok_enviroment, scene_manager, havok_nodes_list);
 	}
 
-	current_level->loadTerrain(scene_manager);
+	current_level->loadTerrain(scene_manager, &terrain_nodes_list);
 
 	if (current_level->getTerrain()) {
 		Ogre::ResourceGroupManager::getSingleton().addResourceLocation(current_level->getTerrain()->getResourcesFolder(), "FileSystem");

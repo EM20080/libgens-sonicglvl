@@ -384,6 +384,12 @@ class EditorApplication : public BaseApplication {
 		// Cloning
 		list<EditorNode*> cloning_nodes;
 		list<EditorNode*> temporary_nodes;
+		list<EditorNode*> preview_nodes;
+		int prev_multiset_count;
+		float prev_multiset_spacing;
+		float prev_multiset_vec_x;
+		float prev_multiset_vec_y;
+		float prev_multiset_vec_z;
 
 		// Game
 		PipeClient* game_client;
@@ -408,7 +414,6 @@ class EditorApplication : public BaseApplication {
 		bool mousePressed(const OIS::MouseEvent &arg, OIS::MouseButtonID id);
 		bool mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id);
 		bool frameRenderingQueued(const Ogre::FrameEvent& evt);
-		void windowResized(Ogre::RenderWindow* rw);
 		void createScene(void);
 
 		// Editor Node Methods		
@@ -416,6 +421,7 @@ class EditorApplication : public BaseApplication {
 		void deleteSelection();
 		void clearSelection();
 		void cloneSelection();
+		void cloneSelectionWithoutUpdate();
 		void temporaryCloneSelection();
 		void showSelectionNames();
 		void selectAll();
@@ -660,6 +666,8 @@ class EditorApplication : public BaseApplication {
 		void setCloningMode(size_t mode);
 		void setVectorAndSpacing();
 		void deleteTemporaryNodes();
+		void deletePreviewNodes();
+		void updateMultiSetPreview();
 
 		bool isPalettePreviewActive();
 		bool isRegularMode();

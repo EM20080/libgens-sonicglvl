@@ -3,7 +3,6 @@
 bool matchesQuery(string str1, string str2, bool exactly)
 {
 	// convert search query string and current object's name to lowercase
-	// for case insensetive comparison
 
 	for (size_t i = 0; i < str1.size(); ++i)
 		str1[i] = tolower(str1[i]);
@@ -20,7 +19,26 @@ bool matchesQuery(string str1, string str2, bool exactly)
 
 bool valueMatches(LibGens::Object *object, string element_name, string value_string)
 {
-	LibGens::ObjectElement *element = object->getElement(element_name);
+	LibGens::ObjectElement *element = NULL;
+	element = object->getElement(element_name);
+	if (!element) {
+		string element_name_lower = element_name;
+		for (size_t i = 0; i < element_name_lower.size(); ++i)
+			element_name_lower[i] = tolower(element_name_lower[i]);
+		
+		list<LibGens::ObjectElement*> elements = object->getElements();
+		for (list<LibGens::ObjectElement*>::iterator it = elements.begin(); it != elements.end(); ++it) {
+			string current_name = (*it)->getName();
+			string current_name_lower = current_name;
+			for (size_t i = 0; i < current_name_lower.size(); ++i)
+				current_name_lower[i] = tolower(current_name_lower[i]);
+			
+			if (element_name_lower == current_name_lower) {
+				element = *it;
+				break;
+			}
+		}
+	}
 	
 	if (!element)
 		return false;
@@ -227,24 +245,38 @@ void EditorApplication::renderFindDialog() {
 
 	ImVec2 center = ImVec2(ImGui::GetIO().DisplaySize.x * 0.5f, ImGui::GetIO().DisplaySize.y * 0.5f);
 	ImGui::SetNextWindowPos(center, ImGuiCond_FirstUseEver, ImVec2(0.5f, 0.5f));
-	ImGui::SetNextWindowSize(ImVec2(400, 300), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSizeConstraints(ImVec2(380, 0), ImVec2(380, FLT_MAX));
 	
-	if (ImGui::Begin("Find Object", &show_find_dialog, ImGuiWindowFlags_NoResize)) {
-		ImGui::InputTextWithHint("Object Name", "Enter object name...", find_object_name, 256);
+	if (ImGui::Begin("Find", &show_find_dialog, ImGuiWindowFlags_AlwaysAutoResize)) {
+		ImGui::Text("Basic Options");
 		
+		ImGui::Text("Object Name");
+		ImGui::SetNextItemWidth(-1);
+		ImGui::InputText("##ObjectName", find_object_name, 256);
+		
+		ImGui::Spacing();
+		ImGui::Checkbox("Find And Select All", &find_select_all);
 		ImGui::Checkbox("Match Exactly", &find_match_exactly);
-		ImGui::Checkbox("Filter by Property", &find_with_filter);
+		
+		ImGui::Spacing();
+		ImGui::Text("Filter Options");
+		ImGui::Checkbox("With Property And Value", &find_with_filter);
 		
 		if (find_with_filter) {
-			ImGui::InputTextWithHint("Property Name", "Enter property name...", find_property_name, 256);
-			ImGui::InputTextWithHint("Property Value", "Enter property value...", find_property_value, 256);
+			ImGui::Text("Property");
+			ImGui::SetNextItemWidth(-1);
+			ImGui::InputText("##PropertyName", find_property_name, 256);
+			
+			ImGui::Text("Value");
+			ImGui::SetNextItemWidth(-1);
+			ImGui::InputText("##PropertyValue", find_property_value, 256);
 		}
 		
-		ImGui::Checkbox("Select All", &find_select_all);
+		ImGui::Spacing();
 		
-		ImGui::Separator();
+		float button_width = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) * 0.5f;
 		
-		if (ImGui::Button("Find")) {
+		if (ImGui::Button("Find Next", ImVec2(button_width, 0))) {
 			string obj_name = find_object_name;
 			string property = find_with_filter ? find_property_name : "";
 			string value = find_with_filter ? find_property_value : "";
@@ -257,7 +289,7 @@ void EditorApplication::renderFindDialog() {
 		}
 		
 		ImGui::SameLine();
-		if (ImGui::Button("Close")) {
+		if (ImGui::Button("Close", ImVec2(button_width, 0))) {
 			closeFindGUI();
 		}
 	}

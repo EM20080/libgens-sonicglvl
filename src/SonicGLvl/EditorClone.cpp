@@ -93,6 +93,7 @@ void EditorApplication::createMultiSetParamObjects()
 		}
 	}
 
+	deletePreviewNodes();
 	deleteTemporaryNodes();
 }
 
@@ -171,9 +172,86 @@ void EditorApplication::deleteTemporaryNodes()
 	temporary_nodes.clear();
 }
 
+void EditorApplication::deletePreviewNodes()
+{
+	if (!preview_nodes.size()) return;
+
+	for (list<EditorNode*>::iterator it = preview_nodes.begin(); it != preview_nodes.end(); it++) {
+		if ((*it)->getType() == EDITOR_NODE_OBJECT) {
+			ObjectNode* object_node = static_cast<ObjectNode*>(*it);
+
+			LibGens::Object* object = object_node->getObject();
+			if (object) {
+				LibGens::ObjectSet* object_set = object->getParentSet();
+				if (object_set) {
+					object_set->eraseObject(object);
+				}
+
+				object_node_manager->deleteObjectNode(object);
+				delete object;
+			}
+		}
+	}
+
+	preview_nodes.clear();
+}
+
+void EditorApplication::updateMultiSetPreview()
+{
+	deletePreviewNodes();
+
+	if (multiset_count < 1 || selected_nodes.size() < 1)
+		return;
+
+	// Only preview Clone mode
+	if (cloning_mode != SONICGLVL_MULTISETPARAM_MODE_CLONE)
+		return;
+
+	LibGens::Vector3 pos_vector(multiset_vec_x, multiset_vec_y, multiset_vec_z);
+
+	list<EditorNode*>::iterator it;
+	for (it = selected_nodes.begin(); it != selected_nodes.end(); ++it)
+	{
+		if ((*it)->getType() == EDITOR_NODE_OBJECT)
+		{
+			ObjectNode* obj_node = static_cast<ObjectNode*>(*it);
+			LibGens::Object* obj = obj_node->getObject();
+			LibGens::Vector3 base_pos = obj->getPosition();
+			LibGens::Quaternion base_rot = obj->getRotation();
+			LibGens::Vector3 new_pos;
+
+			for (int i = 1; i <= multiset_count; ++i)
+			{
+				new_pos = base_pos + (pos_vector * (i * multiset_spacing));
+				LibGens::Object* new_obj = new LibGens::Object(obj);
+				new_obj->setPosition(new_pos);
+				new_obj->setRotation(base_rot);
+
+				if (current_level) {
+					if (current_level->getLevel()) {
+						new_obj->setID(current_level->getLevel()->newObjectID());
+					}
+				}
+
+				if (current_set) {
+					current_set->addObject(new_obj);
+
+					if (!current_level) {
+						new_obj->setID(current_set->newObjectID());
+					}
+				}
+
+				ObjectNode* new_object_node = object_node_manager->createObjectNode(new_obj);
+				preview_nodes.push_back(new_object_node);
+			}
+		}
+	}
+}
+
 void EditorApplication::renderMultiSetDialog() {
 	if (!show_multiset_dialog) return;
 
+	bool was_open = show_multiset_dialog;
 	if (ImGui::Begin("Multi Set / Clone", &show_multiset_dialog, ImGuiWindowFlags_NoResize)) {
 		ImGui::Text("Cloning Mode:");
 		if (ImGui::RadioButton("Clone", cloning_mode == SONICGLVL_MULTISETPARAM_MODE_CLONE)) {
@@ -187,15 +265,25 @@ void EditorApplication::renderMultiSetDialog() {
 		ImGui::Separator();
 		
 		ImGui::Text("Direction Vector:");
-		ImGui::InputFloat("X##multiset", &multiset_vec_x);
-		ImGui::InputFloat("Y##multiset", &multiset_vec_y);
-		ImGui::InputFloat("Z##multiset", &multiset_vec_z);
+		if (ImGui::InputFloat("X##multiset", &multiset_vec_x)) {
+			updateMultiSetPreview();
+		}
+		if (ImGui::InputFloat("Y##multiset", &multiset_vec_y)) {
+			updateMultiSetPreview();
+		}
+		if (ImGui::InputFloat("Z##multiset", &multiset_vec_z)) {
+			updateMultiSetPreview();
+		}
 		
 		ImGui::Separator();
 		
-		ImGui::InputFloat("Spacing", &multiset_spacing);
-		ImGui::InputInt("Count", &multiset_count);
-		if (multiset_count < 0) multiset_count = 0;
+		if (ImGui::InputFloat("Spacing", &multiset_spacing)) {
+			updateMultiSetPreview();
+		}
+		if (ImGui::InputInt("Count", &multiset_count)) {
+			if (multiset_count < 0) multiset_count = 0;
+			updateMultiSetPreview();
+		}
 		
 		ImGui::Separator();
 		
@@ -212,4 +300,9 @@ void EditorApplication::renderMultiSetDialog() {
 		}
 	}
 	ImGui::End();
+
+	if (was_open && !show_multiset_dialog) {
+		deletePreviewNodes();
+		deleteTemporaryNodes();
+	}
 }

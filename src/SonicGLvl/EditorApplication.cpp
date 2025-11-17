@@ -306,6 +306,41 @@ void EditorApplication::cloneSelection() {
 	updateSelection();
 }
 
+void EditorApplication::cloneSelectionWithoutUpdate() {
+	if (!selected_nodes.size()) return;
+
+	list<EditorNode*> nodes_to_clone = selected_nodes;
+		for (list<EditorNode*>::iterator it = selected_nodes.begin(); it != selected_nodes.end(); it++) {
+		(*it)->setSelect(false);
+	}
+	selected_nodes.clear();
+	for (list<EditorNode*>::iterator it = nodes_to_clone.begin(); it != nodes_to_clone.end(); it++) {
+		if ((*it)->getType() == EDITOR_NODE_OBJECT) {
+			ObjectNode* object_node = static_cast<ObjectNode*>(*it);
+
+			LibGens::Object* object = object_node->getObject();
+			if (object) {
+				LibGens::Object* new_object = new LibGens::Object(object);
+
+				if (current_level) {
+					if (current_level->getLevel()) {
+						new_object->setID(current_level->getLevel()->newObjectID());
+					}
+				}
+				LibGens::ObjectSet* parent_set = object->getParentSet();
+				if (parent_set) {
+					parent_set->addObject(new_object);
+				}
+				ObjectNode* new_object_node = object_node_manager->createObjectNode(new_object);
+				new_object_node->setSelect(true);
+				selected_nodes.push_back(new_object_node);
+			}
+		}
+	}
+
+	// DON'T call updateSelection(), that would reset the axis holding state
+}
+
 void EditorApplication::temporaryCloneSelection() {
 	if (!selected_nodes.size()) return;
 
@@ -726,10 +761,6 @@ void EditorApplication::createScene(void) {
 	material_editor_mode = SONICGLVL_MATERIAL_EDITOR_MODE_MODEL;
 	material_editor_material_library = NULL;
 }
-
-
-
-
 bool EditorApplication::keyPressed(const OIS::KeyEvent &arg) {
 	ImGuiIO& io = ImGui::GetIO();
 	
@@ -1003,7 +1034,8 @@ bool EditorApplication::mouseMoved(const OIS::MouseEvent &arg) {
 
 		if (current_node) current_node->setHighlight(true);
 	
-		if (axis->mouseMoved(viewport, arg)) {
+		// Don't process axis dragging when Multi Set dialog is open
+		if (!show_multiset_dialog && axis->mouseMoved(viewport, arg)) {
 			if (!axis->getMode())
 				translateSelection(axis->getTranslate());
 			else
@@ -1049,19 +1081,19 @@ bool EditorApplication::mousePressed(const OIS::MouseEvent &arg, OIS::MouseButto
 		if (isRegularMode()) {
 			if (axis->mousePressed(viewport, arg, id)) {
 				dragging_mode = 0;
+				rememberSelection(axis->getMode());
 
 				if (keyboard->isModifierDown(OIS::Keyboard::Shift) && !show_multiset_dialog) {
 					dragging_mode = 1;
 					rememberCloningNodes();
-					temporaryCloneSelection();
+					// Clone WITHOUT calling updateSelection (which would reset axis state)
+					cloneSelectionWithoutUpdate();
 				}
-
-				if (keyboard->isModifierDown(OIS::Keyboard::Ctrl)) {
+				else if (keyboard->isModifierDown(OIS::Keyboard::Ctrl)) {
 					dragging_mode = 2;
 					cloneSelection();
+					rememberSelection(axis->getMode());
 				}
-
-				rememberSelection(axis->getMode());
 			}
 			else if (id == OIS::MB_Left) {
 				if (current_node) {
@@ -1179,8 +1211,6 @@ bool EditorApplication::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButt
 			{
 				openMultiSetParamDlg();
 				setVectorAndSpacing();
-
-				// save temporary clones to delete them when cloning is done
 				list<EditorNode*>::iterator it;
 				for (it = selected_nodes.begin(); it != selected_nodes.end(); ++it)
 				{
@@ -1189,6 +1219,7 @@ bool EditorApplication::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButt
 				}
 				selected_nodes.clear();
 
+				// Reselect original nodes
 				for (it = cloning_nodes.begin(); it != cloning_nodes.end(); ++it)
 				{
 					(*it)->setSelect(true);
@@ -2204,6 +2235,7 @@ void EditorApplication::renderMaterialEditor() {
 	static int last_material_index = -1;
 	static bool combo_just_opened = false;
 	
+	ImGui::BeginDisabled(!material_editor_material);
 	if (material_editor_material) {
 		if (material_editor_list_selection != last_material_index) {
 			last_material_index = material_editor_list_selection;
@@ -2252,22 +2284,67 @@ void EditorApplication::renderMaterialEditor() {
 		} else {
 			combo_just_opened = true;
 		}
+	} else {
+		ImGui::SetNextItemWidth(250);
+		if (ImGui::BeginCombo("##ShaderCombo", "")) {
+			ImGui::EndCombo();
+		}
 	}
 	
 	ImGui::Checkbox("Defaults on Shader Change", &material_editor_defaults_on_shader_change);
+	ImGui::EndDisabled();
 	ImGui::EndGroup();
 
+	ImGui::BeginDisabled(!material_editor_material);
 	if (material_editor_material) {
 		bool no_cull = material_editor_material->hasNoCulling();
-		if (ImGui::Checkbox("No Culling", &no_cull)) {
+		if (ImGui::Checkbox("Double Sided", &no_cull)) {
 			material_editor_material->setNoCulling(no_cull);
+			Ogre::Material* ogre_material = Ogre::MaterialManager::getSingleton().getByName(material_editor_material->getExtra(), material_editor_mesh_group).getPointer();
+			if (ogre_material && ogre_material->getNumTechniques() > 0) {
+				Ogre::Technique* tech = ogre_material->getTechnique(0);
+				if (tech && tech->getNumPasses() > 0) {
+					Ogre::Pass* pass = tech->getPass(0);
+					if (pass) {
+						pass->setCullingMode(no_cull ? Ogre::CULL_NONE : Ogre::CULL_CLOCKWISE);
+					}
+				}
+			}
+			if (material_editor_preview_window) {
+				material_editor_preview_window->update();
+			}
 		}
 		ImGui::SameLine();
 		bool additive = material_editor_material->hasColorBlend();
 		if (ImGui::Checkbox("Additive", &additive)) {
 			material_editor_material->setColorBlend(additive);
+			Ogre::Material* ogre_material = Ogre::MaterialManager::getSingleton().getByName(material_editor_material->getExtra(), material_editor_mesh_group).getPointer();
+			if (ogre_material && ogre_material->getNumTechniques() > 0) {
+				Ogre::Technique* tech = ogre_material->getTechnique(0);
+				if (tech && tech->getNumPasses() > 0) {
+					Ogre::Pass* pass = tech->getPass(0);
+					if (pass) {
+						if (additive) {
+							pass->setSceneBlending(Ogre::SBF_SOURCE_ALPHA, Ogre::SBF_ONE);
+							pass->setDepthWriteEnabled(false);
+						} else {
+							pass->setSceneBlending(Ogre::SBT_REPLACE);
+							pass->setDepthWriteEnabled(true);
+						}
+					}
+				}
+			}
+			if (material_editor_preview_window) {
+				material_editor_preview_window->update();
+			}
 		}
+	} else {
+		bool dummy_bool = false;
+		ImGui::Checkbox("Double Sided", &dummy_bool);
+		ImGui::SameLine();
+		ImGui::Checkbox("Additive", &dummy_bool);
 	}
+	ImGui::EndDisabled();
 
 	ImGui::Text("Texture Units");
 	ImGui::BeginChild("TextureList", ImVec2(250, 120), true);
@@ -2283,12 +2360,15 @@ void EditorApplication::renderMaterialEditor() {
 		}
 	}
 	ImGui::EndChild();
+	ImGui::BeginDisabled(!material_editor_material);
 	if (ImGui::Button("Add Texture")) addMaterialEditorTextureGUI();
 	ImGui::SameLine();
 	if (ImGui::Button("Remove Texture")) removeMaterialEditorTexture();
 	ImGui::SameLine();
 	if (ImGui::Button("Defaults")) loadMaterialDefaultParams();
+	ImGui::EndDisabled();
 
+	ImGui::BeginDisabled(!material_editor_texture);
 	if (material_editor_texture) {
 		ImGui::InputText("Texture Name", texture_filename_buf, sizeof(texture_filename_buf));
 		if (ImGui::IsItemDeactivatedAfterEdit()) {
@@ -2315,7 +2395,16 @@ void EditorApplication::renderMaterialEditor() {
 			}
 		}
 		if (ImGui::Button("Choose Texture")) pickMaterialEditorTextureGUI();
+	} else {
+		char empty_buf[256] = "";
+		ImGui::InputText("Texture Name", empty_buf, sizeof(empty_buf));
+		ImGui::InputText("Unit", empty_buf, sizeof(empty_buf));
+		if (ImGui::BeginCombo("Slot", "")) {
+			ImGui::EndCombo();
+		}
+		ImGui::Button("Choose Texture");
 	}
+	ImGui::EndDisabled();
 
 	ImGui::Separator();
 	ImGui::Text("Parameters");

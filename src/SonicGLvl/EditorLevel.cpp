@@ -348,30 +348,51 @@ void EditorLevel::unpackResources() {
 			cleanResources();
 			CreateDirectory(resources_cache_folder.c_str(), NULL);
 			resources_data_ar_pack->extract(resources_cache_folder + "/");
+			resources_hash = hash;
+		}
+		delete resources_data_ar_pack;
 
-			if (unpack_slot_resources) {
+		if (unpack_slot_resources) {
+			if (unpack) {
 				CreateDirectory(slot_resources_cache_folder.c_str(), NULL);
 
 				WIN32_FIND_DATA FindFileData;
 				HANDLE hFind;
-				hFind = FindFirstFile((folder + "Cmn*" + slot_id_name + "*.ar.00").c_str(), &FindFileData);
-				if (hFind == INVALID_HANDLE_VALUE) {}
-				else {
+				
+				// Search for common terrain archives with multiple patterns such as.
+				// 2. Cmn<geometry_name>* (e.g., CmnActD_Terrain_EU.ar.00)
+				// 3. Cmn<slot_id>* (e.g., CmnEU.ar.00, CmnMykonos.ar.00)
+				// 4. Act*_Sub<slot_id>_* (e.g., ActD_SubEU_01.ar.00, ActD_SubMykonos_01.ar.00) for spagonia for example
+				vector<string> search_patterns;
+				search_patterns.push_back("Cmn*" + slot_id_name + "*.ar.00");
+				search_patterns.push_back("Cmn" + geometry_name + "*.ar.00");
+				if (geometry_name != slot_id_name) {
+					search_patterns.push_back("Cmn" + slot_id_name + "*.ar.00");
+				}
+				search_patterns.push_back("Act*_Sub" + slot_id_name + "_*.ar.00");
+				
+				for (size_t i = 0; i < search_patterns.size(); i++) {
+					hFind = FindFirstFile((folder + search_patterns[i]).c_str(), &FindFileData);
+					if (hFind == INVALID_HANDLE_VALUE) {
+						continue;
+					}
+					
 					do {
 						const char* name = FindFileData.cFileName;
 						if (name[0] == '.') continue;
 
-						LibGens::ArPack slot_resources_data_ar_pack(folder + name);
-						slot_resources_data_ar_pack.extract(slot_resources_cache_folder + "/");
+						string full_path = folder + name;
+						// Check if we already extracted this file to avoid duplicates
+						if (LibGens::File::check(full_path)) {
+							LibGens::ArPack slot_resources_data_ar_pack(full_path);
+							slot_resources_data_ar_pack.extract(slot_resources_cache_folder + "/");
+						}
 
 					} while (FindNextFile(hFind, &FindFileData) != 0);
 					FindClose(hFind);
 				}
 			}
-
-			resources_hash = hash;
 		}
-		delete resources_data_ar_pack;
 
 		if (unpack_slot_resources) {
 			Ogre::ResourceGroupManager::getSingleton().addResourceLocation(slot_resources_cache_folder, "FileSystem");
@@ -590,6 +611,26 @@ void EditorLevel::loadTerrain(Ogre::SceneManager *scene_manager, list<TerrainNod
 		ghost    	     = new LibGens::Ghost(ghost_filename);
 
 		material_library = terrain->getMaterialLibrary();
+		
+		if (!slot_resources_cache_folder.empty()) {
+			WIN32_FIND_DATA FindFileData;
+			HANDLE hFind = FindFirstFile((slot_resources_cache_folder + "/*.material").c_str(), &FindFileData);
+			if (hFind != INVALID_HANDLE_VALUE) {
+				do {
+					const char* name = FindFileData.cFileName;
+					if (name[0] == '.') continue;
+					
+					string material_name = string(name);
+					material_name = material_name.substr(0, material_name.length() - 9);
+					
+					if (!material_library->checkMaterial(material_name)) {
+						LibGens::Material *mat = new LibGens::Material(slot_resources_cache_folder + "/" + name);
+						material_library->addMaterial(mat);
+					}
+				} while (FindNextFile(hFind, &FindFileData) != 0);
+				FindClose(hFind);
+			}
+		}
 
 		if (light_list) {
 			direct_light     = light_list->getLight(level->getDirectLight());
