@@ -22,12 +22,12 @@
 void EditorApplication::exportSceneFBX(string filename) {
 	if (!current_level) return;
 
-	LibGens::FBX* fbx_pack = new LibGens::FBX(fbx_manager->getManager());
+	LibGens::FBX *fbx_pack = new LibGens::FBX(fbx_manager->getManager());
 
 	fbx_pack->setMaterialLibrary(current_level->getMaterialLibrary());
-
-	for (list<TerrainNode*>::iterator it = terrain_nodes_list.begin(); it != terrain_nodes_list.end(); it++) {
-		FbxMesh* model_node = fbx_pack->addTerrainInstance((*it)->getTerrainInstance());
+	
+	for (list<TerrainNode *>::iterator it=terrain_nodes_list.begin(); it!=terrain_nodes_list.end(); it++) {
+		FbxMesh *model_node=fbx_pack->addTerrainInstance((*it)->getTerrainInstance());
 	}
 
 	fbx_manager->exportFBX(fbx_pack, filename);
