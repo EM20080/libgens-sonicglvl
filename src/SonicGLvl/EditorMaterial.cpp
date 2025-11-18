@@ -36,7 +36,7 @@ void EditorApplication::closePreviewMaterialEditorGUI() {
 		material_editor_preview_window->destroy();
 		material_editor_preview_window = NULL;
 	}
-	Ogre::RenderTarget* existingRT = root->getRenderTarget("Preview Window");
+	Ogre::RenderTarget *existingRT = root->getRenderTarget("Preview Window");
 	if (existingRT) {
 		root->getRenderSystem()->destroyRenderTarget("Preview Window");
 	}
@@ -62,7 +62,7 @@ void EditorApplication::closePreviewMaterialEditorGUI() {
 }
 
 void EditorApplication::createPreviewMaterialEditorGUI() {
-	Ogre::RenderTarget* existingRT = root->getRenderTarget("Preview Window");
+	Ogre::RenderTarget *existingRT = root->getRenderTarget("Preview Window");
 	if (existingRT && !hasScene) {
 		root->getRenderSystem()->destroyRenderTarget("Preview Window");
 	}
@@ -73,7 +73,7 @@ void EditorApplication::createPreviewMaterialEditorGUI() {
 		material_editor_preview_scene_manager = root->createSceneManager("DefaultSceneManager");
 		material_editor_preview_scene_manager->setAmbientLight(Ogre::ColourValue(0.5, 0.5, 0.5));
 		material_editor_preview_bogus_scene_manager = root->createSceneManager("DefaultSceneManager");
-		Ogre::Light* dir_light = material_editor_preview_scene_manager->createLight("Preview Directional Light");
+		Ogre::Light *dir_light = material_editor_preview_scene_manager->createLight("Preview Directional Light");
 		dir_light->setSpecularColour(Ogre::ColourValue::White);
 		dir_light->setDiffuseColour(Ogre::ColourValue(1.0, 1.0, 1.0));
 		dir_light->setType(Ogre::Light::LT_DIRECTIONAL);
@@ -113,7 +113,7 @@ void EditorApplication::createPreviewMaterialEditorGUI() {
 		root->addFrameListener(material_editor_preview_listener);
 		material_editor_preview_listener->setMouse(material_editor_mouse);
 		material_editor_preview_listener->setKeyboard(material_editor_keyboard);
-		unsigned int width, height, depth; int left, top; material_editor_preview_window->getMetrics(width, height, depth, left, top); OIS::MouseState& ms = const_cast<OIS::MouseState&>(material_editor_mouse->getMouseState()); ms.width = width; ms.height = height; 
+		unsigned int width, height, depth; int left, top; material_editor_preview_window->getMetrics(width, height, depth, left, top); OIS::MouseState &ms = const_cast<OIS::MouseState&>(material_editor_mouse->getMouseState()); ms.width = width; ms.height = height; 
 	}
 	rebuildMaterialPreviewNodes();
 	material_editor_model->buildAABB();
@@ -121,7 +121,7 @@ void EditorApplication::createPreviewMaterialEditorGUI() {
 	LibGens::Vector3 aabb_center = model_aabb.center();
 	Ogre::Vector3 camera_center = Ogre::Vector3(aabb_center.x, aabb_center.y, aabb_center.z);
 	float size_max = model_aabb.sizeMax();
-	Ogre::Camera* camera = material_editor_viewport->getCamera();
+	Ogre::Camera *camera = material_editor_viewport->getCamera();
 	camera->setPosition(camera_center);
 	camera->setDirection(Ogre::Vector3(0, 0, -1).normalisedCopy());
 	camera->moveRelative(Ogre::Vector3::UNIT_Z * size_max * 1.5f);
@@ -204,12 +204,12 @@ void EditorApplication::updateMaterialEditorInfo() {
 	material_editor_slot_names.clear();
 	if (material_editor_shader_library) {
 		string shader_name = material_editor_material->getShader();
-		LibGens::Shader* vs = NULL; LibGens::Shader* ps = NULL;
+		LibGens::Shader *vs = NULL; LibGens::Shader *ps = NULL;
 		material_editor_shader_library->getMaterialShaders(shader_name, vs, ps, false, !material_editor_material->hasExtraGI(), false);
 		if (ps) {
 			vector<string> names = ps->getShaderParameterFilenames();
 			for (size_t i = 0; i < names.size(); i++) {
-				LibGens::ShaderParams* params = material_editor_shader_library->getPixelShaderParams(names[i]);
+				LibGens::ShaderParams *params = material_editor_shader_library->getPixelShaderParams(names[i]);
 				if (params->getName() == "global") continue;
 				vector<LibGens::ShaderParam*> paramList = params->getParameterList(3);
 				for (size_t j = 0; j < paramList.size(); j++) {
@@ -225,17 +225,17 @@ void EditorApplication::loadMaterialDefaultParams() {
 		return;
 	}
 
-	LibGens::Material* material = material_editor_material;
+	LibGens::Material *material = material_editor_material;
 	material->removeAllParameters();
 	string shader_name = material->getShader();
-	LibGens::Shader* vertex_shader = NULL;
-	LibGens::Shader* pixel_shader = NULL;
+	LibGens::Shader *vertex_shader = NULL;
+	LibGens::Shader *pixel_shader = NULL;
 	material_editor_shader_library->getMaterialShaders(shader_name, vertex_shader, pixel_shader, false, !material->hasExtraGI(), false);
 
 	if (pixel_shader) {
 		vector<string> names = pixel_shader->getShaderParameterFilenames();
 		for (size_t i = 0; i < names.size(); i++) {
-			LibGens::ShaderParams* params = material_editor_shader_library->getPixelShaderParams(names[i]);
+			LibGens::ShaderParams *params = material_editor_shader_library->getPixelShaderParams(names[i]);
 			vector<LibGens::ShaderParam*> paramList = params->getParameterList(0);
 			for (size_t i2 = 0; i2 < paramList.size(); i2++) {
 				if (paramList[i2]->getName().rfind("g_", 0) == -1 && paramList[i2]->getName().rfind("mrg", 0) == -1)
@@ -255,7 +255,7 @@ void EditorApplication::removeMaterialEditorTexture() {
 	material_editor_material->removeTextureUnitByIndex(texture_list_selection);
 	updateMaterialEditorTextureList();
 
-	Ogre::Material* ogre_material = Ogre::MaterialManager::getSingleton().getByName(material_editor_material->getExtra(), material_editor_mesh_group).getPointer();
+	Ogre::Material *ogre_material = Ogre::MaterialManager::getSingleton().getByName(material_editor_material->getExtra(), material_editor_mesh_group).getPointer();
 
 	if (ogre_material) {
 		updateMaterialShaderParameters(ogre_material, material_editor_material, !material_editor_material->hasExtraGI(), NULL, material_editor_shader_library);
@@ -276,12 +276,12 @@ void EditorApplication::materialEditorTerrainMode() {
 	material_editor_material_library = current_level->getTerrain()->getMaterialLibrary();
 	material_editor_library_folder = current_level->getTerrain()->getResourcesFolder();
 
-	for (LibGens::Material* mat : material_editor_material_library->getMaterials()) {
+	for (LibGens::Material *mat : material_editor_material_library->getMaterials()) {
 		material_editor_materials.push_back(mat);
 	}
 
 	std::sort(material_editor_materials.begin(), material_editor_materials.end(),
-		[](LibGens::Material* lhs, LibGens::Material* rhs) {
+		[](LibGens::Material *lhs, LibGens::Material *rhs) {
 			return lhs->getName().compare(rhs->getName()) < 0;
 		});
 
@@ -342,7 +342,7 @@ void EditorApplication::rebuildMaterialPreviewNodes() {
 		prepareSkeletonAndAnimation(material_editor_skeleton_name, material_editor_animation_name);
 	}
 
-	LibGens::ShaderLibrary* shader_library = NULL;
+	LibGens::ShaderLibrary *shader_library = NULL;
 
 	if (material_editor_unleashed) {
 		shader_library = unleashed_shader_library;
@@ -358,7 +358,7 @@ void EditorApplication::rebuildMaterialPreviewNodes() {
 	if (material_editor_animation_name.size()) {
 		unsigned short attached_objects = material_editor_scene_node->numAttachedObjects();
 		for (unsigned short i = 0; i < attached_objects; i++) {
-			Ogre::Entity* entity = static_cast<Ogre::Entity*>(material_editor_scene_node->getAttachedObject(i));
+			Ogre::Entity *entity = static_cast<Ogre::Entity*>(material_editor_scene_node->getAttachedObject(i));
 
 			if (entity->hasAnimationState(material_editor_animation_name)) {
 				material_editor_animation_state = entity->getAnimationState(material_editor_animation_name);
@@ -395,7 +395,7 @@ void EditorApplication::rebuildListMaterialEditorGUI() {
 
 	if (material_editor_shader_library) {
 		for (size_t i = 0; i < material_editor_shader_library->getFileCount(); i++) {
-			LibGens::ArFile* ar_file = material_editor_shader_library->getFileByIndex(i);
+			LibGens::ArFile *ar_file = material_editor_shader_library->getFileByIndex(i);
 			if (ar_file->getName().find(".shader-list") != string::npos) {
 				material_editor_shader_names.push_back(LibGens::File::nameFromFilenameNoExtension(ar_file->getName()));
 			}
@@ -405,7 +405,7 @@ void EditorApplication::rebuildListMaterialEditorGUI() {
 
 
 void EditorApplication::saveMaterialEditorModelGUI() {
-	char* filename = (char*)malloc(1024);
+	char *filename = (char *)malloc(1024);
 	strcpy(filename, "");
 
 	OPENFILENAME    ofn;
@@ -425,7 +425,7 @@ void EditorApplication::saveMaterialEditorModelGUI() {
 		string folder = LibGens::File::folderFromFilename(ofn.lpstrFile);
 		material_editor_model->save(ToString(ofn.lpstrFile));
 
-		for (LibGens::Material* mat : material_editor_materials) {
+		for (LibGens::Material *mat : material_editor_materials) {
 			mat->save(folder + "\\" + mat->getName() + ".material", ofn.nFilterIndex == 2 ? LIBGENS_MATERIAL_ROOT_UNLEASHED : LIBGENS_MATERIAL_ROOT_GENERATIONS);
 		}
 	}
@@ -458,7 +458,7 @@ void EditorApplication::saveAllMaterialEditorMaterials() {
 	} else {
 		save_unleashed = material_editor_unleashed;
 	}
-	for (LibGens::Material* mat : material_editor_materials) {
+	for (LibGens::Material *mat : material_editor_materials) {
 		if (mat) {
 			mat->save(material_editor_library_folder + "\\" + mat->getName() + ".material", save_unleashed ? LIBGENS_MATERIAL_ROOT_UNLEASHED : LIBGENS_MATERIAL_ROOT_GENERATIONS);
 		}
@@ -466,7 +466,7 @@ void EditorApplication::saveAllMaterialEditorMaterials() {
 }
 
 void EditorApplication::loadMaterialEditorModelGUI() {
-	char* filename = (char*)malloc(1024);
+	char *filename = (char *)malloc(1024);
 	strcpy(filename, "");
 
 	OPENFILENAME    ofn;
@@ -507,7 +507,7 @@ void EditorApplication::loadMaterialEditorModelGUI() {
 		material_editor_materials.clear();
 		material_editor_unleashed = true;
 		for (list<string>::iterator it = material_names.begin(); it != material_names.end(); it++) {
-			LibGens::Material* mat = material_editor_material_library->getMaterial(*it);
+			LibGens::Material *mat = material_editor_material_library->getMaterial(*it);
 
 			if (mat) {
 				if (mat->getRootNodeType() != LIBGENS_MATERIAL_ROOT_UNLEASHED) {
@@ -518,7 +518,7 @@ void EditorApplication::loadMaterialEditorModelGUI() {
 		}
 
 		std::sort(material_editor_materials.begin(), material_editor_materials.end(),
-			[](LibGens::Material* lhs, LibGens::Material* rhs) {
+			[](LibGens::Material *lhs, LibGens::Material *rhs) {
 				return lhs->getName().compare(rhs->getName()) < 0;
 			});
 
@@ -530,7 +530,7 @@ void EditorApplication::loadMaterialEditorModelGUI() {
 	free(filename);
 }
 
-void EditorApplication::copyMaterialEditorTexture(const string& file) const
+void EditorApplication::copyMaterialEditorTexture(const string &file) const
 {
 	string destination_folder;
 
@@ -548,7 +548,7 @@ void EditorApplication::pickMaterialEditorTextureGUI() {
 	if (!material_editor_texture)
 		return;
 
-	char* filename = (char*)malloc(1024);
+	char *filename = (char *)malloc(1024);
 	strcpy(filename, "");
 
 	OPENFILENAME    ofn;
@@ -582,7 +582,7 @@ void EditorApplication::addMaterialEditorTextureGUI() {
 	if (!material_editor_material)
 		return;
 
-	char* filename = (char*)malloc(1024);
+	char *filename = (char *)malloc(1024);
 	strcpy(filename, "");
 
 	OPENFILENAME    ofn;
@@ -618,7 +618,7 @@ void EditorApplication::addMaterialEditorTextureGUI() {
 			else if (fileUnit == "env" || fileUnit == "ref")
 				unit = "reflection";
 		}
-		LibGens::Texture* tex = new LibGens::Texture(unitName, unit, internal_name);
+		LibGens::Texture *tex = new LibGens::Texture(unitName, unit, internal_name);
 		material_editor_material->addTextureUnit(tex);
 
 		copyMaterialEditorTexture(file);
@@ -628,7 +628,7 @@ void EditorApplication::addMaterialEditorTextureGUI() {
 			Ogre::ResourceGroupManager::getSingleton().initialiseAllResourceGroups();
 		}
 
-		Ogre::Material* ogre_material = Ogre::MaterialManager::getSingleton().getByName(material_editor_material->getExtra(), material_editor_mesh_group).getPointer();
+		Ogre::Material *ogre_material = Ogre::MaterialManager::getSingleton().getByName(material_editor_material->getExtra(), material_editor_mesh_group).getPointer();
 
 		if (ogre_material) {
 			updateMaterialShaderParameters(ogre_material, material_editor_material, !material_editor_material->hasExtraGI(), NULL, material_editor_shader_library);
@@ -641,7 +641,7 @@ void EditorApplication::addMaterialEditorTextureGUI() {
 }
 
 void EditorApplication::loadMaterialEditorSkeletonGUI() {
-	char* filename = (char*)malloc(1024);
+	char *filename = (char *)malloc(1024);
 	strcpy(filename, "");
 
 	OPENFILENAME    ofn;
@@ -673,7 +673,7 @@ void EditorApplication::loadMaterialEditorSkeletonGUI() {
 
 
 void EditorApplication::loadMaterialEditorAnimationGUI() {
-	char* filename = (char*)malloc(1024);
+	char *filename = (char *)malloc(1024);
 	strcpy(filename, "");
 
 	OPENFILENAME    ofn;
@@ -739,13 +739,13 @@ void EditorApplication::updateMaterialEditorTextureIndex(int selection_index) {
 void EditorApplication::updateEditParameterMaterialEditor(size_t i, LibGens::Color parameter_color) {
 	if (!material_editor_material) return;
 
-	LibGens::Parameter* parameter = material_editor_material->getParameterByIndex(i);
+	LibGens::Parameter *parameter = material_editor_material->getParameterByIndex(i);
 	if (parameter) {
 		parameter->color = parameter_color;
 	}
 	else return;
 
-	Ogre::Material* ogre_material = Ogre::MaterialManager::getSingleton().getByName(material_editor_material->getExtra(), material_editor_mesh_group).getPointer();
+	Ogre::Material *ogre_material = Ogre::MaterialManager::getSingleton().getByName(material_editor_material->getExtra(), material_editor_mesh_group).getPointer();
 
 	if (ogre_material) {
 		updateMaterialShaderParameters(ogre_material, material_editor_material, !material_editor_material->hasExtraGI(), NULL, material_editor_shader_library);
@@ -771,7 +771,7 @@ void EditorApplication::updateEditShaderMaterialEditor(string shader_name) {
 		material_editor_viewport->getCamera()->setOrientation(cam_rot);
 	}
 	else {
-		Ogre::Material* ogre_material = Ogre::MaterialManager::getSingleton().getByName(material_editor_material->getExtra(), material_editor_mesh_group).getPointer();
+		Ogre::Material *ogre_material = Ogre::MaterialManager::getSingleton().getByName(material_editor_material->getExtra(), material_editor_mesh_group).getPointer();
 
 		if (ogre_material && material_editor_shader_library) {
 			try {
@@ -792,7 +792,7 @@ void EditorApplication::updateEditTextureMaterialEditor(string texture_name, boo
 		return;
 
 	material_editor_texture->setName(texture_name);
-	Ogre::Material* ogre_material = Ogre::MaterialManager::getSingleton().getByName(material_editor_material->getExtra(), material_editor_mesh_group).getPointer();
+	Ogre::Material *ogre_material = Ogre::MaterialManager::getSingleton().getByName(material_editor_material->getExtra(), material_editor_mesh_group).getPointer();
 
 	if (ogre_material && material_editor_shader_library) {
 		updateMaterialShaderParameters(ogre_material, material_editor_material, !material_editor_material->hasExtraGI(), NULL, material_editor_shader_library);
@@ -813,7 +813,7 @@ void EditorApplication::updateEditTextureUnitMaterialEditor(string unit_name) {
 
 	material_editor_texture->setUnit(unit_name);
 
-	Ogre::Material* ogre_material = Ogre::MaterialManager::getSingleton().getByName(material_editor_material->getExtra(), material_editor_mesh_group).getPointer();
+	Ogre::Material *ogre_material = Ogre::MaterialManager::getSingleton().getByName(material_editor_material->getExtra(), material_editor_mesh_group).getPointer();
 
 		if (ogre_material && material_editor_shader_library) {
 		updateMaterialShaderParameters(ogre_material, material_editor_material, !material_editor_material->hasExtraGI(), NULL, material_editor_shader_library);

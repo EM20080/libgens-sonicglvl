@@ -105,7 +105,7 @@ void EditorApplication::openLevelGUI() {
 	ofn.hwndOwner = hwnd;
 	ofn.lpstrFile = szFile;
 	ofn.nMaxFile = sizeof(szFile);
-	ofn.lpstrFilter = "#Level.ar.00\0*.ar.00;\0All Files\0*.*\0";
+	ofn.lpstrFilter = "#Level.ar.00\0#*.ar.00\0All Files\0*.*\0";
 	ofn.nFilterIndex = 1;
 	ofn.lpstrFileTitle = NULL;
 	ofn.nMaxFileTitle = 0;

@@ -37,13 +37,13 @@
 namespace Ogre {
 	class D3D9RenderSystem {
 	public:
-		static IDirect3DDevice9* getActiveD3D9Device();
+		static IDirect3DDevice9 *getActiveD3D9Device();
 	};
 }
 
-Ogre::Rectangle2D* mMiniScreen=NULL;
+Ogre::Rectangle2D *mMiniScreen=NULL;
 
-void Game_ProcessMessage(PipeClient* client, PipeMessage* msg);
+void Game_ProcessMessage(PipeClient *client, PipeMessage *msg);
 
 EditorApplication::EditorApplication(void)
 {
@@ -88,12 +88,12 @@ EditorApplication::~EditorApplication(void) {
 	delete game_client;
 }
 
-ObjectNodeManager* EditorApplication::getObjectNodeManager()
+ObjectNodeManager *EditorApplication::getObjectNodeManager()
 {
 	return object_node_manager;
 }
 
-void EditorApplication::selectNode(EditorNode* node)
+void EditorApplication::selectNode(EditorNode *node)
 {
 	if (node)
 	{
@@ -161,8 +161,8 @@ void EditorApplication::deleteSelection() {
 				}
 			}
 			else if ((*it)->getType() == EDITOR_NODE_OBJECT_MSP) {
-				ObjectMultiSetNode* object_msp_node = static_cast<ObjectMultiSetNode*>(*it);
-				HistoryActionSelectNode* action_select = new HistoryActionSelectNode((*it), true, false, &selected_nodes);
+				ObjectMultiSetNode *object_msp_node = static_cast<ObjectMultiSetNode *>(*it);
+				HistoryActionSelectNode *action_select = new HistoryActionSelectNode((*it), true, false, &selected_nodes);
 				object_msp_node->setSelect(false);
 				wrapper->push(action_select);
 			}
@@ -247,14 +247,14 @@ void EditorApplication::selectAll() {
 
 void EditorApplication::rememberCloningNodes()
 {
-	for (list<EditorNode*>::iterator it = selected_nodes.begin(); it != selected_nodes.end(); ++it)
+	for (list<EditorNode *>::iterator it = selected_nodes.begin(); it != selected_nodes.end(); ++it)
 	{
 		if ((*it)->getType() == EDITOR_NODE_OBJECT)
 			cloning_nodes.push_back(*it);
 	}
 }
 
-list<EditorNode*> EditorApplication::getSelectedNodes()
+list<EditorNode *> EditorApplication::getSelectedNodes()
 {
 	return selected_nodes;
 }
@@ -309,29 +309,29 @@ void EditorApplication::cloneSelection() {
 void EditorApplication::cloneSelectionWithoutUpdate() {
 	if (!selected_nodes.size()) return;
 
-	list<EditorNode*> nodes_to_clone = selected_nodes;
-		for (list<EditorNode*>::iterator it = selected_nodes.begin(); it != selected_nodes.end(); it++) {
+	list<EditorNode *> nodes_to_clone = selected_nodes;
+		for (list<EditorNode *>::iterator it = selected_nodes.begin(); it != selected_nodes.end(); it++) {
 		(*it)->setSelect(false);
 	}
 	selected_nodes.clear();
-	for (list<EditorNode*>::iterator it = nodes_to_clone.begin(); it != nodes_to_clone.end(); it++) {
+	for (list<EditorNode *>::iterator it = nodes_to_clone.begin(); it != nodes_to_clone.end(); it++) {
 		if ((*it)->getType() == EDITOR_NODE_OBJECT) {
-			ObjectNode* object_node = static_cast<ObjectNode*>(*it);
+			ObjectNode *object_node = static_cast<ObjectNode *>(*it);
 
-			LibGens::Object* object = object_node->getObject();
+			LibGens::Object *object = object_node->getObject();
 			if (object) {
-				LibGens::Object* new_object = new LibGens::Object(object);
+				LibGens::Object *new_object = new LibGens::Object(object);
 
 				if (current_level) {
 					if (current_level->getLevel()) {
 						new_object->setID(current_level->getLevel()->newObjectID());
 					}
 				}
-				LibGens::ObjectSet* parent_set = object->getParentSet();
+				LibGens::ObjectSet *parent_set = object->getParentSet();
 				if (parent_set) {
 					parent_set->addObject(new_object);
 				}
-				ObjectNode* new_object_node = object_node_manager->createObjectNode(new_object);
+				ObjectNode *new_object_node = object_node_manager->createObjectNode(new_object);
 				new_object_node->setSelect(true);
 				selected_nodes.push_back(new_object_node);
 			}
@@ -344,17 +344,17 @@ void EditorApplication::cloneSelectionWithoutUpdate() {
 void EditorApplication::temporaryCloneSelection() {
 	if (!selected_nodes.size()) return;
 
-	list<EditorNode*> nodes_to_clone = selected_nodes;
+	list<EditorNode *> nodes_to_clone = selected_nodes;
 	clearSelection();
 
-	for (list<EditorNode*>::iterator it = nodes_to_clone.begin(); it != nodes_to_clone.end(); it++) {
+	for (list<EditorNode *>::iterator it = nodes_to_clone.begin(); it != nodes_to_clone.end(); it++) {
 		// Cast to appropiate types depending on the type of editor node
 		if ((*it)->getType() == EDITOR_NODE_OBJECT) {
-			ObjectNode* object_node = static_cast<ObjectNode*>(*it);
+			ObjectNode *object_node = static_cast<ObjectNode *>(*it);
 
-			LibGens::Object* object = object_node->getObject();
+			LibGens::Object *object = object_node->getObject();
 			if (object) {
-				LibGens::Object* new_object = new LibGens::Object(object);
+				LibGens::Object *new_object = new LibGens::Object(object);
 
 				if (current_level) {
 					if (current_level->getLevel()) {
@@ -362,13 +362,13 @@ void EditorApplication::temporaryCloneSelection() {
 					}
 				}
 
-				LibGens::ObjectSet* parent_set = object->getParentSet();
+				LibGens::ObjectSet *parent_set = object->getParentSet();
 				if (parent_set) {
 					parent_set->addObject(new_object);
 				}
 
 				// Create
-				ObjectNode* new_object_node = object_node_manager->createObjectNode(new_object);
+				ObjectNode *new_object_node = object_node_manager->createObjectNode(new_object);
 
 				// Add to current selection
 				new_object_node->setSelect(true);
@@ -389,7 +389,7 @@ void EditorApplication::translateSelection(Ogre::Vector3 v) {
 
 void EditorApplication::rotateSelection(Ogre::Quaternion q) {
 	if (selected_nodes.size() == 1 || local_rotation) {
-		for (list<EditorNode*>::iterator it = selected_nodes.begin(); it != selected_nodes.end(); ++it) {
+		for (list<EditorNode *>::iterator it = selected_nodes.begin(); it != selected_nodes.end(); ++it) {
 			(*it)->rotate(q);
 		}
 		//node->setRotation(q);
@@ -434,7 +434,7 @@ void EditorApplication::makeHistorySelection(bool mode) {
 			HistoryActionMoveNode *action = new HistoryActionMoveNode((*it), (*it)->getLastPosition(), (*it)->getPosition());
 			wrapper->push(action);
 			if (editor_mode == EDITOR_NODE_QUERY_VECTOR) {
-				VectorNode* vector_node = static_cast<VectorNode*>(*it);
+				VectorNode *vector_node = static_cast<VectorNode *>(*it);
 				if (!show_look_at_dialog)
 				{
 					while (property_vector_nodes[index] != vector_node)
@@ -594,7 +594,7 @@ void EditorApplication::snapToClosestPath() {
 	for (LibGens::Path *path : current_level->getLevel()->getPaths()) {
 		LibGens::PathNodeList path_node_list = path->getNodes();
 
-		for (auto& pair : path_node_list) {
+		for (auto &pair : path_node_list) {
 			size_t editor_node_index = 0;
 
 			for (EditorNode *editor_node : selected_nodes) {
@@ -762,7 +762,7 @@ void EditorApplication::createScene(void) {
 	material_editor_material_library = NULL;
 }
 bool EditorApplication::keyPressed(const OIS::KeyEvent &arg) {
-	ImGuiIO& io = ImGui::GetIO();
+	ImGuiIO &io = ImGui::GetIO();
 	
 	if (axis->isHolding()) return true;
 	
@@ -994,7 +994,7 @@ bool EditorApplication::keyReleased(const OIS::KeyEvent &arg) {
 
 
 bool EditorApplication::mouseMoved(const OIS::MouseEvent &arg) {
-	ImGuiIO& io = ImGui::GetIO();
+	ImGuiIO &io = ImGui::GetIO();
 	
 	viewport->setQueryFlags(editor_mode);
 
@@ -1105,7 +1105,7 @@ bool EditorApplication::mousePressed(const OIS::MouseEvent &arg, OIS::MouseButto
 						bool was_already_selected = current_node->isSelected();
 						if (!was_already_selected)
 						{
-							HistoryActionSelectNode* action_select = new HistoryActionSelectNode(current_node, false, true, &selected_nodes);
+							HistoryActionSelectNode *action_select = new HistoryActionSelectNode(current_node, false, true, &selected_nodes);
 							current_node->setSelect(true);
 							selected_nodes.push_back(current_node);
 							addTrajectory(getTrajectoryMode(current_node));
@@ -1124,7 +1124,7 @@ bool EditorApplication::mousePressed(const OIS::MouseEvent &arg, OIS::MouseButto
 						if (current_node->getType() == EDITOR_NODE_OBJECT)
 						{
 							
-							ObjectNode* object_node = static_cast<ObjectNode*>(current_node);
+							ObjectNode *object_node = static_cast<ObjectNode *>(current_node);
 							size_t id = object_node->getObject()->getID();
 
 							if (is_pick_target)
@@ -1211,7 +1211,7 @@ bool EditorApplication::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButt
 			{
 				openMultiSetParamDlg();
 				setVectorAndSpacing();
-				list<EditorNode*>::iterator it;
+				list<EditorNode *>::iterator it;
 				for (it = selected_nodes.begin(); it != selected_nodes.end(); ++it)
 				{
 					temporary_nodes.push_back((*it));
@@ -1236,7 +1236,7 @@ bool EditorApplication::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButt
     return true;
 }
 
-bool EditorApplication::frameRenderingQueued(const Ogre::FrameEvent& evt) {
+bool EditorApplication::frameRenderingQueued(const Ogre::FrameEvent &evt) {
     BaseApplication::frameRenderingQueued(evt);
 
 	Ogre::Real timeSinceLastFrame = evt.timeSinceLastFrame;
@@ -1301,7 +1301,7 @@ void EditorApplication::loadGhostRecording()
 		return;
 
 	chdir(exe_path.c_str());
-	LibGens::Ghost* gst = new LibGens::Ghost(std::string(filename));
+	LibGens::Ghost *gst = new LibGens::Ghost(std::string(filename));
 	setGhost(gst);
 }
 
@@ -1350,7 +1350,7 @@ void EditorApplication::saveGhostRecordingFbx()
 		return;
 
 	chdir(exe_path.c_str());
-	LibGens::FBX* lFbx = ghost_data->buildFbx(fbx_manager, model_library->getModel("chr_Sonic_HD"), material_library);
+	LibGens::FBX *lFbx = ghost_data->buildFbx(fbx_manager, model_library->getModel("chr_Sonic_HD"), material_library);
 	fbx_manager->exportFBX(lFbx, filename);
 
 	delete lFbx;
@@ -1393,43 +1393,43 @@ bool EditorApplication::connectGame() {
 	return game_client->Connect();
 }
 
-DWORD EditorApplication::sendMessageGame(const PipeMessage& msg, size_t size) {
+DWORD EditorApplication::sendMessageGame(const PipeMessage &msg, size_t size) {
 	return game_client->UploadMessage(msg, size);
 }
 
-void Game_ProcessMessage(PipeClient* client, PipeMessage* msg) {
+void Game_ProcessMessage(PipeClient *client, PipeMessage *msg) {
 	editor_application->processGameMessage(client, msg);
 }
 
-void EditorApplication::processGameMessage(PipeClient* client, PipeMessage* msg) {
+void EditorApplication::processGameMessage(PipeClient *client, PipeMessage *msg) {
 	switch (msg->ID)
 	{
 	case SONICGLVL_MSG_SETRECORDING:
-		isGhostRecording = ((MsgSetRecording*)msg)->Enable;
+		isGhostRecording = ((MsgSetRecording *)msg)->Enable;
 		break;
 
 	case SONICGLVL_MSG_SAVERECORDING:
 		isGhostRecording = false;
-		MsgSaveRecording* m = (MsgSaveRecording*)msg;
-		LibGens::Ghost* gst = new LibGens::Ghost(std::string(m->FilePath));
+		MsgSaveRecording *m = (MsgSaveRecording *)msg;
+		LibGens::Ghost *gst = new LibGens::Ghost(std::string(m->FilePath));
 		setGhost(gst);
 		break;
 	}
 }
 
-void ColorListener::preRenderTargetUpdate(const Ogre::RenderTargetEvent& evt)
+void ColorListener::preRenderTargetUpdate(const Ogre::RenderTargetEvent &evt)
 {
 	scene_manager->setSpecialCaseRenderQueueMode(Ogre::SceneManager::SCRQM_EXCLUDE);
 	scene_manager->addSpecialCaseRenderQueue(Ogre::RENDER_QUEUE_WORLD_GEOMETRY_2);
 	scene_manager->addSpecialCaseRenderQueue(Ogre::RENDER_QUEUE_MAX);
 }
  
-void ColorListener::postRenderTargetUpdate(const Ogre::RenderTargetEvent& evt)
+void ColorListener::postRenderTargetUpdate(const Ogre::RenderTargetEvent &evt)
 {
 	scene_manager->clearSpecialCaseRenderQueues();
 }
 
-void DepthListener::preRenderTargetUpdate(const Ogre::RenderTargetEvent& evt)
+void DepthListener::preRenderTargetUpdate(const Ogre::RenderTargetEvent &evt)
 {
 	queue = scene_manager->getRenderQueue();
     queue->setRenderableListener(this); 
@@ -1439,7 +1439,7 @@ void DepthListener::preRenderTargetUpdate(const Ogre::RenderTargetEvent& evt)
 	scene_manager->addSpecialCaseRenderQueue(Ogre::RENDER_QUEUE_MAX);
 }
  
-void DepthListener::postRenderTargetUpdate(const Ogre::RenderTargetEvent& evt)
+void DepthListener::postRenderTargetUpdate(const Ogre::RenderTargetEvent &evt)
 {
 	scene_manager->clearSpecialCaseRenderQueues();
 
@@ -1447,32 +1447,32 @@ void DepthListener::postRenderTargetUpdate(const Ogre::RenderTargetEvent& evt)
 	queue->setRenderableListener(0); 
 }
 
-bool DepthListener::renderableQueued(Ogre::Renderable* rend, Ogre::uint8 groupID, Ogre::ushort priority, Ogre::Technique** ppTech, Ogre::RenderQueue* pQueue)
+bool DepthListener::renderableQueued(Ogre::Renderable *rend, Ogre::uint8 groupID, Ogre::ushort priority, Ogre::Technique** ppTech, Ogre::RenderQueue *pQueue)
 {
 	*ppTech = mDepthMaterial->getTechnique(0);
 	return true;
 };
 
-ObjectNode* EditorApplication::getObjectNodeFromEditorNode(EditorNode* node)
+ObjectNode *EditorApplication::getObjectNodeFromEditorNode(EditorNode *node)
 {
-	ObjectNode* object_node = nullptr;
+	ObjectNode *object_node = nullptr;
 	if (node->getType() == EDITOR_NODE_OBJECT)
 	{
-		object_node = static_cast<ObjectNode*>(node);
+		object_node = static_cast<ObjectNode *>(node);
 	}
 	else if (node->getType() == EDITOR_NODE_OBJECT_MSP)
 	{
-		ObjectMultiSetNode* ms_node = static_cast<ObjectMultiSetNode*>(node);
+		ObjectMultiSetNode *ms_node = static_cast<ObjectMultiSetNode *>(node);
 		object_node = ms_node->getObjectNode();
 	}
 
 	return object_node;
 }
 
-TrajectoryMode EditorApplication::getTrajectoryMode(EditorNode* node)
+TrajectoryMode EditorApplication::getTrajectoryMode(EditorNode *node)
 {
 	std::string object_name;
-	ObjectNode* object_node = getObjectNodeFromEditorNode(node);
+	ObjectNode *object_node = getObjectNodeFromEditorNode(node);
 	if (object_node)
 		object_name = object_node->getObject()->getName();
 
@@ -1514,13 +1514,13 @@ void EditorApplication::updateTrajectoryNodes(Ogre::Real timeSinceLastFrame)
 		trajectory_preview_nodes[count]->addTime(timeSinceLastFrame);
 
 	int count = 0;
-	list<EditorNode*>::iterator it = selected_nodes.begin();
+	list<EditorNode *>::iterator it = selected_nodes.begin();
 
 	for (; it != selected_nodes.end(); ++it)
 	{
 		if (count < trajectory_preview_nodes.size())
 		{
-			EditorNode* node = *it;
+			EditorNode *node = *it;
 			TrajectoryMode mode = getTrajectoryMode(node);
 			switch (mode)
 			{
@@ -1551,8 +1551,8 @@ void EditorApplication::updateTrajectoryNodes(Ogre::Real timeSinceLastFrame)
 
 void EditorApplication::removeAllTrajectoryNodes()
 {
-	for (vector<TrajectoryNode*>::iterator it = trajectory_preview_nodes.begin(); it != trajectory_preview_nodes.end(); ++it)
-		delete* it;
+	for (vector<TrajectoryNode *>::iterator it = trajectory_preview_nodes.begin(); it != trajectory_preview_nodes.end(); ++it)
+		delete *it;
 
 	trajectory_preview_nodes.clear();
 }
@@ -2058,9 +2058,9 @@ void EditorApplication::convertMaterialsToUnleashedShaders() {
 	SHOW_MSG(msg);
 }
 
-std::string EditorApplication::SelectFolderWithIFileDialog(const wchar_t* title) {
+std::string EditorApplication::SelectFolderWithIFileDialog(const wchar_t *title) {
 	std::string result;
-	IFileDialog* pFileDialog = nullptr;
+	IFileDialog *pFileDialog = nullptr;
 	HRESULT hr = CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pFileDialog));
 	if (SUCCEEDED(hr)) {
 		DWORD dwOptions;
@@ -2069,7 +2069,7 @@ std::string EditorApplication::SelectFolderWithIFileDialog(const wchar_t* title)
 		if (title) pFileDialog->SetTitle(title);
 		hr = pFileDialog->Show(NULL);
 		if (SUCCEEDED(hr)) {
-			IShellItem* pItem = nullptr;
+			IShellItem *pItem = nullptr;
 			hr = pFileDialog->GetResult(&pItem);
 			if (SUCCEEDED(hr)) {
 				PWSTR pszFilePath = nullptr;
@@ -2092,22 +2092,22 @@ void EditorApplication::openTerrainInfoDialog() {
 }
 
 void EditorApplication::updateTerrainInfoDialog() {
-	TerrainNode* terrainNode = nullptr;
-	for (auto* node : selected_nodes) {
+	TerrainNode *terrainNode = nullptr;
+	for (auto *node : selected_nodes) {
 		if (node->getType() == EDITOR_NODE_TERRAIN) {
-			terrainNode = static_cast<TerrainNode*>(node);
+			terrainNode = static_cast<TerrainNode *>(node);
 			break;
 		}
 	}
 
 	if (!terrainNode || !current_level) return;
 
-	LibGens::TerrainInstance* instance = terrainNode->getTerrainInstance();
+	LibGens::TerrainInstance *instance = terrainNode->getTerrainInstance();
 	if (!instance) return;
 
 	const std::string instance_name = instance->getName();
 
-	LibGens::Terrain* terrain = current_level->getTerrain();
+	LibGens::Terrain *terrain = current_level->getTerrain();
 	if (!terrain) return;
 
 	std::string group_name;
@@ -2115,9 +2115,9 @@ void EditorApplication::updateTerrainInfoDialog() {
 	bool found = false;
 
 	auto groups = terrain->getGroups();
-	for (auto* group : groups) {
+	for (auto *group : groups) {
 		auto instances = group->getInstances();
-		for (auto* inst : instances) {
+		for (auto *inst : instances) {
 			if (inst == instance) {
 				group_name = group->getName();
 				subset_id = group->getSubsetID();
@@ -2188,7 +2188,7 @@ void EditorApplication::renderMaterialEditor() {
 	ImGui::Begin("Material Editor", &show_material_editor, ImGuiWindowFlags_None);
 
 	// Mode and info on same line
-	const char* mode_labels[] = { "Model", "Material", "Terrain" };
+	const char *mode_labels[] = { "Model", "Material", "Terrain" };
 	int mode = (int)material_editor_mode;
 	ImGui::SetNextItemWidth(120);
 	if (ImGui::Combo("Mode", &mode, mode_labels, IM_ARRAYSIZE(mode_labels))) {
@@ -2300,11 +2300,11 @@ void EditorApplication::renderMaterialEditor() {
 		bool no_cull = material_editor_material->hasNoCulling();
 		if (ImGui::Checkbox("Double Sided", &no_cull)) {
 			material_editor_material->setNoCulling(no_cull);
-			Ogre::Material* ogre_material = Ogre::MaterialManager::getSingleton().getByName(material_editor_material->getExtra(), material_editor_mesh_group).getPointer();
+			Ogre::Material *ogre_material = Ogre::MaterialManager::getSingleton().getByName(material_editor_material->getExtra(), material_editor_mesh_group).getPointer();
 			if (ogre_material && ogre_material->getNumTechniques() > 0) {
-				Ogre::Technique* tech = ogre_material->getTechnique(0);
+				Ogre::Technique *tech = ogre_material->getTechnique(0);
 				if (tech && tech->getNumPasses() > 0) {
-					Ogre::Pass* pass = tech->getPass(0);
+					Ogre::Pass *pass = tech->getPass(0);
 					if (pass) {
 						pass->setCullingMode(no_cull ? Ogre::CULL_NONE : Ogre::CULL_CLOCKWISE);
 					}
@@ -2318,11 +2318,11 @@ void EditorApplication::renderMaterialEditor() {
 		bool additive = material_editor_material->hasColorBlend();
 		if (ImGui::Checkbox("Additive", &additive)) {
 			material_editor_material->setColorBlend(additive);
-			Ogre::Material* ogre_material = Ogre::MaterialManager::getSingleton().getByName(material_editor_material->getExtra(), material_editor_mesh_group).getPointer();
+			Ogre::Material *ogre_material = Ogre::MaterialManager::getSingleton().getByName(material_editor_material->getExtra(), material_editor_mesh_group).getPointer();
 			if (ogre_material && ogre_material->getNumTechniques() > 0) {
-				Ogre::Technique* tech = ogre_material->getTechnique(0);
+				Ogre::Technique *tech = ogre_material->getTechnique(0);
 				if (tech && tech->getNumPasses() > 0) {
-					Ogre::Pass* pass = tech->getPass(0);
+					Ogre::Pass *pass = tech->getPass(0);
 					if (pass) {
 						if (additive) {
 							pass->setSceneBlending(Ogre::SBF_SOURCE_ALPHA, Ogre::SBF_ONE);
@@ -2350,7 +2350,7 @@ void EditorApplication::renderMaterialEditor() {
 	ImGui::BeginChild("TextureList", ImVec2(250, 120), true);
 	if (material_editor_material) {
 		for (int i=0;i<material_editor_material->getTextureUnitsSize();++i) {
-			LibGens::Texture* tex = material_editor_material->getTextureByIndex(i);
+			LibGens::Texture *tex = material_editor_material->getTextureByIndex(i);
 			string label = tex->getName()+" ("+tex->getUnit()+")";
 			bool selected = (i==texture_list_selection);
 			if (ImGui::Selectable(label.c_str(), selected)) {
@@ -2381,7 +2381,7 @@ void EditorApplication::renderMaterialEditor() {
 		if (!material_editor_slot_names.empty()) {
 			if (texture_slot_index < 0) texture_slot_index = 0;
 			if (texture_slot_index >= (int)material_editor_slot_names.size()) texture_slot_index = (int)material_editor_slot_names.size()-1;
-			const char* current_slot = material_editor_slot_names[texture_slot_index].c_str();
+			const char *current_slot = material_editor_slot_names[texture_slot_index].c_str();
 			if (ImGui::BeginCombo("Slot", current_slot)) {
 				for (int i=0;i<(int)material_editor_slot_names.size();++i) {
 					bool sel = (i==texture_slot_index);
