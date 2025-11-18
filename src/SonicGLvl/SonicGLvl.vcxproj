@@ -281,8 +281,9 @@
       <DLL Include="..\..\depends\ogre\bin\OIS.dll" />
       <DLL Include="..\..\depends\ogre\bin\Plugin_OctreeSceneManager.dll" />
       <DLL Include="..\..\depends\ogre\bin\RenderSystem_Direct3D9.dll" />
-      <DLL Include="..\..\depends\SDL2\lib\$(Platform)\SDL2.dll" />
+      <DLL Include="..\..\depends\SDL2\lib\x86\SDL2.dll" />
     </ItemGroup>
     <Copy SourceFiles="@(DLL)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
   </Target>
+
 </Project>
