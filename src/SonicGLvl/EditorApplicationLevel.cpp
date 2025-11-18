@@ -211,7 +211,7 @@ void EditorApplication::openLevel(string filename) {
 	printf("Unpacked data...\n");
 	current_level->unpackResourcesAsync();
 	current_level->unpackTerrainAsync();
-	printf("Unpacking resources and terrain in background...\n");
+	printf("Unpacking resources...\n");
 
 	object_node_manager->setSlotIdName(slot_id_name);
 	current_level->loadData(library, object_node_manager);
@@ -251,6 +251,7 @@ void EditorApplication::openLevel(string filename) {
 	}
 	
 	current_level->waitForUnpacking();
+	Sleep(100);
 	current_level->saveHashes();
 
 	if ((game_mode == LIBGENS_LEVEL_GAME_GENERATIONS) || (game_mode == LIBGENS_LEVEL_GAME_UNLEASHED)) {

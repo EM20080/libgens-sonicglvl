@@ -281,16 +281,22 @@ void EditorLevel::unpackTerrain() {
 		vector<string> unpacked_files;
 		stage_data_ar_pack->extract(terrain_cache_folder + "/", "", "", &unpacked_files);
 
+		vector<std::thread> gia_threads;
 		for (size_t i=0; i<unpacked_files.size(); i++) {
 			string uncompressed_filename=unpacked_files[i];
 
 			if (uncompressed_filename.find("gia-") != string::npos) {
 				printf("Extracting %s\n", uncompressed_filename.c_str());
-
-				LibGens::ArPack *gia_ar_pack=new LibGens::ArPack(uncompressed_filename);
-				gia_ar_pack->extract(gi_cache_folder + "/", "", stage_data_ar_pack->getFileByIndex(i)->getName() + "-");
-				delete gia_ar_pack;
+				string prefix = stage_data_ar_pack->getFileByIndex(i)->getName();
+				gia_threads.push_back(std::thread([uncompressed_filename, this, prefix]() {
+					LibGens::ArPack *gia_ar_pack=new LibGens::ArPack(uncompressed_filename);
+					gia_ar_pack->extract(gi_cache_folder + "/", "", prefix + "-");
+					delete gia_ar_pack;
+				}));
 			}
+		}
+		for (auto &t : gia_threads) {
+			if (t.joinable()) t.join();
 		}
 
 		terrain_hash = hash;
@@ -374,6 +380,7 @@ void EditorLevel::unpackResources() {
 				}
 				search_patterns.push_back("Act*_Sub" + slot_id_name + "_*.ar.00");
 				
+				vector<string> slot_resource_files;
 				for (size_t i = 0; i < search_patterns.size(); i++) {
 					hFind = FindFirstFile((folder + search_patterns[i]).c_str(), &FindFileData);
 					if (hFind == INVALID_HANDLE_VALUE) {
@@ -387,12 +394,21 @@ void EditorLevel::unpackResources() {
 						string full_path = folder + name;
 						// Check if we already extracted this file to avoid duplicates
 						if (LibGens::File::check(full_path)) {
-							LibGens::ArPack slot_resources_data_ar_pack(full_path);
-							slot_resources_data_ar_pack.extract(slot_resources_cache_folder + "/");
+							slot_resource_files.push_back(full_path);
 						}
 
 					} while (FindNextFile(hFind, &FindFileData) != 0);
 					FindClose(hFind);
+				}
+				vector<std::thread> slot_threads;
+				for (const auto &file_path : slot_resource_files) {
+					slot_threads.push_back(std::thread([file_path, this]() {
+						LibGens::ArPack slot_resources_data_ar_pack(file_path);
+						slot_resources_data_ar_pack.extract(slot_resources_cache_folder + "/");
+					}));
+				}
+				for (auto &t : slot_threads) {
+					if (t.joinable()) t.join();
 				}
 			}
 		}
@@ -511,7 +527,7 @@ void EditorLevel::loadTerrain(Ogre::SceneManager *scene_manager, list<TerrainNod
 		material_library = new LibGens::MaterialLibrary(terrain_data_folder + "/");
 
 		// Search for model files
-		vector<LibGens::Model *> terrain_models;
+		vector<string> model_files;
 		{
 			WIN32_FIND_DATA FindFileData;
 			HANDLE hFind;
@@ -521,20 +537,31 @@ void EditorLevel::loadTerrain(Ogre::SceneManager *scene_manager, list<TerrainNod
 				do {
 					const char *name=FindFileData.cFileName;
 					if (name[0]=='.') continue;
-
-					string new_filename=resources_cache_folder+"/"+ToString(name);
-					LibGens::Model *model = new LibGens::Model(new_filename);
-					terrain_models.push_back(model);
-
-					//model->changeVertexFormat(LIBGENS_VERTEX_FORMAT_PC);
-					terrain->addModel(model);
+					model_files.push_back(resources_cache_folder+"/"+ToString(name));
 				} while (FindNextFile(hFind, &FindFileData) != 0);
 				FindClose(hFind);
 			}
 		}
+		
+		vector<LibGens::Model *> terrain_models;
+		std::mutex terrain_models_mutex;
+		vector<std::thread> model_threads;
+		for (const auto &model_file : model_files) {
+			model_threads.push_back(std::thread([model_file, &terrain_models, &terrain_models_mutex, this]() {
+				LibGens::Model *model = new LibGens::Model(model_file);
+				//model->changeVertexFormat(LIBGENS_VERTEX_FORMAT_PC);
+				std::lock_guard<std::mutex> lock(terrain_models_mutex);
+				terrain_models.push_back(model);
+				terrain->addModel(model);
+			}));
+		}
+		for (auto &t : model_threads) {
+			if (t.joinable()) t.join();
+		}
 
 		vector<LibGens::Model *> used_models;
 		// Search for instance files
+		vector<string> instance_files;
 		{
 			WIN32_FIND_DATA FindFileData;
 			HANDLE hFind;
@@ -544,23 +571,33 @@ void EditorLevel::loadTerrain(Ogre::SceneManager *scene_manager, list<TerrainNod
 				do {
 					const char *name=FindFileData.cFileName;
 					if (name[0]=='.') continue;
-
-					string new_filename=resources_cache_folder+"/"+ToString(name);
-					LibGens::TerrainInstance *instance = new LibGens::TerrainInstance(new_filename, ToString(name), &terrain_models);
-
-					// Add to scene
-					TerrainNode *terrain_node=new TerrainNode(instance, scene_manager, material_library);
-					terrain_node->setGIQualityLevel(NULL, 0);
-					//if (terrain_nodes_list) terrain_nodes_list->push_back(terrain_node);
-
-					used_models.push_back(instance->getModel());
-					terrain_nodes_list->push_back(terrain_node);
-
-					terrain->addInstance(instance);
-
+					instance_files.push_back(resources_cache_folder+"/"+ToString(name));
 				} while (FindNextFile(hFind, &FindFileData) != 0);
 				FindClose(hFind);
 			}
+		}
+
+		std::mutex instance_mutex;
+		vector<std::thread> instance_threads;
+		LibGens::MaterialLibrary *mat_lib = material_library;
+		for (const auto &instance_file : instance_files) {
+			instance_threads.push_back(std::thread([instance_file, &terrain_models, &used_models, &instance_mutex, scene_manager, mat_lib, terrain_nodes_list, this]() {
+				string name = LibGens::File::nameFromFilename(instance_file);
+				LibGens::TerrainInstance *instance = new LibGens::TerrainInstance(instance_file, name, &terrain_models);
+
+				// Add to scene
+				TerrainNode *terrain_node=new TerrainNode(instance, scene_manager, mat_lib);
+				terrain_node->setGIQualityLevel(NULL, 0);
+				//if (terrain_nodes_list) terrain_nodes_list->push_back(terrain_node);
+
+				std::lock_guard<std::mutex> lock(instance_mutex);
+				used_models.push_back(instance->getModel());
+				terrain_nodes_list->push_back(terrain_node);
+				terrain->addInstance(instance);
+			}));
+		}
+		for (auto &t : instance_threads) {
+			if (t.joinable()) t.join();
 		}
 
 		for (size_t i=0; i<terrain_models.size(); i++) {
@@ -577,7 +614,6 @@ void EditorLevel::loadTerrain(Ogre::SceneManager *scene_manager, list<TerrainNod
 				LibGens::TerrainInstance *instance = new LibGens::TerrainInstance(terrain_models[i]->getName(), terrain_models[i], LibGens::Matrix4());
 				instance->setFilename(terrain_data_folder + "/" + terrain_models[i]->getName()+".terrain-instanceinfo");
 
-				
 				// Add to scene
 				TerrainNode *terrain_node=new TerrainNode(instance, scene_manager, material_library);
 				terrain_node->setGIQualityLevel(NULL, 0);
