@@ -208,12 +208,8 @@ void EditorApplication::openLevel(string filename) {
 
 	current_level = new EditorLevel(folder, slot_name, geometry_name, slot_id_name, game_mode);
 	current_level->unpackData();
-	printf("Unpacked data...\n");
-	current_level->unpackResources();
-	printf("Unpacked resources...\n");
-	current_level->unpackTerrain();
-	printf("Unpacked terrain...\n");
-	current_level->saveHashes();
+	current_level->unpackResourcesAsync();
+	current_level->unpackTerrainAsync();
 
 	object_node_manager->setSlotIdName(slot_id_name);
 	current_level->loadData(library, object_node_manager);
@@ -252,6 +248,9 @@ void EditorApplication::openLevel(string filename) {
 		camera_manager->setLevel(current_level->getLevel());
 	}
 	
+	current_level->waitForUnpacking();
+	current_level->saveHashes();
+
 	if ((game_mode == LIBGENS_LEVEL_GAME_GENERATIONS) || (game_mode == LIBGENS_LEVEL_GAME_UNLEASHED)) {
 		current_level->loadCollision(havok_enviroment, scene_manager, havok_nodes_list);
 	}

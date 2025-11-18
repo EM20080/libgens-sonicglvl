@@ -115,13 +115,17 @@ class EditorLevel {
 
 		bool has_additional_gi;
 
-		XXH128_hash_t data_hash;
-		XXH128_hash_t terrain_hash;
-		XXH128_hash_t resources_hash;
-	public:
-		EditorLevel(string folder_p, string slot_name_p, string geometry_name_p, string merge_name_p, size_t game_mode_p);
+	XXH128_hash_t data_hash;
+	XXH128_hash_t terrain_hash;
+	XXH128_hash_t resources_hash;
 
-		void cleanData();
+	std::thread unpack_resources_thread;
+	std::thread unpack_terrain_thread;
+	std::mutex unpack_mutex;
+	bool resources_unpacked;
+	bool terrain_unpacked;
+public:
+	EditorLevel(string folder_p, string slot_name_p, string geometry_name_p, string merge_name_p, size_t game_mode_p);		void cleanData();
 		void unpackData();
 
 		void deleteTerrain();
@@ -129,11 +133,14 @@ class EditorLevel {
 		void cleanGI();
 		void unpackTerrain();
 
-		void cleanResources();
-		void cleanTerrainResources();
-		void unpackResources();
-
-		void loadHashes();
+	void cleanResources();
+	void cleanTerrainResources();
+	void unpackResources();
+	void unpackResourcesAsync();
+	void unpackTerrainAsync();
+	bool isResourcesUnpacked();
+	bool isTerrainUnpacked();
+	void waitForUnpacking();		void loadHashes();
 		void saveHashes();
 
 		size_t getGameMode() {

@@ -46,6 +46,9 @@ EditorLevel::EditorLevel(string folder_p, string slot_name_p, string geometry_na
 	model_library    = new LibGens::ModelLibrary(resources_cache_folder + "/");
 	material_library = NULL;
 
+	resources_unpacked = false;
+	terrain_unpacked = false;
+
 	loadHashes();
 }
 
@@ -785,3 +788,38 @@ void EditorLevel::generateTerrainGroups(unsigned int cell_size) {
 
 	terrain->generateGroups(cell_size);
 }
+
+void EditorLevel::unpackResourcesAsync() {
+	unpack_resources_thread = std::thread([this]() {
+		this->unpackResources();
+		std::lock_guard<std::mutex> lock(unpack_mutex);
+		resources_unpacked = true;
+	});
+}
+
+void EditorLevel::unpackTerrainAsync() {
+	unpack_terrain_thread = std::thread([this]() {
+		this->unpackTerrain();
+		std::lock_guard<std::mutex> lock(unpack_mutex);
+		terrain_unpacked = true;
+	});
+}
+
+bool EditorLevel::isResourcesUnpacked() {
+	std::lock_guard<std::mutex> lock(unpack_mutex);
+	return resources_unpacked;
+}
+
+bool EditorLevel::isTerrainUnpacked() {
+	std::lock_guard<std::mutex> lock(unpack_mutex);
+	return terrain_unpacked;
+}
+
+void EditorLevel::waitForUnpacking() {
+	if (unpack_resources_thread.joinable()) {
+		unpack_resources_thread.join();
+	}
+	if (unpack_terrain_thread.joinable()) {
+		unpack_terrain_thread.join();
+	}
+} // :ChineseThumbsUp:
