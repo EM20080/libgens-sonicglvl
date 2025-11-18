@@ -208,8 +208,10 @@ void EditorApplication::openLevel(string filename) {
 
 	current_level = new EditorLevel(folder, slot_name, geometry_name, slot_id_name, game_mode);
 	current_level->unpackData();
+	printf("Unpacked data...\n");
 	current_level->unpackResourcesAsync();
 	current_level->unpackTerrainAsync();
+	printf("Unpacking resources and terrain in background...\n");
 
 	object_node_manager->setSlotIdName(slot_id_name);
 	current_level->loadData(library, object_node_manager);
