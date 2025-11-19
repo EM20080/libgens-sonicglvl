@@ -288,7 +288,7 @@ void EditorApplication::renderMainMenuBar() {
 			ImGui::EndMenu();
 		}
 		
-		if (ImGui::BeginMenu("Layout")) {
+		if (ImGui::BeginMenu("UI")) {
 			if (ImGui::MenuItem("Layout 1 (Original)", "", current_layout == 1)) {
 				current_layout = 1;
 			}
