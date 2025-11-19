@@ -252,25 +252,22 @@ class EditorApplication : public BaseApplication {
 		int current_layout;
 		bool show_material_editor;
 		bool show_physics_editor;
-	bool show_find_dialog;
-	bool show_look_at_dialog;
-	bool show_multiset_dialog;
-	bool show_new_set_dialog;
-	bool show_terrain_info;
-	bool show_quick_overview;
-	
-	ImVec2 left_panel_size;
-	ImVec2 bottom_panel_size;
-	
-	char find_object_name[256];
-	char find_property_name[256];
-	char new_set_name[256];
-	char new_set_filename[256];
-	char find_property_value[256];
-		bool find_match_exactly;
-		bool find_with_filter;
-		bool find_select_all;
-		bool new_set_is_game_active;
+		bool show_find_dialog;
+		bool show_look_at_dialog;
+		bool show_multiset_dialog;
+		bool show_terrain_info;
+		bool show_quick_overview;
+		
+		ImVec2 left_panel_size;
+		ImVec2 bottom_panel_size;
+		
+		char find_object_name[256];
+		char find_property_name[256];
+		char find_property_value[256];
+	    bool find_match_exactly;
+	    bool find_with_filter;
+	    bool find_select_all;
+	    bool new_set_is_game_active;
 		
 		SDL_Cursor* cursor_arrow;
 		SDL_Cursor* cursor_hand;
@@ -323,7 +320,8 @@ class EditorApplication : public BaseApplication {
 		string help_property_name;
 		string help_property_description;
 		string target_object_name;
-
+	    size_t backup_property_id;
+	    bool selecting_target_id;
 		// ImGui transform panel state
 		float transform_pos[3] = {0, 0, 0};
 		float transform_rot[3] = {0, 0, 0};
@@ -496,11 +494,10 @@ class EditorApplication : public BaseApplication {
 		void handleImGuiEvent(SDL_Event* event);
 		void renderMainMenuBar();
 		void renderQuickOverviewDialog();
-	void renderFindDialog();
-	void renderLookAtDialog();
-	void renderMultiSetDialog();
-	void renderNewSetDialog();
-	void renderTerrainInfoDialog();
+		void renderFindDialog();
+		void renderLookAtDialog();
+		void renderMultiSetDialog();
+		void renderTerrainInfoDialog();
 		void handleSDLEvent(const SDL_Event& event);
 		
 		void setEditorMode(Ogre::uint32 v) {
@@ -602,12 +599,12 @@ class EditorApplication : public BaseApplication {
 		// Sets GUI
 		void updateBottomSelectionGUI();
 		void updateMenu();
-	void updateSetsGUI();
-	void updateSelectedSetGUI();
-	void newCurrentSet();
-	void createNewSet(const char* name, const char* filename, bool is_game_active);
-	void deleteCurrentSet();
-	void updateCurrentSetVisible(bool v);
+	    void updateSetsGUI();
+	    void updateSelectedSetGUI();
+	    void newCurrentSet();
+	    void createNewSet(const char* name, const char* filename, bool is_game_active);
+	    void deleteCurrentSet();
+	    void updateCurrentSetVisible(bool v);
 		void changeCurrentSet(string change_set);
 		void renameCurrentSet(string rename_set);
 		

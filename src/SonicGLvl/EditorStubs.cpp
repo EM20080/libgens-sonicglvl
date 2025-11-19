@@ -108,6 +108,7 @@ void EditorApplication::renderPropertyEditor(void) {
 	static float temp_float = 0.0f;
 	static char temp_string[512] = "";
 	static float temp_vector[3] = { 0, 0, 0 };
+	static size_t temp_id = 0;
 	static bool initialized = false;
 	
 	ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
@@ -225,6 +226,39 @@ void EditorApplication::renderPropertyEditor(void) {
 						ImGui::InputFloat3("New Value", temp_vector, "%.2f");
 						break;
 					}
+					case LibGens::OBJECT_ELEMENT_ID: {
+						LibGens::ObjectElementID* id_elem = (LibGens::ObjectElementID*)element;
+						if (!initialized) {
+							temp_id = id_elem->value;
+							backup_property_id = id_elem->value;
+							initialized = true;
+						}
+						ImGui::Text("Current: %u", (unsigned int)id_elem->value);
+						ImGui::Spacing();
+						
+						char id_buffer[32];
+						snprintf(id_buffer, sizeof(id_buffer), "%u", (unsigned int)temp_id);
+						if (ImGui::InputText("New Value (Object ID)", id_buffer, sizeof(id_buffer), ImGuiInputTextFlags_CharsDecimal)) {
+							temp_id = atoi(id_buffer);
+						}
+						
+						ImGui::Spacing();
+						if (ImGui::Button("Select From Viewport")) {
+							editor_mode = EDITOR_NODE_QUERY_NODE;
+							selecting_target_id = true;
+						}
+						ImGui::SameLine();
+						if (ImGui::Button("Go to Target") && current_level) {
+							LibGens::Object* target_obj = current_level->getLevel()->getObjectByID(id_elem->value);
+							if (target_obj) {
+								ObjectNode* target_node = object_node_manager->findObjectNode(target_obj);
+								if (target_node) {
+									viewport->focusOnPoint(target_node->getPosition());
+								}
+							}
+						}
+						break;
+					}
 					}
 				}
 
@@ -248,8 +282,12 @@ void EditorApplication::renderPropertyEditor(void) {
 					case LibGens::OBJECT_ELEMENT_VECTOR:
 						updateEditPropertyVector(LibGens::Vector3(temp_vector[0], temp_vector[1], temp_vector[2]));
 						break;
+					case LibGens::OBJECT_ELEMENT_ID:
+						updateEditPropertyID(temp_id);
+						break;
 					}
 					initialized = false;
+					selecting_target_id = false;
 					show_properties_editor = false;
 				}
 				ImGui::SameLine();
@@ -476,6 +514,20 @@ void EditorApplication::updateEditPropertyVector(LibGens::Vector3 v) {
 			(LibGens::ObjectElementVector*)(*it)->getElement(current_properties_names[current_property_index]);
 		if (element) {
 			element->value = v;
+			object_node_manager->reloadObjectNode(*it);
+		}
+	}
+}
+
+void EditorApplication::updateEditPropertyID(size_t id) {
+	if (!history_edit_property_wrapper) history_edit_property_wrapper = new HistoryActionWrapper();
+
+	for (list<LibGens::Object*>::iterator it = current_object_list_properties.begin();
+		it != current_object_list_properties.end(); it++) {
+		LibGens::ObjectElementID* element =
+			(LibGens::ObjectElementID*)(*it)->getElement(current_properties_names[current_property_index]);
+		if (element) {
+			element->value = id;
 			object_node_manager->reloadObjectNode(*it);
 		}
 	}

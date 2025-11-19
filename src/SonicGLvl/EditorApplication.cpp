@@ -62,6 +62,8 @@ EditorApplication::EditorApplication(void)
 	new_set_name[0] = '\0';
 	new_set_filename[0] = '\0';
 	new_set_is_game_active = true;
+	backup_property_id = 0;
+	selecting_target_id = false;
 
 	cursor_arrow = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
 	cursor_hand = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
@@ -1083,6 +1085,39 @@ bool EditorApplication::mousePressed(const OIS::MouseEvent &arg, OIS::MouseButto
 			return true;
 		}
 
+		if (editor_mode == EDITOR_NODE_QUERY_NODE && selecting_target_id) {
+			if (id == OIS::MB_Left) {
+				float mouse_x=arg.state.X.abs/float(arg.state.width);
+				float mouse_y=arg.state.Y.abs/float(arg.state.height);
+				viewport->convertMouseToLocalScreen(mouse_x, mouse_y);
+
+				Ogre::uint32 node_query_flags = EDITOR_NODE_QUERY_OBJECT;
+				Ogre::Entity *node_entity = viewport->raycastEntity(mouse_x, mouse_y, node_query_flags);
+
+				if (node_entity) {
+					Ogre::SceneNode *node=node_entity->getParentSceneNode();
+					if (node) {
+						Ogre::Any ptr_container=node->getUserObjectBindings().getUserAny(EDITOR_NODE_BINDING);
+						if (!ptr_container.isEmpty()) {
+							EditorNode *editor_node=Ogre::any_cast<EditorNode *>(ptr_container);
+							ObjectNode *object_node = dynamic_cast<ObjectNode*>(editor_node);
+							
+							if (object_node && object_node->getObject()) {
+								updateEditPropertyID(object_node->getObject()->getID());
+								editor_mode = EDITOR_NODE_QUERY_OBJECT;
+								selecting_target_id = false;
+							}
+						}
+					}
+				}
+			}
+			else if (id == OIS::MB_Right) {
+				editor_mode = EDITOR_NODE_QUERY_OBJECT;
+				selecting_target_id = false;
+			}
+			return true;
+		}
+
 		if (isRegularMode()) {
 			if (axis->mousePressed(viewport, arg, id)) {
 				dragging_mode = 0;
@@ -1162,37 +1197,6 @@ bool EditorApplication::mousePressed(const OIS::MouseEvent &arg, OIS::MouseButto
 		}
 		else if (isPalettePreviewActive()) {
 			mousePressedObjectsPalettePreview(arg, id);
-		}
-		else if (editor_mode == EDITOR_NODE_QUERY_NODE) {
-			/*
-			if (id == OIS::MB_Left) {
-				float mouse_x=arg.state.X.abs/float(arg.state.width);
-				float mouse_y=arg.state.Y.abs/float(arg.state.height);
-				viewport->convertMouseToLocalScreen(mouse_x, mouse_y);
-
-				// Raycast from camera to viewport
-				Ogre::uint32 node_query_flags = EDITOR_NODE_QUERY_OBJECT | EDITOR_NODE_QUERY_PATH_NODE | EDITOR_NODE_QUERY_GHOST;
-				Ogre::Entity *node_entity = viewport->raycastEntity(mouse_x, mouse_y, node_query_flags);
-
-				if (node_entity) {
-					Ogre::SceneNode *node=node_entity->getParentSceneNode();
-					if (node) {
-						Ogre::Any ptr_container=node->getUserObjectBindings().getUserAny(EDITOR_NODE_BINDING);
-						if (!ptr_container.isEmpty()) {
-							EditorNode *editor_node=Ogre::any_cast<EditorNode *>(ptr_container);
-
-							Ogre::Vector3 raycast_point = editor_node->getPosition();
-							closeVectorQueryMode();
-							updateEditPropertyVectorGUI(LibGens::Vector3(raycast_point.x, raycast_point.y, raycast_point.z));
-						}
-					}
-				}
-			}
-
-			if (id == OIS::MB_Right) {
-				closeVectorQueryMode();
-			}
-			*/
 		}
 
 		viewport->mousePressed(arg, id);
