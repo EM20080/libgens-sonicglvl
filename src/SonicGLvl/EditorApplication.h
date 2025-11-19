@@ -271,6 +271,7 @@ class EditorApplication : public BaseApplication {
 		char new_set_name[256];
 		char new_set_filename[256];
 	    bool new_set_is_game_active;
+		bool temp_id_list;
 		
 		SDL_Cursor* cursor_arrow;
 		SDL_Cursor* cursor_hand;
@@ -324,6 +325,8 @@ class EditorApplication : public BaseApplication {
 		string help_property_description;
 		string target_object_name;
 	    size_t backup_property_id;
+	    vector<size_t> backup_property_id_list;
+	    int temp_id_list_selection;
 	    bool selecting_target_id;
 		// ImGui transform panel state
 		float transform_pos[3] = {0, 0, 0};
@@ -498,11 +501,11 @@ class EditorApplication : public BaseApplication {
 		void handleImGuiEvent(SDL_Event* event);
 		void renderMainMenuBar();
 		void renderQuickOverviewDialog();
-	void renderFindDialog();
-	void renderLookAtDialog();
-	void renderMultiSetDialog();
-	void renderNewSetDialog();
-	void renderTerrainInfoDialog();
+	    void renderFindDialog();
+	    void renderLookAtDialog();
+	    void renderMultiSetDialog();
+	    void renderNewSetDialog();
+	    void renderTerrainInfoDialog();
 		void handleSDLEvent(const SDL_Event& event);
 		
 		void setEditorMode(Ogre::uint32 v) {
@@ -630,6 +633,7 @@ class EditorApplication : public BaseApplication {
 		void updateEditPropertyString(string v);
 		void updateEditPropertyID(size_t v);
 		void updateEditPropertyIDList(vector<size_t> v);
+		void updateEditPropertyIDListItem(int index, size_t v);
 		void updateEditPropertyVector(LibGens::Vector3 v);
 		void updateEditPropertyVectorFocus(int index = 0);
 		void updateEditPropertyVectorGUI(int index = 0, bool is_list = false);

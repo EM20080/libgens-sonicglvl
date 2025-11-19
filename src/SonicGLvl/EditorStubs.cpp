@@ -259,6 +259,80 @@ void EditorApplication::renderPropertyEditor(void) {
 						}
 						break;
 					}
+					case LibGens::OBJECT_ELEMENT_ID_LIST: {
+						LibGens::ObjectElementIDList* id_list_elem = (LibGens::ObjectElementIDList*)element;
+						if (!initialized) {
+							temp_property_id_list = id_list_elem->value;
+							backup_property_id_list = id_list_elem->value;
+							// Auto-select first item if list is not empty
+							temp_id_list_selection = temp_property_id_list.empty() ? -1 : 0;
+							initialized = true;
+						}
+						
+						ImGui::Text("Object ID List");
+						ImGui::Text("ID Count: %d", (int)id_list_elem->value.size());
+						ImGui::Spacing();
+						
+						if (ImGui::BeginListBox("##IDListBox", ImVec2(-FLT_MIN, 100))) {
+							for (size_t i = 0; i < temp_property_id_list.size(); i++) {
+								char label[64];
+								snprintf(label, sizeof(label), "%u", (unsigned int)temp_property_id_list[i]);
+								if (ImGui::Selectable(label, temp_id_list_selection == (int)i)) {
+									temp_id_list_selection = (int)i;
+								}
+							}
+							ImGui::EndListBox();
+						}
+						
+						ImGui::BeginGroup();
+						if (ImGui::Button("Create")) {
+							temp_property_id_list.push_back(0);
+						}
+						ImGui::SameLine();
+						if (ImGui::Button("Delete") && temp_id_list_selection >= 0 && temp_id_list_selection < (int)temp_property_id_list.size()) {
+							temp_property_id_list.erase(temp_property_id_list.begin() + temp_id_list_selection);
+							if (temp_id_list_selection >= (int)temp_property_id_list.size()) {
+								temp_id_list_selection = (int)temp_property_id_list.size() - 1;
+							}
+						}
+						ImGui::SameLine();
+						if (ImGui::Button("Move Up") && temp_id_list_selection > 0) {
+							std::swap(temp_property_id_list[temp_id_list_selection], temp_property_id_list[temp_id_list_selection - 1]);
+							temp_id_list_selection--;
+						}
+						ImGui::SameLine();
+						if (ImGui::Button("Move Down") && temp_id_list_selection >= 0 && temp_id_list_selection < (int)temp_property_id_list.size() - 1) {
+							std::swap(temp_property_id_list[temp_id_list_selection], temp_property_id_list[temp_id_list_selection + 1]);
+							temp_id_list_selection++;
+						}
+						ImGui::EndGroup();
+						
+						if (temp_id_list_selection >= 0 && temp_id_list_selection < (int)temp_property_id_list.size()) {
+							ImGui::Spacing();
+							char edit_buffer[32];
+							snprintf(edit_buffer, sizeof(edit_buffer), "%u", (unsigned int)temp_property_id_list[temp_id_list_selection]);
+							if (ImGui::InputText("Edit Selected ID", edit_buffer, sizeof(edit_buffer), ImGuiInputTextFlags_CharsDecimal)) {
+								temp_property_id_list[temp_id_list_selection] = atoi(edit_buffer);
+							}
+							
+							ImGui::Spacing();
+							if (ImGui::Button("Select From Viewport##IDList")) {
+								editor_mode = EDITOR_NODE_QUERY_NODE;
+								selecting_target_id = true;
+							}
+							ImGui::SameLine();
+							if (ImGui::Button("Go to Target##IDList") && current_level) {
+								LibGens::Object* target_obj = current_level->getLevel()->getObjectByID(temp_property_id_list[temp_id_list_selection]);
+								if (target_obj) {
+									ObjectNode* target_node = object_node_manager->findObjectNode(target_obj);
+									if (target_node) {
+										viewport->focusOnPoint(target_node->getPosition());
+									}
+								}
+							}
+						}
+						break;
+					}
 					}
 				}
 
@@ -285,26 +359,33 @@ void EditorApplication::renderPropertyEditor(void) {
 					case LibGens::OBJECT_ELEMENT_ID:
 						updateEditPropertyID(temp_id);
 						break;
+					case LibGens::OBJECT_ELEMENT_ID_LIST:
+						updateEditPropertyIDList(temp_property_id_list);
+						break;
 					}
 					initialized = false;
 					selecting_target_id = false;
+					temp_id_list_selection = -1;
 					show_properties_editor = false;
 				}
 				ImGui::SameLine();
 				if (ImGui::Button("Cancel", ImVec2(100, 0))) {
 					// Just close without applying changes
 					initialized = false;
+					temp_id_list_selection = -1;
 					show_properties_editor = false;
 				}
 				ImGui::SameLine();
 				if (ImGui::Button("Close", ImVec2(100, 0))) {
 					initialized = false;
+					temp_id_list_selection = -1;
 					show_properties_editor = false;
 				}
 			}
 		}
 	} else {
 		initialized = false;
+		temp_id_list_selection = -1;
 	}
 	ImGui::End();
 }
@@ -528,6 +609,20 @@ void EditorApplication::updateEditPropertyID(size_t id) {
 			(LibGens::ObjectElementID*)(*it)->getElement(current_properties_names[current_property_index]);
 		if (element) {
 			element->value = id;
+			object_node_manager->reloadObjectNode(*it);
+		}
+	}
+}
+
+void EditorApplication::updateEditPropertyIDList(vector<size_t> v) {
+	if (!history_edit_property_wrapper) history_edit_property_wrapper = new HistoryActionWrapper();
+
+	for (list<LibGens::Object*>::iterator it = current_object_list_properties.begin();
+		it != current_object_list_properties.end(); it++) {
+		LibGens::ObjectElementIDList* element =
+			(LibGens::ObjectElementIDList*)(*it)->getElement(current_properties_names[current_property_index]);
+		if (element) {
+			element->value = v;
 			object_node_manager->reloadObjectNode(*it);
 		}
 	}

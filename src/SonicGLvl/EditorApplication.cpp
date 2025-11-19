@@ -1103,9 +1103,16 @@ bool EditorApplication::mousePressed(const OIS::MouseEvent &arg, OIS::MouseButto
 							ObjectNode *object_node = dynamic_cast<ObjectNode*>(editor_node);
 							
 							if (object_node && object_node->getObject()) {
-								updateEditPropertyID(object_node->getObject()->getID());
-								editor_mode = EDITOR_NODE_QUERY_OBJECT;
-								selecting_target_id = false;
+								size_t selected_id = object_node->getObject()->getID();
+								
+								if (current_property_index >= 0 && current_property_index < (int)current_properties_types.size() &&
+									current_properties_types[current_property_index] == LibGens::OBJECT_ELEMENT_ID_LIST) {
+									if (temp_id_list_selection >= 0 && temp_id_list_selection < (int)temp_property_id_list.size()) {
+										temp_property_id_list[temp_id_list_selection] = selected_id;
+									}
+								} else {
+									updateEditPropertyID(selected_id);
+								}
 							}
 						}
 					}
