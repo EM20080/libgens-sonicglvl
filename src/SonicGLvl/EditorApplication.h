@@ -420,6 +420,7 @@ class EditorApplication : public BaseApplication {
 		bool mousePressed(const OIS::MouseEvent &arg, OIS::MouseButtonID id);
 		bool mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id);
 		bool frameRenderingQueued(const Ogre::FrameEvent& evt);
+		void windowResized(Ogre::RenderWindow* rw);
 		void createScene(void);
 
 		// Editor Node Methods		
@@ -497,10 +498,11 @@ class EditorApplication : public BaseApplication {
 		void handleImGuiEvent(SDL_Event* event);
 		void renderMainMenuBar();
 		void renderQuickOverviewDialog();
-		void renderFindDialog();
-		void renderLookAtDialog();
-		void renderMultiSetDialog();
-		void renderTerrainInfoDialog();
+	void renderFindDialog();
+	void renderLookAtDialog();
+	void renderMultiSetDialog();
+	void renderNewSetDialog();
+	void renderTerrainInfoDialog();
 		void handleSDLEvent(const SDL_Event& event);
 		
 		void setEditorMode(Ogre::uint32 v) {

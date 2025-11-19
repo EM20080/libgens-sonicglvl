@@ -1245,6 +1245,14 @@ bool EditorApplication::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButt
     return true;
 }
 
+void EditorApplication::windowResized(Ogre::RenderWindow* rw) {
+    BaseApplication::windowResized(rw);
+    
+    if (viewport) {
+        viewport->resize(0.0f, 0.0f, 1.0f, 1.0f);
+    }
+}
+
 bool EditorApplication::frameRenderingQueued(const Ogre::FrameEvent &evt) {
     BaseApplication::frameRenderingQueued(evt);
 
