@@ -261,12 +261,15 @@ class EditorApplication : public BaseApplication {
 		ImVec2 left_panel_size;
 		ImVec2 bottom_panel_size;
 		
-		char find_object_name[256];
+	    char find_object_name[256];
 		char find_property_name[256];
 		char find_property_value[256];
 	    bool find_match_exactly;
 	    bool find_with_filter;
 	    bool find_select_all;
+		bool show_new_set_dialog;
+		char new_set_name[256];
+		char new_set_filename[256];
 	    bool new_set_is_game_active;
 		
 		SDL_Cursor* cursor_arrow;
