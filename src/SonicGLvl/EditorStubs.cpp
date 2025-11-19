@@ -295,8 +295,16 @@ void EditorApplication::renderTerrainInfoDialog(void) {
 void EditorApplication::renderImGuiContent(void) {
 	renderMainMenuBar();
 
-	if (show_left_panel) {
-		renderLeftPanel();
+	if (current_layout == 1) {
+		if (show_left_panel) {
+			renderLeftPanel();
+		}
+	}
+	else if (current_layout == 2) {
+		if (show_left_panel) {
+			renderLeftPanel();
+		}
+		renderRightPanel();
 	}
 
 	if (show_bottom_panel) {
@@ -327,6 +335,10 @@ void EditorApplication::renderImGuiContent(void) {
 		renderMultiSetDialog();
 	}
 
+	if (show_new_set_dialog) {
+		renderNewSetDialog();
+	}
+
 	if (show_terrain_info) {
 		renderTerrainInfoDialog();
 	}
@@ -340,7 +352,6 @@ void EditorApplication::renderImGuiContent(void) {
 	}
 }
 
-// Initialization - call base class implementations
 void EditorApplication::initializeImGui(void) {
 	BaseApplication::initializeImGui();
 }

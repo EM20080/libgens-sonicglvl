@@ -201,6 +201,15 @@ void EditorApplication::renderMainMenuBar() {
 			if (ImGui::MenuItem("Use Rotation Snap", "", axis->isRotationSnap())) {
 				toggleRotationSnap();
 			}
+			ImGui::Separator();
+			if (ImGui::MenuItem("Bottom Panel", "", show_bottom_panel)) {
+				show_bottom_panel = !show_bottom_panel;
+			}
+			if (current_layout == 2) {
+				if (ImGui::MenuItem("Left Panel", "", show_left_panel)) {
+					show_left_panel = !show_left_panel;
+				}
+			}
 			ImGui::EndMenu();
 		}
 		
@@ -275,6 +284,16 @@ void EditorApplication::renderMainMenuBar() {
 					saveGhostRecordingFbx();
 				}
 				ImGui::EndMenu();
+			}
+			ImGui::EndMenu();
+		}
+		
+		if (ImGui::BeginMenu("Layout")) {
+			if (ImGui::MenuItem("Layout 1 (Original)", "", current_layout == 1)) {
+				current_layout = 1;
+			}
+			if (ImGui::MenuItem("Layout 2 (New)", "", current_layout == 2)) {
+				current_layout = 2;
 			}
 			ImGui::EndMenu();
 		}

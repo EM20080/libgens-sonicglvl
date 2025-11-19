@@ -491,6 +491,10 @@ void BaseApplication::windowResized(Ogre::RenderWindow* rw) {
 
 	screen_width = width;
 	screen_height = height;
+
+	ImGui_ImplDX9_InvalidateDeviceObjects();
+	
+	ImGui_ImplDX9_CreateDeviceObjects();
 }
 
 void BaseApplication::windowClosed(Ogre::RenderWindow* rw) {

@@ -55,8 +55,13 @@ EditorApplication::EditorApplication(void)
 	show_find_dialog = false;
 	show_look_at_dialog = false;
 	show_multiset_dialog = false;
+	show_new_set_dialog = false;
 	show_terrain_info = false;
 	show_quick_overview = false;
+	current_layout = 1; // Default to OG layout
+	new_set_name[0] = '\0';
+	new_set_filename[0] = '\0';
+	new_set_is_game_active = true;
 
 	cursor_arrow = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
 	cursor_hand = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);

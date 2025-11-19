@@ -331,7 +331,7 @@ void EditorApplication::renderLeftPanel() {
 			ImGui::Checkbox("Cloning Mode", &palette_cloning_mode); // This is gonna be where if you place an object, put params, then place the same object again it will copy parameters off the other.
 		}
         
-		if (ImGui::CollapsingHeader("Object Properties", ImGuiTreeNodeFlags_DefaultOpen)) {
+		if (current_layout == 1 && ImGui::CollapsingHeader("Object Properties", ImGuiTreeNodeFlags_DefaultOpen)) {
 			if (!current_object_list_properties.empty()) {
 				LibGens::Object* obj = current_object_list_properties.front();
 				ImGui::Text("Name: %s", obj->getName().c_str());
@@ -421,7 +421,7 @@ void EditorApplication::renderLeftPanel() {
 						if (ImGui::Selectable(display_name.c_str(), is_selected)) {
 							current_property_index = (int)i;
 						}
-						if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) { // im not done yet.
+						if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
 							show_properties_editor = true;
 							if (!history_edit_property_wrapper) history_edit_property_wrapper = new HistoryActionWrapper();
 						}
@@ -439,28 +439,67 @@ void EditorApplication::renderLeftPanel() {
 					show_properties_editor = true;
 					if (!history_edit_property_wrapper) history_edit_property_wrapper = new HistoryActionWrapper();
 				}
-				
-				if (ImGui::BeginPopupContextWindow("PropertyContextMenu", ImGuiPopupFlags_MouseButtonRight | ImGuiPopupFlags_NoOpenOverItems)) {
-					ImGui::Text("Property: %s", current_properties_names[current_property_index].c_str());
-					ImGui::Separator();
-					if (ImGui::MenuItem("Edit...")) {
-						show_properties_editor = true;
-						if (!history_edit_property_wrapper) history_edit_property_wrapper = new HistoryActionWrapper();
-					}
-					if (current_properties_types[current_property_index] == LibGens::OBJECT_ELEMENT_VECTOR_LIST) {
-						if (ImGui::MenuItem("Add Vector")) {
-							addVectorToList();
-						}
-					}
-					if (current_properties_types[current_property_index] == LibGens::OBJECT_ELEMENT_ID_LIST) {
-						if (ImGui::MenuItem("Pick Target...")) {
-							openQueryTargetMode(true);
-						}
-					}
-					ImGui::EndPopup();
-				}
 			}
 		}
+		
+		if (current_layout == 2 && ImGui::CollapsingHeader("Working Layer", ImGuiTreeNodeFlags_DefaultOpen)) {
+			ImGui::Text("Working Layer:");
+			
+			if (current_level && current_level->getLevel()) {
+				list<LibGens::ObjectSet*> sets = current_level->getLevel()->getSets();
+				LibGens::ObjectSet* current_set_ptr = current_set;
+				string current_set_name = current_set_ptr ? current_set_ptr->getName() : "None";
+				
+				if (ImGui::BeginCombo("##WorkingLayer", current_set_name.c_str())) {
+					for (auto set : sets) {
+						bool is_selected = (current_set_ptr == set);
+						if (ImGui::Selectable(set->getName().c_str(), is_selected)) {
+							current_set = set;
+						}
+						if (is_selected) {
+							ImGui::SetItemDefaultFocus();
+						}
+					}
+					ImGui::EndCombo();
+				}
+			}
+			
+			ImGui::Separator();
+			ImGui::Text("Name");
+			ImGui::SameLine(200);
+			ImGui::Text("Objects");
+			
+			float list_height = std::min(200.0f, panel_height - ImGui::GetCursorPosY() - 50.0f);
+			if (ImGui::BeginListBox("##LayerList", ImVec2(-FLT_MIN, list_height))) {
+				if (current_level && current_level->getLevel()) {
+					list<LibGens::ObjectSet*> sets = current_level->getLevel()->getSets();
+					int idx = 0;
+					for (auto set : sets) {
+						bool visible = true;
+						if (set_visibility.count(set)) {
+							visible = set_visibility[set];
+						}
+						
+						ImGui::PushID(idx);
+						if (ImGui::Checkbox("##vis", &visible)) {
+							set_visibility[set] = visible;
+							object_node_manager->updateSetVisibility(set, visible);
+						}
+						ImGui::PopID();
+						
+						ImGui::SameLine();
+						string display_str = set->getName();
+						ImGui::Text("%s", display_str.c_str());
+						
+						ImGui::SameLine(200);
+						ImGui::Text("%d", (int)set->getObjects().size());
+						idx++;
+					}
+				}
+				ImGui::EndListBox();
+			}
+		}
+		
 		ImGui::TextWrapped("Help: Select objects from palette and place in level. Use properties panel to edit.");
 	}
 	ImGui::PopStyleVar(2);

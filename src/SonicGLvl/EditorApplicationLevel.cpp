@@ -311,24 +311,79 @@ void EditorApplication::openLevel(string filename) {
 }
 
 void EditorApplication::newCurrentSet() {
-	if (current_level->getLevel()->getSet("rename_me")) {
-		MessageBox(NULL, "Rename the object set called \"rename_me\" first before creating a new object set.", "SonicGLvl", MB_OK);
+	show_new_set_dialog = true;
+	strcpy(new_set_name, "");
+	strcpy(new_set_filename, "");
+	new_set_is_game_active = true;
+}
+
+void EditorApplication::createNewSet(const char* name, const char* filename, bool is_game_active) {
+	if (current_level->getLevel()->getSet(name)) {
+		MessageBox(NULL, "A set with that name already exists. Please choose a different name.", "SonicGLvl", MB_OK);
+		return;
+	}
+	
+	LibGens::ObjectSet *set = new LibGens::ObjectSet();
+	set->setName(name);
+	
+	if (current_level->getGameMode() == LIBGENS_LEVEL_GAME_UNLEASHED) {
+		string final_filename = filename;
+		
+		if (final_filename.empty()) {
+			final_filename = string(name) + LIBGENS_OBJECT_SET_EXTENSION;
+		} else {
+			if (final_filename.find(LIBGENS_OBJECT_SET_EXTENSION) == string::npos) {
+				final_filename += LIBGENS_OBJECT_SET_EXTENSION;
+			}
+		}
+		
+		set->setFilename(current_level->getLevel()->getFolder() + final_filename);
+		
+		string stage_xml_path = current_level->getLevel()->getFolder() + "Stage.stg.xml";
+		TiXmlDocument doc(stage_xml_path);
+		if (doc.LoadFile()) {
+			TiXmlElement* root = doc.FirstChildElement();
+			if (root) {
+				TiXmlElement* set_data = nullptr;
+				for (TiXmlElement* elem = root->FirstChildElement(); elem; elem = elem->NextSiblingElement()) {
+					if (elem->ValueStr() == "SetData") {
+						set_data = elem;
+						break;
+					}
+				}
+				
+				if (!set_data) {
+					set_data = new TiXmlElement("SetData");
+					root->LinkEndChild(set_data);
+				}
+				
+				TiXmlElement* layer = new TiXmlElement("Layer");
+				
+				TiXmlElement* name_elem = new TiXmlElement("Name");
+				name_elem->LinkEndChild(new TiXmlText(name));
+				layer->LinkEndChild(name_elem);
+				
+				TiXmlElement* filename_elem = new TiXmlElement("FileName");
+				filename_elem->LinkEndChild(new TiXmlText(final_filename.c_str()));
+				layer->LinkEndChild(filename_elem);
+				
+				TiXmlElement* is_game_active_elem = new TiXmlElement("IsGameActive");
+				is_game_active_elem->LinkEndChild(new TiXmlText(is_game_active ? "true" : "false"));
+				layer->LinkEndChild(is_game_active_elem);
+				
+				set_data->LinkEndChild(layer);
+				doc.SaveFile();
+			}
+		}
 	}
 	else {
-		LibGens::ObjectSet *set = new LibGens::ObjectSet();
-		set->setName("rename_me");
-		if (current_level->getGameMode() == LIBGENS_LEVEL_GAME_UNLEASHED) {
-			set->setFilename(current_level->getLevel()->getFolder() + set->getName() + LIBGENS_OBJECT_SET_EXTENSION);
-		}
-		else {
-			set->setFilename(current_level->getLevel()->getFolder() + LIBGENS_OBJECT_SET_NAME + set->getName() + LIBGENS_OBJECT_SET_EXTENSION);
-		}
-
-		current_level->getLevel()->addSet(set);
-		current_set = set;
-		updateSetsGUI();
-		updateSelectedSetGUI();
+		set->setFilename(current_level->getLevel()->getFolder() + LIBGENS_OBJECT_SET_NAME + name + LIBGENS_OBJECT_SET_EXTENSION);
 	}
+
+	current_level->getLevel()->addSet(set);
+	current_set = set;
+	updateSetsGUI();
+	updateSelectedSetGUI();
 }
 
 void EditorApplication::deleteCurrentSet() {

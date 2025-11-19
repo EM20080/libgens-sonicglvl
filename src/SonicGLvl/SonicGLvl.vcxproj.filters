@@ -141,6 +141,9 @@
     <ClCompile Include="EditorLookAt.cpp">
       <Filter>Editor</Filter>
     </ClCompile>
+    <ClCompile Include="EditorNewSet.cpp">
+      <Filter>Editor</Filter>
+    </ClCompile>
     <ClCompile Include="TrajectoryNode.cpp">
       <Filter>Editor Nodes</Filter>
     </ClCompile>
