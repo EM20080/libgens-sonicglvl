@@ -143,7 +143,7 @@ namespace LibGens {
 			return;
 		}
 		
-		File file(filename, LIBGENS_FILE_READ_BINARY, LIBGENS_FILE_PREFER_DISK_FILE);
+		File file(filename, LIBGENS_FILE_READ_BINARY);
 		if (file.valid()) {
 			read(&file);
 			file.close();
@@ -425,7 +425,7 @@ namespace LibGens {
 
 
 	void ArPack::addFile(string filepath, string override_name) {
-		File file(filepath, LIBGENS_FILE_READ_BINARY, LIBGENS_FILE_PREFER_DISK_FILE);
+		File file(filepath, LIBGENS_FILE_READ_BINARY);
 
 		if (file.valid()) {
 			string name = filepath;

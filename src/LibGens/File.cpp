@@ -159,7 +159,7 @@ namespace LibGens {
 		ReadOnlyMemoryMappedFile(const char* filename)
 			: ReadOnlyMemoryFile(nullptr, 0), file_handle(INVALID_HANDLE_VALUE), mapping_handle(NULL) {
 
-			file_handle = CreateFileA(filename, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+			file_handle = CreateFileA(filename, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
 			if (file_handle == INVALID_HANDLE_VALUE) {
 				return;
 			}
