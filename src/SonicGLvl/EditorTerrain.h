@@ -17,12 +17,12 @@
 //    Read AUTHORS.txt, LICENSE.txt and COPYRIGHT.txt for more details.
 //=========================================================================
 
+#ifndef TERRAIN_STREAMER_H_INCLUDED
+#define TERRAIN_STREAMER_H_INCLUDED
+
 #include "Common.h"
 #include "Terrain.h"
 #include "TerrainGroup.h"
-
-#ifndef TERRAIN_STREAMER_H_INCLUDED
-#define TERRAIN_STREAMER_H_INCLUDED
 
 class TerrainGroupStreamNode {
 	protected:
