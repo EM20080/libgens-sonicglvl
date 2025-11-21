@@ -579,24 +579,53 @@ void EditorLevel::loadTerrain(Ogre::SceneManager *scene_manager, list<TerrainNod
 
 		std::mutex instance_mutex;
 		vector<std::thread> instance_threads;
-		LibGens::MaterialLibrary *mat_lib = material_library;
+		vector<LibGens::TerrainInstance*> terrain_instances;
+		terrain_instances.reserve(instance_files.size());
 		for (const auto &instance_file : instance_files) {
-			instance_threads.push_back(std::thread([instance_file, &terrain_models, &used_models, &instance_mutex, scene_manager, mat_lib, terrain_nodes_list, this]() {
+			instance_threads.push_back(std::thread([instance_file, &terrain_models, &terrain_instances, &instance_mutex]() {
 				string name = LibGens::File::nameFromFilename(instance_file);
 				LibGens::TerrainInstance *instance = new LibGens::TerrainInstance(instance_file, name, &terrain_models);
 
-				// Add to scene
-				TerrainNode *terrain_node=new TerrainNode(instance, scene_manager, mat_lib);
-				terrain_node->setGIQualityLevel(NULL, 0);
-				//if (terrain_nodes_list) terrain_nodes_list->push_back(terrain_node);
-
 				std::lock_guard<std::mutex> lock(instance_mutex);
-				used_models.push_back(instance->getModel());
-				terrain_nodes_list->push_back(terrain_node);
-				terrain->addInstance(instance);
+				terrain_instances.push_back(instance);
 			}));
 		}
 		for (auto &t : instance_threads) {
+			if (t.joinable()) t.join();
+		}
+
+		std::mutex node_mutex;
+		LibGens::MaterialLibrary *mat_lib = material_library;
+		LibGens::Terrain *terr = terrain;
+		
+		const size_t num_threads = std::thread::hardware_concurrency() * 2;
+		const size_t batch_size = (terrain_instances.size() + num_threads - 1) / num_threads;
+		
+		vector<std::thread> node_threads;
+		for (size_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
+			size_t start_idx = thread_idx * batch_size;
+			size_t end_idx = min(start_idx + batch_size, terrain_instances.size());
+			
+			if (start_idx >= terrain_instances.size()) break;
+			
+			node_threads.push_back(std::thread([start_idx, end_idx, &terrain_instances, scene_manager, mat_lib, terrain_nodes_list, &used_models, &node_mutex, terr]() {
+				vector<TerrainNode*> local_nodes;
+				vector<LibGens::Model*> local_models;
+				
+				for (size_t i = start_idx; i < end_idx; ++i) {
+					TerrainNode *terrain_node=new TerrainNode(terrain_instances[i], scene_manager, mat_lib);
+					terrain_node->setGIQualityLevel(NULL, 0);
+					local_nodes.push_back(terrain_node);
+					local_models.push_back(terrain_instances[i]->getModel());
+					terr->addInstance(terrain_instances[i]);
+				}
+				
+				std::lock_guard<std::mutex> lock(node_mutex);
+				terrain_nodes_list->insert(terrain_nodes_list->end(), local_nodes.begin(), local_nodes.end());
+				used_models.insert(used_models.end(), local_models.begin(), local_models.end());
+			}));
+		}
+		for (auto &t : node_threads) {
 			if (t.joinable()) t.join();
 		}
 
