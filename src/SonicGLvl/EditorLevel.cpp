@@ -412,10 +412,6 @@ void EditorLevel::unpackResources() {
 				}
 			}
 		}
-
-		if (unpack_slot_resources) {
-			Ogre::ResourceGroupManager::getSingleton().addResourceLocation(slot_resources_cache_folder, "FileSystem");
-		}
 	}
 }
 
@@ -680,6 +676,16 @@ void EditorLevel::loadTerrain(Ogre::SceneManager *scene_manager, list<TerrainNod
 
 		material_library = terrain->getMaterialLibrary();
 		
+		// Check if geometry resources has a sky model for stages like Night EU and Petra Night
+		bool has_geometry_sky = false;
+		string sky_name = level->getSkybox();
+		if (!sky_name.empty()) {
+			string sky_model_path = resources_cache_folder + "/" + sky_name + ".model";
+			if (LibGens::File::check(sky_model_path)) {
+				has_geometry_sky = true;
+			}
+		}
+		
 		if (!slot_resources_cache_folder.empty()) {
 			WIN32_FIND_DATA FindFileData;
 			HANDLE hFind = FindFirstFile((slot_resources_cache_folder + "/*.material").c_str(), &FindFileData);
@@ -690,6 +696,10 @@ void EditorLevel::loadTerrain(Ogre::SceneManager *scene_manager, list<TerrainNod
 					
 					string material_name = string(name);
 					material_name = material_name.substr(0, material_name.length() - 9);
+					
+					if (has_geometry_sky && material_name.find("sky") != string::npos) {
+						continue;
+					}
 					
 					if (!material_library->checkMaterial(material_name)) {
 						LibGens::Material *mat = new LibGens::Material(slot_resources_cache_folder + "/" + name);
