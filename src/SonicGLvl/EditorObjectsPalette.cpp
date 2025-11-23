@@ -17,11 +17,25 @@
 //    Read AUTHORS.txt, LICENSE.txt and COPYRIGHT.txt for more details.
 //=========================================================================
 
+#include <d3d9.h>
+#define STB_IMAGE_IMPLEMENTATION
+#define STBI_ONLY_PNG
+#define STBI_ONLY_JPEG
+#define STBI_ONLY_BMP
+#define STBI_ONLY_TGA
+#include "../LibGens-externals/stb/stb_image.h"
 #include "EditorApplication.h"
 #include "EditorNodeHistory.h"
 #include "ObjectNodeHistory.h"
 #include "ObjectLibrary.h"
 #include "ObjectSet.h"
+
+namespace Ogre {
+	class D3D9RenderSystem {
+	public:
+		static IDirect3DDevice9 *getActiveD3D9Device();
+	};
+}
 
 void EditorApplication::updateObjectCategoriesGUI() {
 }
@@ -101,9 +115,10 @@ void EditorApplication::updateObjectsPalettePreview() {
 		clearObjectsPalettePreview();
 
 		if (current_palette_selection) {
-			current_palette_selection->setPosition(LibGens::Vector3(LIBGENS_AABB_MAX_START, LIBGENS_AABB_MAX_START, LIBGENS_AABB_MAX_START));
+			clearSelection();
+			updateSelection();
 
-			palette_cloning_mode = true;
+			current_palette_selection->setPosition(LibGens::Vector3(LIBGENS_AABB_MAX_START, LIBGENS_AABB_MAX_START, LIBGENS_AABB_MAX_START));
 
 			ObjectNode *palette_node=new ObjectNode(current_palette_selection, scene_manager, model_library, material_library, object_production, object_node_manager->getSlotIDName());
 			current_palette_nodes.push_back(palette_node);
@@ -121,8 +136,6 @@ void EditorApplication::overrideObjectsPalettePreview(list<LibGens::Object *> ov
 
 	current_palette_selection = NULL;
 	last_palette_selection = NULL;
-
-	palette_cloning_mode = false;
 
 	for (list<LibGens::Object *>::iterator it=override_objects.begin(); it!=override_objects.end(); it++) {
 		ObjectNode *palette_node=new ObjectNode((*it), scene_manager, model_library, material_library, object_production, object_node_manager->getSlotIDName());
@@ -226,11 +239,9 @@ void EditorApplication::mousePressedObjectsPalettePreview(const OIS::MouseEvent 
 
 void EditorApplication::clearObjectsPalettePreview() {
 	for (list<ObjectNode *>::iterator it=current_palette_nodes.begin(); it!=current_palette_nodes.end(); it++) {
-		if (!palette_cloning_mode) {
-			LibGens::Object *object=(*it)->getObject();
-			if (object) {
-				delete object;
-			}
+		LibGens::Object *object=(*it)->getObject();
+		if (object) {
+			delete object;
 		}
 
 		delete (*it);
@@ -254,6 +265,51 @@ bool EditorApplication::isRegularMode() {
 	if (isPalettePreviewActive())              regular_mode = false;
 	if (editor_mode == EDITOR_NODE_QUERY_NODE) regular_mode = false;
 	return regular_mode;
+}
+
+ImTextureID EditorApplication::loadIconTexture(string icon_name) {
+	if (icon_textures.find(icon_name) != icon_textures.end()) {
+		return icon_textures[icon_name];
+	}
+	icon_textures[icon_name] = 0;
+	IDirect3DDevice9* device = Ogre::D3D9RenderSystem::getActiveD3D9Device();
+	if (!device) return 0;
+	string icon_path = SONICGLVL_ICONS_PATH + icon_name;
+	int width, height, channels;
+	unsigned char* data = stbi_load(icon_path.c_str(), &width, &height, &channels, 4);
+	if (!data) return 0;
+	IDirect3DTexture9* texture = NULL;
+	HRESULT hr = device->CreateTexture(width, height, 1, 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &texture, NULL);
+	if (SUCCEEDED(hr) && texture) {
+		D3DLOCKED_RECT rect;
+		if (SUCCEEDED(texture->LockRect(0, &rect, NULL, D3DLOCK_DISCARD))) {
+			unsigned char* dest = (unsigned char*)rect.pBits;
+			for (int y = 0; y < height; y++) {
+				for (int x = 0; x < width; x++) {
+					int i = (y * width + x) * 4;
+					int j = y * rect.Pitch + x * 4;
+					dest[j + 0] = data[i + 2];
+					dest[j + 1] = data[i + 1];
+					dest[j + 2] = data[i + 0];
+					dest[j + 3] = data[i + 3];
+				}
+			}
+			texture->UnlockRect(0);
+		}
+		stbi_image_free(data);
+		icon_textures[icon_name] = (ImTextureID)texture;
+		return (ImTextureID)texture;
+	}
+	stbi_image_free(data);
+	return 0;
+}
+
+ImTextureID EditorApplication::getIconTexture(string object_name) {
+	string icon_name = object_name + ".png";
+	if (icon_database && icon_database->hasIcon(object_name)) {
+		icon_name = icon_database->getIcon(object_name);
+	}
+	return loadIconTexture(icon_name);
 }
 
 void EditorApplication::renderLeftPanel() {
@@ -284,7 +340,9 @@ void EditorApplication::renderLeftPanel() {
 					if (ImGui::BeginCombo("Category", current_category_name)) {
 						for (size_t i = 0; i < categories.size(); i++) {
 							bool is_selected = (current_category_index == i && current_category_search.empty());
-							if (ImGui::Selectable(categories[i]->getName().c_str(), is_selected)) {
+							string cat_name = categories[i]->getName();
+							if (cat_name.empty()) cat_name = "(unnamed)";
+							if (ImGui::Selectable(cat_name.c_str(), is_selected)) {
 								search_buffer[0] = '\0';
 								updateObjectsPaletteGUI((int)i);
 							}
@@ -295,42 +353,109 @@ void EditorApplication::renderLeftPanel() {
 						ImGui::EndCombo();
 					}
                     
-					if (ImGui::BeginListBox("##PaletteList", ImVec2(-FLT_MIN, 200))) {
+					ImGui::BeginChild("##PaletteList", ImVec2(-FLT_MIN, 300), true);
+					
+					if (!show_object_icons) {
 						if (!current_category_search.empty() && !palette_search_results.empty()) {
 							for (size_t i = 0; i < palette_search_results.size(); i++) {
 								bool is_selected = (current_palette_selection == palette_search_results[i]);
-								if (ImGui::Selectable(palette_search_results[i]->getName().c_str(), is_selected)) {
+								string obj_name = palette_search_results[i]->getName();
+								if (obj_name.empty()) obj_name = "##obj" + to_string(i);
+								if (ImGui::Selectable(obj_name.c_str(), is_selected)) {
 									current_palette_selection = palette_search_results[i];
 									updateObjectsPalettePreview();
-								}
-								if (is_selected) {
-									ImGui::SetItemDefaultFocus();
 								}
 							}
 						} else {
 							LibGens::ObjectCategory* object_category = library->getCategoryByIndex(current_category_index);
 							if (object_category) {
-								vector<LibGens::Object*> objects = object_category->getTemplates();
-								for (size_t i = 0; i < objects.size(); i++) {
-									bool is_selected = (current_palette_selection == objects[i]);
-									if (ImGui::Selectable(objects[i]->getName().c_str(), is_selected)) {
+							vector<LibGens::Object*> objects = object_category->getTemplates();
+							for (size_t i = 0; i < objects.size(); i++) {
+								bool is_selected = (current_palette_selection == objects[i]);
+								string obj_name = objects[i]->getName();
+								if (obj_name.empty()) obj_name = "##obj" + to_string(i);
+								if (ImGui::Selectable(obj_name.c_str(), is_selected)) {
 										updateObjectsPaletteSelection((int)i);
 										updateObjectsPalettePreview();
-									}
-									if (is_selected) {
-										ImGui::SetItemDefaultFocus();
 									}
 								}
 							}
 						}
-						ImGui::EndListBox();
+					} else {
+						// Grid view with icons
+					float iconSize = 64.0f;
+					float cellSize = iconSize + 20.0f;
+					float panelWidth = ImGui::GetContentRegionAvail().x;
+					int columns = (int)(panelWidth / cellSize);
+					if (columns < 1) columns = 1;
+					if (!current_category_search.empty() && !palette_search_results.empty()) {
+						for (size_t i = 0; i < palette_search_results.size(); i++) {
+							ImGui::PushID((int)i);
+							bool is_selected = (current_palette_selection == palette_search_results[i]);
+							ImTextureID icon_tex = getIconTexture(palette_search_results[i]->getName());
+							ImVec2 cursorPos = ImGui::GetCursorScreenPos();
+							ImVec4 bgColor = is_selected ? ImVec4(0.3f, 0.5f, 0.8f, 0.3f) : ImVec4(0.2f, 0.2f, 0.2f, 0.2f);
+							ImVec4 borderColor = is_selected ? ImVec4(0.4f, 0.7f, 1.0f, 1.0f) : ImVec4(0.4f, 0.4f, 0.4f, 0.6f);
+							ImDrawList* draw_list = ImGui::GetWindowDrawList();
+							draw_list->AddRectFilled(cursorPos, ImVec2(cursorPos.x + cellSize - 4, cursorPos.y + cellSize + 20), ImGui::ColorConvertFloat4ToU32(bgColor), 4.0f);
+							draw_list->AddRect(cursorPos, ImVec2(cursorPos.x + cellSize - 4, cursorPos.y + cellSize + 20), ImGui::ColorConvertFloat4ToU32(borderColor), 4.0f, 0, 1.5f);
+							ImGui::Dummy(ImVec2(cellSize - 4, cellSize + 20));
+							if (ImGui::IsItemClicked()) {
+								current_palette_selection = palette_search_results[i];
+								updateObjectsPalettePreview();
+							}
+					ImVec2 imagePos = ImVec2(cursorPos.x + (cellSize - 4 - iconSize) * 0.5f, cursorPos.y + 8);
+					if (icon_tex && show_object_icons) {
+						draw_list->AddImage(icon_tex, imagePos, ImVec2(imagePos.x + iconSize, imagePos.y + iconSize));
+					}
+					float textYPos = show_object_icons ? (cursorPos.y + iconSize + 10) : (cursorPos.y + (cellSize + 20 - ImGui::GetTextLineHeight()) * 0.5f);
+					ImVec2 textPos = ImVec2(cursorPos.x + 4, textYPos);
+					ImVec2 textSize = ImGui::CalcTextSize(palette_search_results[i]->getName().c_str(), NULL, false, cellSize - 8);
+					draw_list->AddText(NULL, 0, textPos, ImGui::ColorConvertFloat4ToU32(ImVec4(1,1,1,1)), palette_search_results[i]->getName().c_str(), NULL, cellSize - 8);
+					if ((i + 1) % columns != 0 && i < palette_search_results.size() - 1) {
+						ImGui::SameLine();
+					}
+							ImGui::PopID();
+						}
+					} else {
+						LibGens::ObjectCategory* object_category = library->getCategoryByIndex(current_category_index);
+						if (object_category) {
+							vector<LibGens::Object*> objects = object_category->getTemplates();
+							for (size_t i = 0; i < objects.size(); i++) {
+								ImGui::PushID((int)i);
+								bool is_selected = (current_palette_selection == objects[i]);
+								ImTextureID icon_tex = getIconTexture(objects[i]->getName());
+								ImVec2 cursorPos = ImGui::GetCursorScreenPos();
+								ImVec4 bgColor = is_selected ? ImVec4(0.3f, 0.5f, 0.8f, 0.3f) : ImVec4(0.2f, 0.2f, 0.2f, 0.2f);
+								ImVec4 borderColor = is_selected ? ImVec4(0.4f, 0.7f, 1.0f, 1.0f) : ImVec4(0.4f, 0.4f, 0.4f, 0.6f);
+								ImDrawList* draw_list = ImGui::GetWindowDrawList();
+								draw_list->AddRectFilled(cursorPos, ImVec2(cursorPos.x + cellSize - 4, cursorPos.y + cellSize + 20), ImGui::ColorConvertFloat4ToU32(bgColor), 4.0f);
+								draw_list->AddRect(cursorPos, ImVec2(cursorPos.x + cellSize - 4, cursorPos.y + cellSize + 20), ImGui::ColorConvertFloat4ToU32(borderColor), 4.0f, 0, 1.5f);
+							ImGui::Dummy(ImVec2(cellSize - 4, cellSize + 20));
+							if (ImGui::IsItemClicked()) {
+								updateObjectsPaletteSelection((int)i);
+								updateObjectsPalettePreview();
+							}
+						ImVec2 imagePos = ImVec2(cursorPos.x + (cellSize - 4 - iconSize) * 0.5f, cursorPos.y + 8);
+						if (icon_tex && show_object_icons) {
+							draw_list->AddImage(icon_tex, imagePos, ImVec2(imagePos.x + iconSize, imagePos.y + iconSize));
+						}
+					float textYPos = show_object_icons ? (cursorPos.y + iconSize + 10) : (cursorPos.y + (cellSize + 20 - ImGui::GetTextLineHeight()) * 0.5f);
+					ImVec2 textPos = ImVec2(cursorPos.x + 4, textYPos);
+					ImVec2 textSize = ImGui::CalcTextSize(objects[i]->getName().c_str(), NULL, false, cellSize - 8);
+					draw_list->AddText(NULL, 0, textPos, ImGui::ColorConvertFloat4ToU32(ImVec4(1,1,1,1)), objects[i]->getName().c_str(), NULL, cellSize - 8);
+					if ((i + 1) % columns != 0 && i < objects.size() - 1) {
+						ImGui::SameLine();
+					}
+							ImGui::PopID();
+						}
 					}
 				}
+					}
+				}
+				ImGui::EndChild();
 			}
-            
-			ImGui::Checkbox("Cloning Mode", &palette_cloning_mode); // This is gonna be where if you place an object, put params, then place the same object again it will copy parameters off the other.
 		}
-        
 		if (current_layout == 1 && ImGui::CollapsingHeader("Object Properties", ImGuiTreeNodeFlags_DefaultOpen)) {
 			if (!current_object_list_properties.empty()) {
 				LibGens::Object* obj = current_object_list_properties.front();
@@ -346,7 +471,7 @@ void EditorApplication::renderLeftPanel() {
 			if (ImGui::BeginListBox("##PropertiesList", ImVec2(-FLT_MIN, list_height))) {
 				for (size_t i = 0; i < current_properties_names.size(); i++) {
 					string property_name = current_properties_names[i];
-					string display_name = property_name;
+					string display_name = property_name.empty() ? "(unnamed)" : property_name;
 					LibGens::ObjectElementType type = LibGens::OBJECT_ELEMENT_BOOL;
 					
 					if (i < current_properties_types.size()) {
@@ -395,7 +520,8 @@ void EditorApplication::renderLeftPanel() {
 							LibGens::ObjectElementBool* bool_elem = (LibGens::ObjectElementBool*)element;
 							bool value = bool_elem->value;
 							
-							if (ImGui::Selectable(property_name.c_str(), is_selected, 0, ImVec2(ImGui::GetContentRegionAvail().x - 30, 0))) {
+							string selectable_label = property_name.empty() ? ("##prop" + to_string(i)) : property_name;
+							if (ImGui::Selectable(selectable_label.c_str(), is_selected, 0, ImVec2(ImGui::GetContentRegionAvail().x - 30, 0))) {
 								current_property_index = (int)i;
 							}
 							
@@ -413,12 +539,14 @@ void EditorApplication::renderLeftPanel() {
 							ImGui::PopStyleColor(4);
 							ImGui::PopID();
 						} else {
-							if (ImGui::Selectable(display_name.c_str(), is_selected)) {
+							string label = display_name.empty() ? ("##prop" + to_string(i)) : display_name;
+							if (ImGui::Selectable(label.c_str(), is_selected)) {
 								current_property_index = (int)i;
 							}
 						}
 					} else {
-						if (ImGui::Selectable(display_name.c_str(), is_selected)) {
+						string label = display_name.empty() ? ("##prop" + to_string(i)) : display_name;
+						if (ImGui::Selectable(label.c_str(), is_selected)) {
 							current_property_index = (int)i;
 						}
 						if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {

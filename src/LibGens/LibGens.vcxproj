@@ -183,6 +183,7 @@
     <ClCompile Include="HavokPhysicsCache.cpp" />
     <ClCompile Include="HavokPropertyDatabase.cpp" />
     <ClCompile Include="HavokSkeletonCache.cpp" />
+    <ClCompile Include="IconDataBase.cpp" />
     <ClCompile Include="InstanceMTI.cpp" />
     <ClCompile Include="Keyframe.cpp" />
     <ClCompile Include="KeyframeSet.cpp" />
@@ -254,6 +255,7 @@
     <ClInclude Include="HavokPhysicsCache.h" />
     <ClInclude Include="HavokPropertyDatabase.h" />
     <ClInclude Include="HavokSkeletonCache.h" />
+    <ClInclude Include="IconDataBase.h" />
     <ClInclude Include="InstanceMTI.h" />
     <ClInclude Include="Keyframe.h" />
     <ClInclude Include="KeyframeSet.h" />

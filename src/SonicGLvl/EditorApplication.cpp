@@ -650,6 +650,7 @@ void EditorApplication::createScene(void) {
 	fbx_manager      = new LibGens::FBXManager();
 
 	havok_property_database    = new LibGens::HavokPropertyDatabase(SONICGLVL_HAVOK_PROPERTY_DATABASE_PATH);
+	icon_database              = new LibGens::IconDataBase(SONICGLVL_ICON_DATABASE_PATH);
 	history                    = new History();
 	property_vector_history    = new History();
 	look_at_vector_history     = new History();
@@ -685,6 +686,8 @@ void EditorApplication::createScene(void) {
 	generations_library->loadDatabase(SONICGLVL_GENERATIONS_OBJECTS_DATABASE_PATH);
 	unleashed_library->loadDatabase(SONICGLVL_UNLEASHED_OBJECTS_DATABASE_PATH);
 
+	Ogre::ResourceGroupManager::getSingleton().addResourceLocation(SONICGLVL_ICONS_PATH, "FileSystem");
+
 	configuration    = new EditorConfiguration();
 	configuration->load(SONICGLVL_CONFIGURATION_FILE);
 
@@ -699,7 +702,7 @@ void EditorApplication::createScene(void) {
 	createObjectsPropertiesGUI();
 
 	current_category_index     = 0;
-	palette_cloning_mode       = false;
+	show_object_icons          = false;
 	ignore_mouse_clicks_frames = 0;
 	last_palette_selection     = NULL;
 	current_palette_selection  = NULL;

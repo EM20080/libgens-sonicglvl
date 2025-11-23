@@ -43,6 +43,7 @@
 #include "UVAnimationLibrary.h"
 #include "Havok.h"
 #include "HavokPropertyDatabase.h"
+#include "IconDataBase.h"
 #include "Level.h"
 #include "Object.h"
 #include "ObjectCategory.h"
@@ -69,6 +70,8 @@
 #define SONICGLVL_GENERATIONS_OBJECTS_DATABASE_PATH "../database/GenerationsObjectsDatabase.xml"
 #define SONICGLVL_UNLEASHED_OBJECTS_DATABASE_PATH   "../database/UnleashedObjectsDatabase.xml"
 #define SONICGLVL_HAVOK_PROPERTY_DATABASE_PATH      "../database/HavokPropertyDatabase.xml"
+#define SONICGLVL_ICON_DATABASE_PATH                "../database/IconDataBase.xml"
+#define SONICGLVL_ICONS_PATH                        "../database/icons/"
 #define SONICGLVL_LIBRARY_PATH                      "../database/objects/"
 #define SONICGLVL_RESOURCES_PATH                    "../database/resources/"
 #define SONICGLVL_RESOURCES_UNLEASHED_PATH          "../database/objects/Resources_Unleashed/"
@@ -242,6 +245,10 @@ class EditorApplication : public BaseApplication {
 		LibGens::HavokPropertyDatabase *havok_property_database;
 		list<HavokNode *> havok_nodes_list;
 		
+		// Icons
+		LibGens::IconDataBase *icon_database;
+		map<string, ImTextureID> icon_textures;
+		
 		// Configuration
 		EditorConfiguration *configuration;
 		
@@ -301,7 +308,7 @@ class EditorApplication : public BaseApplication {
 		LibGens::Object *current_palette_selection;
 		list<ObjectNode *> current_palette_nodes;
 		LibGens::ObjectSet *current_set;
-		bool palette_cloning_mode;
+		bool show_object_icons;
 		vector<LibGens::Object*> palette_search_results;
 
 		// Object Properties
@@ -684,6 +691,9 @@ class EditorApplication : public BaseApplication {
 
 		bool isPalettePreviewActive();
 		bool isRegularMode();
+
+		ImTextureID loadIconTexture(string icon_name);
+		ImTextureID getIconTexture(string object_name);
 
 		// Accessor methods
 		LibGens::ShaderLibrary* getShaderLibrary();
