@@ -89,8 +89,8 @@ void EditorApplication::createPreviewMaterialEditorGUI() {
 		material_editor_viewport = new EditorViewport(material_editor_preview_scene_manager, material_editor_preview_bogus_scene_manager, material_editor_preview_window, SONICGLVL_CAMERA_PREVIEW_NAME);
 		material_editor_viewport->setPanningMultiplier(3);
 		material_editor_viewport->setZoomingMultiplier(0.04);
-		material_editor_viewport->setNearClipDistance(0.001f);
-		material_editor_viewport->setFarClipDistance(100.0f);
+		material_editor_viewport->setNearClipDistance(1.0f);
+		material_editor_viewport->setFarClipDistance(9000.0f);
 		material_editor_preview_listener = new MaterialEditorPreviewListener();
 		material_editor_preview_listener->setEditorViewport(material_editor_viewport);
 		material_editor_preview_listener->setEditorWindow(material_editor_preview_window);
@@ -821,4 +821,5 @@ void EditorApplication::updateEditTextureUnitMaterialEditor(string unit_name) {
 	if (material_editor_preview_window) {
 		material_editor_preview_window->update();
 	}
+
 }
