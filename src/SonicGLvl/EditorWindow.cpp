@@ -295,6 +295,9 @@ void EditorApplication::renderMainMenuBar() {
 			if (ImGui::MenuItem("Layout 2 (New)", "", current_layout == 2)) {
 				current_layout = 2;
 			}
+			ImGui::Separator();
+			ImGui::MenuItem("Show Enemy Icons", "", &show_object_icons) {
+				show_object_icons = !show_object_icons;
 			ImGui::EndMenu();
 		}
 		

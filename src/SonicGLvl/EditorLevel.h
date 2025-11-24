@@ -151,15 +151,17 @@ public:
 			return data_cache_folder;
 		}
 
-		string getResourcesFolder() {
-			return resources_cache_folder;
-		}
+	string getResourcesFolder() {
+		return resources_cache_folder;
+	}
 
-		bool hasAdditionalGI() {
-			return has_additional_gi;
-		}
+	string getSlotResourcesFolder() {
+		return slot_resources_cache_folder;
+	}
 
-		void loadData(LibGens::ObjectLibrary *library, ObjectNodeManager *object_node_manager);
+	bool hasAdditionalGI() {
+		return has_additional_gi;
+	}		void loadData(LibGens::ObjectLibrary *library, ObjectNodeManager *object_node_manager);
 		void loadCollision(LibGens::HavokEnviroment *havok_enviroment, Ogre::SceneManager *scene_manager, list<HavokNode *> &havok_nodes_list);
 		void loadTerrain(Ogre::SceneManager *scene_manager, list<TerrainNode *> *terrain_nodes_list=NULL);
 		void cleanCollision(list<HavokNode *> &havok_nodes_list);

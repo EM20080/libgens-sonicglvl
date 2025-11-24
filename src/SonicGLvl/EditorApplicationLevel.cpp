@@ -262,6 +262,11 @@ void EditorApplication::openLevel(string filename) {
 
 	if (current_level->getTerrain()) {
 		Ogre::ResourceGroupManager::getSingleton().addResourceLocation(current_level->getTerrain()->getResourcesFolder(), "FileSystem");
+		
+		string slot_resources_folder = current_level->getSlotResourcesFolder();
+		if (!slot_resources_folder.empty()) {
+			Ogre::ResourceGroupManager::getSingleton().addResourceLocation(slot_resources_folder, "FileSystem");
+		}
 
 		uv_animation_library->addFolder(current_level->getTerrain()->getResourcesFolder());
 		havok_enviroment->addFolder(current_level->getTerrain()->getResourcesFolder());

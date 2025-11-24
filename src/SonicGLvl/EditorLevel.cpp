@@ -674,43 +674,40 @@ void EditorLevel::loadTerrain(Ogre::SceneManager *scene_manager, list<TerrainNod
 		terrain_autodraw = new LibGens::TerrainAutodraw(autodraw_filename);
 		ghost    	     = new LibGens::Ghost(ghost_filename);
 
-		material_library = terrain->getMaterialLibrary();
-		
-		// Check if geometry resources has a sky model for stages like Night EU and Petra Night
-		bool has_geometry_sky = false;
-		string sky_name = level->getSkybox();
-		if (!sky_name.empty()) {
-			string sky_model_path = resources_cache_folder + "/" + sky_name + ".model";
-			if (LibGens::File::check(sky_model_path)) {
-				has_geometry_sky = true;
-			}
+	material_library = terrain->getMaterialLibrary();
+	
+	bool has_geometry_sky = false;
+	string sky_name = level->getSkybox();
+	if (!sky_name.empty()) {
+		string sky_model_path = resources_cache_folder + "/" + sky_name + ".model";
+		if (LibGens::File::check(sky_model_path)) {
+			has_geometry_sky = true;
 		}
-		
-		if (!slot_resources_cache_folder.empty()) {
-			WIN32_FIND_DATA FindFileData;
-			HANDLE hFind = FindFirstFile((slot_resources_cache_folder + "/*.material").c_str(), &FindFileData);
-			if (hFind != INVALID_HANDLE_VALUE) {
-				do {
-					const char* name = FindFileData.cFileName;
-					if (name[0] == '.') continue;
-					
-					string material_name = string(name);
-					material_name = material_name.substr(0, material_name.length() - 9);
-					
-					if (has_geometry_sky && material_name.find("sky") != string::npos) {
-						continue;
-					}
-					
-					if (!material_library->checkMaterial(material_name)) {
-						LibGens::Material *mat = new LibGens::Material(slot_resources_cache_folder + "/" + name);
-						material_library->addMaterial(mat);
-					}
-				} while (FindNextFile(hFind, &FindFileData) != 0);
-				FindClose(hFind);
-			}
+	}
+	
+	if (!slot_resources_cache_folder.empty()) {
+		WIN32_FIND_DATA FindFileData;
+		HANDLE hFind = FindFirstFile((slot_resources_cache_folder + "/*.material").c_str(), &FindFileData);
+		if (hFind != INVALID_HANDLE_VALUE) {
+			do {
+				const char* name = FindFileData.cFileName;
+				if (name[0] == '.') continue;
+				
+				string material_name = string(name);
+				material_name = material_name.substr(0, material_name.length() - 9);
+				
+				if (has_geometry_sky && material_name.find("sky") != string::npos) {
+					continue;
+				}
+				
+				if (!material_library->checkMaterial(material_name)) {
+					LibGens::Material *mat = new LibGens::Material(slot_resources_cache_folder + "/" + name);
+					material_library->addMaterial(mat);
+				}
+			} while (FindNextFile(hFind, &FindFileData) != 0);
+			FindClose(hFind);
 		}
-
-		if (light_list) {
+	}		if (light_list) {
 			direct_light     = light_list->getLight(level->getDirectLight());
 		}
 	}
