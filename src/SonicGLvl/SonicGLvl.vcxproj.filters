@@ -168,7 +168,12 @@
     <ClCompile Include="..\..\depends\imgui\backends\imgui_impl_sdl2.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
-    <ClCompile Include="EditorGhost.cpp" />
+    <ClCompile Include="EditorGhost.cpp">
+      <Filter>Editor</Filter>
+    </ClCompile>
+    <ClCompile Include="EditorRight.cpp">
+      <Filter>Editor</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BaseApplication.h">
@@ -265,7 +270,9 @@
     <ClInclude Include="TrajectoryNode.h">
       <Filter>Editor Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="EditorLevel.h" />
+    <ClInclude Include="EditorLevel.h">
+      <Filter>Editor</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Resource">
