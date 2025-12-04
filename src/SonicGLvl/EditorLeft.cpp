@@ -462,8 +462,6 @@ void EditorApplication::newLayer() {
 }
 
 INT_PTR CALLBACK LeftBarCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
-	int list_view_index = ListView_GetNextItem(GetDlgItem(hDlg, IDL_PALETTE_LIST), -1, LVIS_SELECTED | LVIS_FOCUSED);
-	editor_application->updateObjectsPaletteSelection(list_view_index);
 	int selection_index=0;
 
 	switch (msg)
@@ -484,6 +482,19 @@ INT_PTR CALLBACK LeftBarCallback(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lPar
 	{
 		switch (LOWORD(wParam))
 		{
+		case IDL_PALETTE_LIST:
+		{
+			switch (((LPNMHDR)lParam)->code)
+			{
+			case LVN_ITEMCHANGED:
+			{
+				int list_view_index = ListView_GetNextItem(GetDlgItem(hDlg, IDL_PALETTE_LIST), -1, LVIS_SELECTED | LVIS_FOCUSED);
+				editor_application->updateObjectsPaletteSelection(list_view_index);
+				return true;
+			}
+			}
+			break;
+		}
 		case IDL_LAYER_LIST:
 		{
 			switch (((LPNMHDR)lParam)->code)

@@ -308,6 +308,7 @@ class EditorApplication : public BaseApplication {
 		LibGens::Object *current_palette_selection;
 		list<ObjectNode *> current_palette_nodes;
 		LibGens::ObjectSet *current_set;
+		bool palette_cloning_mode;
 		bool show_object_icons;
 		vector<LibGens::Object*> palette_search_results;
 

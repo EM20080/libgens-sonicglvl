@@ -707,6 +707,7 @@ void EditorApplication::createScene(void) {
 	last_palette_selection     = NULL;
 	current_palette_selection  = NULL;
 	current_set                = NULL;
+	palette_cloning_mode       = false;
 	current_single_property_object = NULL;
 	history_edit_property_wrapper = NULL;
 	cloning_mode = SONICGLVL_MULTISETPARAM_MODE_CLONE;

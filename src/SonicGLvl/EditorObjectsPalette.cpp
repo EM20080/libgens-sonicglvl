@@ -120,6 +120,8 @@ void EditorApplication::updateObjectsPalettePreview() {
 
 			current_palette_selection->setPosition(LibGens::Vector3(LIBGENS_AABB_MAX_START, LIBGENS_AABB_MAX_START, LIBGENS_AABB_MAX_START));
 
+			palette_cloning_mode = true;
+
 			ObjectNode *palette_node=new ObjectNode(current_palette_selection, scene_manager, model_library, material_library, object_production, object_node_manager->getSlotIDName());
 			current_palette_nodes.push_back(palette_node);
 		}
@@ -136,6 +138,8 @@ void EditorApplication::overrideObjectsPalettePreview(list<LibGens::Object *> ov
 
 	current_palette_selection = NULL;
 	last_palette_selection = NULL;
+
+	palette_cloning_mode = false;
 
 	for (list<LibGens::Object *>::iterator it=override_objects.begin(); it!=override_objects.end(); it++) {
 		ObjectNode *palette_node=new ObjectNode((*it), scene_manager, model_library, material_library, object_production, object_node_manager->getSlotIDName());
@@ -239,9 +243,11 @@ void EditorApplication::mousePressedObjectsPalettePreview(const OIS::MouseEvent 
 
 void EditorApplication::clearObjectsPalettePreview() {
 	for (list<ObjectNode *>::iterator it=current_palette_nodes.begin(); it!=current_palette_nodes.end(); it++) {
-		LibGens::Object *object=(*it)->getObject();
-		if (object) {
-			delete object;
+		if (!palette_cloning_mode) {
+			LibGens::Object *object=(*it)->getObject();
+			if (object) {
+				delete object;
+			}
 		}
 
 		delete (*it);
