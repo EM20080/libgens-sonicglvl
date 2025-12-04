@@ -85,7 +85,7 @@ namespace LibGens {
 	}
 
 	void ArFile::save(string filename) {
-		File file(filename, LIBGENS_FILE_WRITE_BINARY, LIBGENS_FILE_PREFER_DISK_FILE);
+		File file(filename, LIBGENS_FILE_WRITE_BINARY, true);
 		file.write(data.data(), data_size);
 		file.close();
 	}
@@ -291,7 +291,7 @@ namespace LibGens {
 			}
 		}
 
-		File *current_file=new LibGens::File(filename, LIBGENS_FILE_WRITE_BINARY, LIBGENS_FILE_PREFER_DISK_FILE);
+		File *current_file=new LibGens::File(filename, LIBGENS_FILE_WRITE_BINARY, true);
 		if (current_file->valid()) {
 			unsigned int ar_header_0=0;
 			unsigned int ar_header_1=0x10;
@@ -314,7 +314,7 @@ namespace LibGens {
 
 					sprintf_s(extension, "%02d", ar_split_index);
 					string new_filename=pack_name+ToString(extension);
-					current_file=new LibGens::File(new_filename, LIBGENS_FILE_WRITE_BINARY, LIBGENS_FILE_PREFER_DISK_FILE);
+					current_file=new LibGens::File(new_filename, LIBGENS_FILE_WRITE_BINARY, true);
 					if (!current_file->valid()) {
 						printf("Couldn't write to AR File %s\n", new_filename.c_str());
 						getchar();
