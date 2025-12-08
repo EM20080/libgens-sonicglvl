@@ -22,6 +22,8 @@
 #include "PAC.h"
 #include "ObjectLibrary.h"
 #include "ObjectSet.h"
+#include "MTINode.h"
+#include "InstanceMTI.h"
 
 EditorLevel::EditorLevel(string folder_p, string slot_name_p, string geometry_name_p, string slot_id_name_p, size_t game_mode_p) {
 	folder = folder_p;
@@ -709,6 +711,174 @@ void EditorLevel::loadTerrain(Ogre::SceneManager *scene_manager, list<TerrainNod
 		}
 	}		if (light_list) {
 			direct_light     = light_list->getLight(level->getDirectLight());
+		}
+	}
+}
+
+void EditorLevel::loadMTI(Ogre::SceneManager *scene_manager, list<Ogre::SceneNode *> *mti_nodes_list) {
+	if (!scene_manager) return;
+	
+	std::map<std::string, std::string> instancer_textures;
+	
+	string stage_xml = data_cache_folder + "/Stage.stg.xml";
+	if (!LibGens::File::check(stage_xml)) {
+		stage_xml = data_cache_folder + "/Terrain.stg.xml";
+	}
+	
+	if (LibGens::File::check(stage_xml)) {
+		TiXmlDocument doc(stage_xml);
+		if (doc.LoadFile()) {
+			TiXmlHandle hDoc(&doc);
+			TiXmlElement* pElem = hDoc.FirstChildElement().Element();
+			if (pElem) {
+				for (TiXmlElement* instancer = pElem->FirstChildElement("Instancer"); instancer; instancer = instancer->NextSiblingElement("Instancer")) {
+					std::string name;
+					TiXmlElement* name_elem = instancer->FirstChildElement("Name");
+					if (name_elem && name_elem->GetText()) {
+						name = name_elem->GetText();
+					}
+					
+					TiXmlElement* resources = instancer->FirstChildElement("Resources");
+					if (resources) {
+						TiXmlElement* resource = resources->FirstChildElement("Resource");
+						if (resource) {
+							TiXmlElement* tex0 = resource->FirstChildElement("Texture0");
+							if (tex0 && tex0->GetText()) {
+								instancer_textures[name] = std::string(tex0->GetText()) + ".dds";
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	string mti_folder = resources_cache_folder;
+	
+	vector<string> mti_files;
+	WIN32_FIND_DATA FindFileData;
+	HANDLE hFind = FindFirstFile((mti_folder + "/*.mti").c_str(), &FindFileData);
+	if (hFind != INVALID_HANDLE_VALUE) {
+		do {
+			const char* name = FindFileData.cFileName;
+			if (name[0] == '.') continue;
+			mti_files.push_back(mti_folder + "/" + string(name));
+		} while (FindNextFile(hFind, &FindFileData) != 0);
+		FindClose(hFind);
+	}
+	
+	size_t total_nodes = 0;
+	for (const auto& mti_file : mti_files) {
+		LibGens::InstanceBrush* brush = new LibGens::InstanceBrush(mti_file);
+		const list<LibGens::InstanceBrushNode*>& nodes = brush->getNodes();
+		
+		string mti_basename = mti_file.substr(mti_file.find_last_of("/\\") + 1);
+		mti_basename = mti_basename.substr(0, mti_basename.length() - 4);
+		
+		size_t node_count = nodes.size();
+		total_nodes += node_count;
+		
+		std::string tex_name;
+		if (instancer_textures.find(mti_basename) != instancer_textures.end()) {
+			tex_name = instancer_textures[mti_basename];
+		}
+		
+		std::string material_name = "MTI_" + mti_basename;
+		
+		if (!Ogre::MaterialManager::getSingleton().resourceExists(material_name)) {
+			Ogre::MaterialPtr mat = Ogre::MaterialManager::getSingleton().create(material_name, Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
+			Ogre::Pass* pass = mat->getTechnique(0)->getPass(0);
+			pass->setLightingEnabled(false);
+			pass->setVertexColourTracking(Ogre::TVC_DIFFUSE);
+			pass->setSceneBlending(Ogre::SBT_TRANSPARENT_ALPHA);
+			pass->setDepthWriteEnabled(false);
+			pass->setAlphaRejectSettings(Ogre::CMPF_GREATER, 128);
+			pass->setCullingMode(Ogre::CULL_NONE);
+			pass->setDepthBias(1, 1);
+			
+			if (!tex_name.empty()) {
+				Ogre::TextureUnitState* tex_unit = pass->createTextureUnitState(tex_name);
+				tex_unit->setTextureAddressingMode(Ogre::TextureUnitState::TAM_CLAMP);
+			}
+		}
+		
+		Ogre::MeshPtr mesh = Ogre::MeshManager::getSingleton().createManual("MTI_Mesh_" + mti_basename, Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
+		Ogre::SubMesh* submesh = mesh->createSubMesh();
+		submesh->useSharedVertices = false;
+		submesh->vertexData = new Ogre::VertexData();
+		submesh->vertexData->vertexCount = 4;
+		
+		Ogre::VertexDeclaration* decl = submesh->vertexData->vertexDeclaration;
+		size_t offset = 0;
+		decl->addElement(0, offset, Ogre::VET_FLOAT3, Ogre::VES_POSITION);
+		offset += Ogre::VertexElement::getTypeSize(Ogre::VET_FLOAT3);
+		decl->addElement(0, offset, Ogre::VET_FLOAT2, Ogre::VES_TEXTURE_COORDINATES);
+		offset += Ogre::VertexElement::getTypeSize(Ogre::VET_FLOAT2);
+		
+		Ogre::HardwareVertexBufferSharedPtr vbuf = Ogre::HardwareBufferManager::getSingleton().createVertexBuffer(
+			offset, 4, Ogre::HardwareBuffer::HBU_STATIC_WRITE_ONLY);
+		
+		float size = 2.0f;
+		float half_size = size * 0.5f;
+		float vertices[] = {
+			-half_size, 0, 0,  0, 1,
+			 half_size, 0, 0,  1, 1,
+			 half_size, size, 0,  1, 0,
+			-half_size, size, 0,  0, 0
+		};
+		vbuf->writeData(0, sizeof(vertices), vertices, true);
+		submesh->vertexData->vertexBufferBinding->setBinding(0, vbuf);
+		
+		submesh->indexData = new Ogre::IndexData();
+		submesh->indexData->indexCount = 6;
+		submesh->indexData->indexBuffer = Ogre::HardwareBufferManager::getSingleton().createIndexBuffer(
+			Ogre::HardwareIndexBuffer::IT_16BIT, 6, Ogre::HardwareBuffer::HBU_STATIC_WRITE_ONLY);
+		unsigned short indices[] = {0, 1, 2, 0, 2, 3};
+		submesh->indexData->indexBuffer->writeData(0, sizeof(indices), indices, true);
+		
+		const float CHUNK_SIZE = 100.0f;
+		std::map<std::pair<int, int>, std::vector<LibGens::InstanceBrushNode*>> spatial_chunks;
+		
+		for (auto node : nodes) {
+			LibGens::Vector3 pos = node->getPosition();
+			int chunk_x = (int)(pos.x / CHUNK_SIZE);
+			int chunk_z = (int)(pos.z / CHUNK_SIZE);
+			spatial_chunks[std::make_pair(chunk_x, chunk_z)].push_back(node);
+		}
+		
+		size_t chunk_id = 0;
+		for (const auto& chunk_pair : spatial_chunks) {
+			const auto& chunk_nodes = chunk_pair.second;
+			size_t chunk_count = chunk_nodes.size();
+			
+			Ogre::BillboardSet* billboard_set = scene_manager->createBillboardSet(
+				"MTI_BillboardSet_" + mti_basename + "_" + std::to_string(chunk_id++), chunk_count);
+			billboard_set->setMaterialName(material_name);
+			billboard_set->setDefaultDimensions(size, size);
+			billboard_set->setBillboardType(Ogre::BBT_POINT);
+			billboard_set->setCommonDirection(Ogre::Vector3::UNIT_Y);
+			billboard_set->setCommonUpVector(Ogre::Vector3::UNIT_Y);
+			billboard_set->setBillboardOrigin(Ogre::BBO_BOTTOM_CENTER);
+			
+			float min_x = FLT_MAX, min_y = FLT_MAX, min_z = FLT_MAX;
+			float max_x = -FLT_MAX, max_y = -FLT_MAX, max_z = -FLT_MAX;
+			
+			for (auto node : chunk_nodes) {
+				LibGens::Vector3 pos = node->getPosition();
+				float px = pos.x, py = pos.y, pz = pos.z;
+				
+				min_x = std::min(min_x, px - half_size); max_x = std::max(max_x, px + half_size);
+				min_y = std::min(min_y, py); max_y = std::max(max_y, py + size);
+				min_z = std::min(min_z, pz - half_size); max_z = std::max(max_z, pz + half_size);
+				
+				Ogre::Billboard* billboard = billboard_set->createBillboard(px, py, pz);
+			}
+			
+			billboard_set->setBounds(Ogre::AxisAlignedBox(min_x, min_y, min_z, max_x, max_y, max_z), 0);
+			
+			Ogre::SceneNode* chunk_node = scene_manager->getRootSceneNode()->createChildSceneNode();
+			chunk_node->attachObject(billboard_set);
+			if (mti_nodes_list) mti_nodes_list->push_back(chunk_node);
 		}
 	}
 }

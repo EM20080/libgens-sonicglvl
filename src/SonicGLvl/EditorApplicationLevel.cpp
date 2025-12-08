@@ -120,6 +120,7 @@ void EditorApplication::openLostWorldLevel(string filename) {
 	uv_animation_library->addFolder(lost_world_level->getResourcesFolder());
 
 	lost_world_level->loadTerrain(scene_manager, &terrain_nodes_list);
+	lost_world_level->loadMTI(scene_manager, &mti_nodes_list);
 
 	/*
 	current_level->getTerrain()->addModels(lost_world_level->getTerrain()->getModelsToOrganize());
@@ -271,6 +272,8 @@ void EditorApplication::openLevel(string filename) {
 		uv_animation_library->addFolder(current_level->getTerrain()->getResourcesFolder());
 		havok_enviroment->addFolder(current_level->getTerrain()->getResourcesFolder());
 	}
+	
+	current_level->loadMTI(scene_manager, &mti_nodes_list);
 
 	// Create the scene lights
 	LibGens::Light *direct_light=current_level->getDirectLight();
@@ -544,6 +547,12 @@ void EditorApplication::cleanLevelTerrain() {
 		delete (*it);
 	}
 	terrain_nodes_list.clear();
+
+	for (list<Ogre::SceneNode *>::iterator it=mti_nodes_list.begin(); it!=mti_nodes_list.end(); it++) {
+		(*it)->detachAllObjects();
+		scene_manager->destroySceneNode(*it);
+	}
+	mti_nodes_list.clear();
 
 	Ogre::ResourceGroupManager::getSingleton().unloadUnreferencedResourcesInGroup(GENERAL_MESH_GROUP, false);
 	Ogre::MeshManager::getSingleton().unloadUnreferencedResources(false);

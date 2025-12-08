@@ -33,6 +33,7 @@ public:
     bool show_objects = true;
     bool show_terrain = true;
     bool show_terrain_autodraw = true;
+    bool show_mti = true;
     bool show_collision = true;
     bool show_paths = true;
     bool show_ghost = true;
@@ -219,6 +220,7 @@ void SonicGLvlUI::RenderMainMenuBar() {
                 ImGui::MenuItem("Collision", "Ctrl+4", &show_collision);
                 ImGui::MenuItem("Paths", "Ctrl+5", &show_paths);
                 ImGui::MenuItem("Ghost", "Ctrl+6", &show_ghost);
+                ImGui::MenuItem("MTI Instances", "Ctrl+7", &show_mti);
                 ImGui::EndMenu();
             }
 

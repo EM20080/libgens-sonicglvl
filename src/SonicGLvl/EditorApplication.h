@@ -50,6 +50,7 @@
 #include "ObjectSet.h"
 #include "PipeClient.h"
 #include "TrajectoryNode.h"
+#include "MTINode.h"
 #include <SDL.h>
 #include <imgui.h>
 
@@ -221,6 +222,7 @@ class EditorApplication : public BaseApplication {
 		// Terrain
 		TerrainStreamer *terrain_streamer;
 		list<TerrainNode *> terrain_nodes_list;
+		list<Ogre::SceneNode *> mti_nodes_list;
 		float terrain_update_counter;
 
 		// GI

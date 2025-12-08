@@ -46,6 +46,9 @@ namespace LibGens {
 			InstanceBrushNode();
 			void read(File *file);
 			void write(File *file);
+			Vector3 getPosition() const { return position; }
+			unsigned char getIndex() const { return index; }
+			Color getColor() const { return color; }
 	};
 
 	class InstanceBrush {
@@ -56,5 +59,6 @@ namespace LibGens {
 			void read(File *file);
 			void save(string filename);
 			void write(File *file);
+			const list<InstanceBrushNode *>& getNodes() const { return nodes; }
 	};
 };

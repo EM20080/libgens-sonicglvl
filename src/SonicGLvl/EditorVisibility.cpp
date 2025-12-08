@@ -34,6 +34,9 @@ void EditorApplication::updateNodeVisibility() {
 		if (visible) (*it)->show();
 		else (*it)->hide();
 	}
+	for (list<Ogre::SceneNode *>::iterator it=mti_nodes_list.begin(); it!=mti_nodes_list.end(); it++) {
+		(*it)->setVisible(visible);
+	}
 
 	// EDITOR_NODE_HAVOK
 	visible=configuration->checkVisibilityFlag(EDITOR_NODE_HAVOK);

@@ -54,6 +54,7 @@
 
 class EditorLevelEntry;
 class EditorLevelDatabase;
+class MTINode;
 
 class EditorLevelEntry {
 	friend class EditorLevelDatabase;
@@ -164,6 +165,7 @@ public:
 	}		void loadData(LibGens::ObjectLibrary *library, ObjectNodeManager *object_node_manager);
 		void loadCollision(LibGens::HavokEnviroment *havok_enviroment, Ogre::SceneManager *scene_manager, list<HavokNode *> &havok_nodes_list);
 		void loadTerrain(Ogre::SceneManager *scene_manager, list<TerrainNode *> *terrain_nodes_list=NULL);
+		void loadMTI(Ogre::SceneManager *scene_manager, list<Ogre::SceneNode *> *mti_nodes_list=NULL);
 		void cleanCollision(list<HavokNode *> &havok_nodes_list);
 
 		void createHavokNodes(LibGens::HavokPhysicsCache *physics_cache, Ogre::SceneManager *scene_manager, list<HavokNode *> &havok_nodes_list);
