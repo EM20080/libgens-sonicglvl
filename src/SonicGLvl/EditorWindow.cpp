@@ -314,6 +314,8 @@ void EditorApplication::renderMainMenuBar() {
 void EditorApplication::renderQuickOverviewDialog() {
 	if (!show_quick_overview) return;
 	
+	ImVec2 center = ImVec2(ImGui::GetIO().DisplaySize.x * 0.5f, ImGui::GetIO().DisplaySize.y * 0.5f);
+	ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 	ImGui::SetNextWindowSize(ImVec2(600, 500), ImGuiCond_FirstUseEver);
 	if (ImGui::Begin("Quick Overview", &show_quick_overview, ImGuiWindowFlags_NoResize)) {
 		ImGui::TextWrapped("Camera Controls:");
