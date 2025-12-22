@@ -583,8 +583,8 @@ namespace LibGens {
 			TiXmlText* timeValue=new TiXmlText(ToString(spawn_time));
 			timeRoot->LinkEndChild(timeValue);
 			startRoot->LinkEndChild(timeRoot);
-		}
-		pElem_i->LinkEndChild(startRoot);
+
+			pElem_i->LinkEndChild(startRoot);
 		}
 
 		// Save the changes
