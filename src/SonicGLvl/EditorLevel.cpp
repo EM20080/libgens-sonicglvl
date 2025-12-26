@@ -210,7 +210,8 @@ void EditorLevel::cleanGI() {
 }
 
 void EditorLevel::cleanTerrainResources() {
-	WIN32_FIND_DATA FindFileData;
+	Ogre::ResourceGroupManager::getSingleton().unloadUnreferencedResourcesInGroup(GENERAL_MESH_GROUP, false);
+	Ogre::TextureManager::getSingleton().unloadUnreferencedResources(false);	WIN32_FIND_DATA FindFileData;
 	HANDLE hFind;
 	hFind = FindFirstFile((resources_cache_folder+"/*.*").c_str(), &FindFileData);
 	if (hFind == INVALID_HANDLE_VALUE) {} 
@@ -1065,3 +1066,4 @@ void EditorLevel::waitForUnpacking() {
 		unpack_terrain_thread.join();
 	}
 } // :ChineseThumbsUp:
+
