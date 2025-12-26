@@ -484,3 +484,4 @@ depends/imgui/imstb_truetype.h
 depends/SDL2/lib/x86/SDL2-static.lib
 bin/SonicGLvl.exp
 bin/SonicGLvl.lib
+bin/ogre.cfg
