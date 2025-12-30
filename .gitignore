@@ -485,3 +485,6 @@ depends/SDL2/lib/x86/SDL2-static.lib
 bin/SonicGLvl.exp
 bin/SonicGLvl.lib
 bin/ogre.cfg
+bin/SonicGLvl.lib
+bin/SonicGLvl_Win32.exp
+bin/SonicGLvl_Win32.lib
