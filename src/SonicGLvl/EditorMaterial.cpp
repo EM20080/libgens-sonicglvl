@@ -774,8 +774,13 @@ void EditorApplication::updateEditShaderMaterialEditor(string shader_name) {
 		Ogre::Material *ogre_material = Ogre::MaterialManager::getSingleton().getByName(material_editor_material->getExtra(), material_editor_mesh_group).getPointer();
 
 		if (ogre_material && material_editor_shader_library) {
+			LibGens::UVAnimation* uv_anim = NULL;
+			LibGens::Texture* tex = material_editor_material->getTextureByUnit(LIBGENS_MATERIAL_TEXTURE_UNIT_DIFFUSE);
+			if (tex) {
+				uv_anim = SONICGLVL_UV_ANIMATION_LIBRARY->getUVAnimation(material_editor_material->getName(), tex->getTexset());
+			}
 			try {
-				updateMaterialShaderParameters(ogre_material, material_editor_material, !material_editor_material->hasExtraGI(), NULL, material_editor_shader_library);
+				updateMaterialShaderParameters(ogre_material, material_editor_material, !material_editor_material->hasExtraGI(), uv_anim, material_editor_shader_library);
 			}
 			catch (...) {
 			}

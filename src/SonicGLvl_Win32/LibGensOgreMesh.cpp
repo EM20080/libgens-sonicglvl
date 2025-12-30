@@ -207,11 +207,11 @@ void setShaderParameters(Ogre::Pass *pass, Ogre::GpuProgramParametersSharedPtr p
 
 				if (material_parameter) {
 					LibGens::Color color = material_parameter->getColor();
-					
-					if (shader_parameter_name == "diffuse")  color.a = 1.0;
+					string shader_name = material->getShader();
+					bool is_water_mul = (shader_name.find("Water_Mul") == 0);
+					if (shader_parameter_name == "diffuse") color.a = is_water_mul ? 0.6f : 1.0f;
 					if (shader_parameter_name == "specular") color.a = 1.0;
-					if (shader_parameter_name == "ambient")  color.a = 1.0;
-
+					if (shader_parameter_name == "ambient") color.a = 1.0;
 					program_params->setConstant((size_t)index, Ogre::Vector4(color.r, color.g, color.b, color.a));
 					continue;
 				}
@@ -448,6 +448,12 @@ void setShaderParameters(Ogre::Pass *pass, Ogre::GpuProgramParametersSharedPtr p
 
 					if (uv_animation) {
 						editor_application->getAnimationsList()->addTexcoordAnimation(uv_animation, program_params, (size_t)index);
+					}
+					else {
+						string shader_name = material->getShader();
+						if (shader_name == "Water_Add" || shader_name == "Water_Mul") {
+							program_params->setAutoConstant((size_t)index, Ogre::GpuProgramParameters::ACT_TIME, shader_name == "Water_Add" ? 0.1f : 0.05f);
+						}
 					}
 				}
 				else if (shader_parameter_name == "mrgFresnelParam") {
