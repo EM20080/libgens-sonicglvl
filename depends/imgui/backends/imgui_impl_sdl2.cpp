@@ -104,7 +104,11 @@
 #include "imgui.h"
 #ifndef IMGUI_DISABLE
 #include "imgui_impl_sdl2.h"
-
+#include <SDL.h>
+#include <SDL_timer.h>
+#include <SDL_render.h>
+#include <SDL_misc.h>
+#include <SDL_syswm.h>
 // Clang warnings with -Weverything
 #if defined(__clang__)
 #pragma clang diagnostic push
