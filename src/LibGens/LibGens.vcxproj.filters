@@ -192,6 +192,9 @@
     <ClCompile Include="HavokEndianSwap.cpp">
       <Filter>Havok</Filter>
     </ClCompile>
+    <ClCompile Include="IconDataBase.cpp">
+      <Filter>Icons</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AR.h">
@@ -382,6 +385,9 @@
     <ClInclude Include="HavokEndianSwap.h">
       <Filter>Havok</Filter>
     </ClInclude>
+    <ClInclude Include="IconDataBase.h">
+      <Filter>Icons</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="BIXF">
@@ -431,6 +437,9 @@
     </Filter>
     <Filter Include="Property">
       <UniqueIdentifier>{636ff22b-b7c7-494f-ab62-ba23563a6e14}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Icons">
+      <UniqueIdentifier>{c5660751-225f-48b5-8c94-d094cebf83e9}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>
