@@ -169,6 +169,258 @@ namespace {
 		list<HavokPointer> data_pointers;
 		list<HavokPointer> data_global_pointers;
 
+		unsigned int readU32(LibGens::File* fp, unsigned int address) {
+			unsigned int value = 0;
+			fp->seek(address, SEEK_SET);
+			fp->read(&value, sizeof(unsigned int));
+			Endian::swap(value);
+			return value;
+		}
+
+		unsigned short readU16(LibGens::File* fp, unsigned int address) {
+			unsigned short value = 0;
+			fp->seek(address, SEEK_SET);
+			fp->read(&value, sizeof(unsigned short));
+			Endian::swap(value);
+			return value;
+		}
+
+		bool isFixedPointer(unsigned int address) {
+			for (list<HavokPointer>::iterator it = data_pointers.begin(); it != data_pointers.end(); it++) {
+				if ((*it).abs_address == address) return true;
+			}
+
+			for (list<HavokPointer>::iterator it = data_global_pointers.begin(); it != data_global_pointers.end(); it++) {
+				if ((*it).abs_address == address) return true;
+			}
+
+			return false;
+		}
+
+		unsigned int pointerTarget(LibGens::File* fp, unsigned int address) {
+			for (list<HavokPointer>::iterator it = data_pointers.begin(); it != data_pointers.end(); it++) {
+				if ((*it).abs_address == address) return (*it).target_address;
+			}
+
+			for (list<HavokPointer>::iterator it = data_global_pointers.begin(); it != data_global_pointers.end(); it++) {
+				if ((*it).abs_address == address) return (*it).target_address;
+			}
+
+			return readU32(fp, address);
+		}
+
+		bool isVirtualObject(unsigned int address) {
+			for (list<HavokLink>::iterator it = data_links.begin(); it != data_links.end(); it++) {
+				if ((*it).address_1 == address) return true;
+			}
+
+			return false;
+		}
+
+		void swapU16(unsigned int address) {
+			endianSwap(address, 2);
+		}
+
+		void swapU32(unsigned int address) {
+			endianSwap(address, 4);
+		}
+
+		void swapVector4(unsigned int address) {
+			swapU32(address);
+			swapU32(address + 4);
+			swapU32(address + 8);
+			swapU32(address + 12);
+		}
+
+		void swapQsTransform(unsigned int address) {
+			swapVector4(address);
+			swapVector4(address + 16);
+			swapVector4(address + 32);
+		}
+
+		void swapArrayHeader(unsigned int address) {
+			swapU32(address);
+			swapU32(address + 4);
+			swapU32(address + 8);
+		}
+
+		void swapLegacyArrayHeader(unsigned int address) {
+			swapU32(address);
+			swapU32(address + 4);
+		}
+
+		void swapPointerArray(unsigned int address, unsigned int count) {
+			for (unsigned int i = 0; i < count; i++) {
+				swapU32(address + i * 4);
+			}
+		}
+
+		void NonMetadataHKX(LibGens::File* fp, string type_name, unsigned int address) {
+			// non-metadata packfiles still carry class names in virtual fixups, but do not carry hkClass layouts. 
+			// So instead, we swap the common payloads from their fixed 5.5.0 layouts.
+			if (type_name == "hkRootLevelContainer") {
+				unsigned int variants = pointerTarget(fp, address);
+				unsigned int num_variants = readU32(fp, address + 4);
+				swapLegacyArrayHeader(address);
+
+				if (variants && num_variants) {
+					for (unsigned int i = 0; i < num_variants; i++) {
+						unsigned int item = variants + i * 16;
+						swapU32(item);
+						swapU32(item + 4);
+						swapU32(item + 8);
+						swapU32(item + 12);
+					}
+				}
+			}
+			else if (type_name == "hkaAnimationContainer") {
+				unsigned int skeletons = pointerTarget(fp, address);
+				unsigned int num_skeletons = readU32(fp, address + 4);
+				unsigned int animations = pointerTarget(fp, address + 8);
+				unsigned int num_animations = readU32(fp, address + 12);
+				unsigned int bindings = pointerTarget(fp, address + 16);
+				unsigned int num_bindings = readU32(fp, address + 20);
+				unsigned int attachments = pointerTarget(fp, address + 24);
+				unsigned int num_attachments = readU32(fp, address + 28);
+				unsigned int skins = pointerTarget(fp, address + 32);
+				unsigned int num_skins = readU32(fp, address + 36);
+
+				swapLegacyArrayHeader(address);
+				swapLegacyArrayHeader(address + 8);
+				swapLegacyArrayHeader(address + 16);
+				swapLegacyArrayHeader(address + 24);
+				swapLegacyArrayHeader(address + 32);
+
+				swapPointerArray(skeletons, num_skeletons);
+				swapPointerArray(animations, num_animations);
+				swapPointerArray(bindings, num_bindings);
+				swapPointerArray(attachments, num_attachments);
+				swapPointerArray(skins, num_skins);
+			}
+			else if (type_name == "hkaSkeleton") {
+				unsigned int parent_indices = pointerTarget(fp, address + 4);
+				unsigned int num_parent_indices = readU32(fp, address + 8);
+				unsigned int bones = pointerTarget(fp, address + 12);
+				unsigned int num_bones = readU32(fp, address + 16);
+				unsigned int transforms = pointerTarget(fp, address + 20);
+				unsigned int num_transforms = readU32(fp, address + 24);
+				unsigned int float_slots = pointerTarget(fp, address + 28);
+				unsigned int num_float_slots = readU32(fp, address + 32);
+
+				swapU32(address);
+				swapLegacyArrayHeader(address + 4);
+				swapLegacyArrayHeader(address + 12);
+				swapLegacyArrayHeader(address + 20);
+				swapLegacyArrayHeader(address + 28);
+
+				for (unsigned int i = 0; i < num_parent_indices; i++) {
+					swapU16(parent_indices + i * 2);
+				}
+
+				if (bones && num_bones) {
+					for (unsigned int i = 0; i < num_bones; i++) {
+						unsigned int bone_ptr = bones + i * 4;
+						unsigned int bone = pointerTarget(fp, bone_ptr);
+						swapU32(bone_ptr);
+
+						if (bone && !isVirtualObject(bone)) {
+							NonMetadataHKX(fp, "hkaBone", bone);
+						}
+					}
+				}
+
+				for (unsigned int i = 0; i < num_transforms; i++) {
+					swapQsTransform(transforms + i * 48);
+				}
+
+				swapPointerArray(float_slots, num_float_slots);
+			}
+			else if (type_name == "hkaBone") {
+				swapU32(address);
+				swapU32(address + 4);
+			}
+			else if ((type_name == "hkaInterleavedSkeletalAnimation") ||
+					 (type_name == "hkaInterleavedUncompressedAnimation") ||
+					 (type_name == "hkaInterleavedAnimation")) {
+				NonMetadataHKX(fp, "hkaAnimation", address);
+
+				unsigned int transforms = pointerTarget(fp, address + 36);
+				unsigned int num_transforms = readU32(fp, address + 40);
+				unsigned int floats = pointerTarget(fp, address + 44);
+				unsigned int num_floats = readU32(fp, address + 48);
+
+				swapLegacyArrayHeader(address + 36);
+				swapLegacyArrayHeader(address + 44);
+
+				for (unsigned int i = 0; i < num_transforms; i++) {
+					swapQsTransform(transforms + i * 48);
+				}
+
+				for (unsigned int i = 0; i < num_floats; i++) {
+					swapU32(floats + i * 4);
+				}
+			}
+			else if (type_name == "hkaAnimation") {
+				unsigned int annotations = pointerTarget(fp, address + 28);
+				unsigned int num_annotations = readU32(fp, address + 32);
+
+				swapU32(address);
+				swapU32(address + 8);
+				swapU32(address + 12);
+				swapU32(address + 16);
+				swapU32(address + 20);
+				swapU32(address + 24);
+				swapLegacyArrayHeader(address + 28);
+
+				if (annotations && num_annotations) {
+					for (unsigned int i = 0; i < num_annotations; i++) {
+						unsigned int track_ptr = annotations + i * 4;
+						unsigned int track = pointerTarget(fp, track_ptr);
+						swapU32(track_ptr);
+
+						if (track && !isVirtualObject(track)) {
+							NonMetadataHKX(fp, "hkaAnnotationTrack", track);
+						}
+					}
+				}
+			}
+			else if (type_name == "hkaAnimationBinding") {
+				unsigned int transform_map = pointerTarget(fp, address + 12);
+				unsigned int num_transform_map = readU32(fp, address + 16);
+				unsigned int float_map = pointerTarget(fp, address + 20);
+				unsigned int num_float_map = readU32(fp, address + 24);
+
+				swapU32(address);
+				swapU32(address + 4);
+				swapU32(address + 8);
+				swapLegacyArrayHeader(address + 12);
+				swapLegacyArrayHeader(address + 20);
+
+				for (unsigned int i = 0; i < num_transform_map; i++) {
+					swapU16(transform_map + i * 2);
+				}
+
+				for (unsigned int i = 0; i < num_float_map; i++) {
+					swapU16(float_map + i * 2);
+				}
+			}
+			else if (type_name == "hkaAnnotationTrack") {
+				unsigned int annotations = pointerTarget(fp, address + 4);
+				unsigned int num_annotations = readU32(fp, address + 8);
+
+				swapU32(address);
+				swapLegacyArrayHeader(address + 4);
+
+				for (unsigned int i = 0; i < num_annotations; i++) {
+					NonMetadataHKX(fp, "hkaAnnotation", annotations + i * 8);
+				}
+			}
+			else if (type_name == "hkaAnnotation") {
+				swapU32(address);
+				swapU32(address + 4);
+			}
+		}
+
 		void endianSwap(HavokPackfileHeader& header) {
 			header.user_tag = 0;
 			Endian::swap(header.file_version);
@@ -751,6 +1003,32 @@ namespace {
 
 					unsigned int address = 0;
 					unsigned int name_address = 0;
+
+					fp->read(&address, sizeof(unsigned int));
+					fp->seek(4, SEEK_CUR);
+					Endian::swap(address);
+					if (address == (unsigned int)-1) break;
+
+					fp->read(&name_address, sizeof(unsigned int));
+					Endian::swap(name_address);
+
+					HavokLink link;
+					link.address_1 = header.absolute_data_start + address;
+					link.address_2 = class_name_global_address + name_address;
+					link.type = 0;
+					data_links.push_back(link);
+
+					if (fp->getCurrentAddress() >= header.absolute_data_start + header.exports_offset) break;
+
+					i++;
+				}
+
+				i = 0;
+				while (true) {
+					fp->seek(header.absolute_data_start + header.virtual_fixups_offset + i * 12, SEEK_SET);
+
+					unsigned int address = 0;
+					unsigned int name_address = 0;
 					string type_name = "";
 
 					fp->read(&address, sizeof(unsigned int));
@@ -778,6 +1056,9 @@ namespace {
 					fp->seek(header.absolute_data_start + address, SEEK_SET);
 
 					convertStructure(fp, type_name);
+					if (types.empty()) {
+						NonMetadataHKX(fp, type_name, header.absolute_data_start + address);
+					}
 
 					if (back >= header.absolute_data_start + header.exports_offset) break;
 
